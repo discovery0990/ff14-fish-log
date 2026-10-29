@@ -16,7 +16,7 @@ const memStorage = () => {
   const s = new Map();
   return { getItem: (k) => s.get(k) ?? null, setItem: (k, v) => s.set(k, String(v)) };
 };
-const profile = (p = {}) => ({ lvl: null, gath: null, exp: null, showAbove: false, ...p });
+const profile = (p = {}) => ({ lvl: null, gath: null, exp: null, ...p });
 
 // ------------------------------------------------------------ counts
 
@@ -52,9 +52,8 @@ Deno.test('ocean holes are only in the Ocean tab', () => {
 
 Deno.test('level only locks restricted holes; other above-level holes are shown', () => {
   // Hidden Falls (r54) is a restricted Lv 35 hole.
-  assertEquals(m.holeVisibility('r54', profile({ lvl: 34 })), 'hide');
+  assertEquals(m.holeVisibility('r54', profile({ lvl: 34 })), 'grey'); // always listed, greyed
   assertEquals(m.holeVisibility('r54', profile({ lvl: 35 })), 'show');
-  assertEquals(m.holeVisibility('r54', profile({ lvl: 34, showAbove: true })), 'grey');
   assert(m.isLocked('r54', profile({ lvl: 34 })));
   // Hopeseed Pond (r5, Lv 35) and North Isle of Endless Summer (r156, Lv 50) are not restricted.
   assertEquals(m.holeVisibility('r5', profile({ lvl: 10 })), 'show');
@@ -62,7 +61,7 @@ Deno.test('level only locks restricted holes; other above-level holes are shown'
   // Confirmed in game at Lv 44: Privateer Forecastle (r? Lv 50) fishable, Sterncastle locked.
   const priv = (n) => Object.keys(DATA.holes).find((h) => DATA.holes[h].name === `Rhotano Sea (Privateer ${n})`);
   assertEquals(m.holeVisibility(priv('Forecastle'), profile({ lvl: 44 })), 'show');
-  assertEquals(m.holeVisibility(priv('Sterncastle'), profile({ lvl: 44 })), 'hide');
+  assertEquals(m.holeVisibility(priv('Sterncastle'), profile({ lvl: 44 })), 'grey');
 });
 
 Deno.test('every hole has map coordinates', () => {
@@ -226,7 +225,7 @@ Deno.test('backup round trip and validation', () => {
   assert(b.ok);
   assertEquals(b.caught, ['4964']);
   assertEquals(b.discovered, ['r5']);
-  assertEquals(b.profile, { lvl: 40, gath: 340, exp: [0, 1], showAbove: false });
+  assertEquals(b.profile, { lvl: 40, gath: 340, exp: [0, 1] });
   assertEquals(b.exportedAt, T);
 
   assertEquals(parseBackup('nope', DATA).ok, false);

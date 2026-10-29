@@ -319,12 +319,9 @@ export function profileView(ctx) {
     <h1>Profile &amp; filters</h1>
     <section><h2 class="sec">My fisher</h2>
       <div class="list">${stepper('lvl', 'Fisher level', 1, 100)}${stepper('gath', 'Gathering', 0, 9999)}</div>
-      <p class="note">Most holes can be fished at any level. A few (restricted holes) are locked until you reach their level: they're not on your map and you can't cast there, so they're hidden until then. Fish needing more Gathering than you have are flagged at the hole and left out of Up soon. Leave blank to turn off.</p>
+      <p class="note">Most holes can be fished at any level. A few (restricted holes) are locked until you reach their level: they're not on your map and you can't cast there, so the app greys them out until then. Fish needing more Gathering than you have are flagged at the hole and left out of Up soon. Leave blank to turn off.</p>
     </section>
     <section><h2 class="sec">Expansions unlocked</h2><div class="chips">${exps}</div></section>
-    <section><h2 class="sec">Show</h2>
-      <div class="list">${sw('show-above', 'Show locked holes (greyed)', p.showAbove)}</div>
-    </section>
     <section><h2 class="sec">Up soon looks ahead</h2><div class="chips">${horizons}</div></section>
     <section><h2 class="sec">Backup</h2>
       ${ctx.flash ? `<p class="note hi">${esc(ctx.flash)}</p>` : ''}
@@ -391,7 +388,6 @@ export function zoneView(ctx, tab, zid, filter = 'all') {
   const zone = m.data.zones[zid];
   if (!zone) return notFound();
   const vis = m.visibleHoles(tab, zid, profile);
-  const hiddenHoles = m.zoneHolesAll(tab, zid).length - vis.length;
   const c = m.count(m.zoneHolesAll(tab, zid), store.isCaught);
   const undisc = vis.filter((h) => !store.isDiscovered(h)).length;
   const chips = [['all', 'All'], ['incomplete', 'Incomplete'], ['undiscovered', 'Undiscovered']].map(([k, l]) =>
@@ -430,7 +426,6 @@ export function zoneView(ctx, tab, zid, filter = 'all') {
       ${progress(c)}</header>
     <div class="chips" role="group" aria-label="Show">${chips}</div>
     <section><h2 class="sec">Fishing holes</h2><div class="cards">${cards || '<p class="empty">No holes match.</p>'}</div>
-      ${hiddenHoles ? `<p class="note">${plural(hiddenHoles, 'locked hole')} hidden until you reach ${hiddenHoles === 1 ? 'its' : 'their'} level. <a class="link" href="#/profile">Profile</a> can show ${hiddenHoles === 1 ? 'it' : 'them'} greyed.</p>` : ''}
     </section>`;
 }
 
@@ -489,7 +484,7 @@ export function holeView(ctx, hid) {
       ${progress(c)}
     </header>
     ${why ? `<p class="banner">${m.isLocked(hid, profile)
-      ? `Locked: you can't cast here until Fisher Lv ${h.lvl}. Hidden while browsing.`
+      ? `Locked: you can't cast here until Fisher Lv ${h.lvl}.`
       : `Hidden while browsing: ${esc(why)}. Change it in <a class="link" href="#/profile">Profile</a>.`}</p>` : ''}
     <div class="fishes">${main}</div>
     ${extras.length ? `<section><h2 class="sec">Also caught here</h2><p class="note">Reported by players; not in the in-game guide for this hole.</p>

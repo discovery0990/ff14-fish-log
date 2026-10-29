@@ -69,7 +69,7 @@ The mockup is at https://claude.ai/artifact/528uaT9rVpkYAw5xb5dgAz.
 
 ### Filtering rules
 
-- **Locked holes:** the game's 47 "restricted" rod holes (`FishingSpot.Rare`, sparkling icon in the in-game log) can't be cast at below their level. The game says "You can sense something swimming below, but are uncertain where." (LogMessage 1125). With fisher level < hole level they're hidden (greyed if the toggle is on). A zone or region with no visible holes is hidden too.
+- **Locked holes:** the game's 47 "restricted" rod holes (`FishingSpot.Rare`, sparkling icon in the in-game log) can't be cast at below their level. The game says "You can sense something swimming below, but are uncertain where." (LogMessage 1125). With fisher level < hole level they stay listed but greyed, tagged "Locked until Lv X", and are left out of Up soon. This mirrors the game, which lists them as undiscovered. There's no setting for it. Only the expansion filter hides holes; a zone or region with no visible holes is hidden too.
 - **All other holes** are on your map and fishable at any level. This was confirmed in game at Lv 44: the Lv 50 Privateer Forecastle is on the map and fishable, while the restricted Sterncastle is unmarked and locked. So Gulleye's "holes at or below your level" (patch 6.0) only concerns restricted holes. Above-level unrestricted holes are shown normally and included in Up soon.
 - **Coordinates:** every hole shows map coordinates, computed from `FishingSpot.X/Z` (or `SpearfishingNotebook.X/Y`) and the zone map's `SizeFactor`. The build checks them against Teamcraft's coordinates for the 328 rod holes it covers.
 - Spearfishing holes have no known restricted flag, so they're never locked.

@@ -169,7 +169,6 @@ root.addEventListener('click', (ev) => {
       store.setProfile({ exp: next.length === all.length ? null : next });
       break;
     }
-    case 'show-above': store.setProfile({ showAbove: !store.state.profile.showAbove }); break;
     case 'horizon': store.setPrefs({ upSoonHours: Number(d.h) }); break;
     case 'clear-search': {
       const input = document.getElementById('search');

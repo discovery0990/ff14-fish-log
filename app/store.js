@@ -10,7 +10,6 @@ export const defaultState = () => ({
     lvl: null,         // fisher level; null = not set (no level filtering)
     gath: null,        // Gathering; null = not set (no warnings)
     exp: null,         // unlocked expansion ids; null = all
-    showAbove: false,  // show holes above my level, greyed
   },
   last: null,          // last viewed hole id
   upSoonHours: 2,      // "Up soon" horizon
@@ -68,7 +67,6 @@ export function parseBackup(text, data) {
   const profile = p && {
     lvl: num(p.lvl, 1, 100), gath: num(p.gath, 0, 9999),
     exp: Array.isArray(p.exp) ? p.exp.filter((e) => Number.isInteger(e)) : null,
-    showAbove: p.showAbove === true,
   };
   const t = Date.parse(b.exportedAt);
   return {

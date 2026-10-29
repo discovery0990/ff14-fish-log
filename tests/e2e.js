@@ -98,8 +98,9 @@ try {
   check(await js(`document.body.textContent.includes('X 36.0 Y 26.6')`), 'hole shows map coordinates');
   await go('#/rod/zone/32'); // Eastern La Noscea
   check(await js(`document.body.textContent.includes('North Isle of Endless Summer')`), 'unmarked hole is listed in its zone');
-  check(await js(`document.body.textContent.includes('Privateer Forecastle') && !document.body.textContent.includes('Privateer Sterncastle')`), 'Lv 40: Forecastle shown, restricted Sterncastle hidden');
-  check(await js(`document.body.textContent.includes('2 locked holes hidden')`), 'zone says how many locked holes are hidden (Red Mantis Falls, Privateer Sterncastle)');
+  check(await js(`[...document.querySelectorAll('a.card')].find((c) => c.textContent.includes('Privateer Sterncastle'))?.classList.contains('grey')`), 'Lv 40: restricted Sterncastle is greyed');
+  check(await js(`![...document.querySelectorAll('a.card')].find((c) => c.textContent.includes('Privateer Forecastle'))?.classList.contains('grey')`), 'Lv 40: Forecastle is not greyed');
+  check(await js(`document.querySelectorAll('a.card.grey').length === 2 && document.body.textContent.includes('Locked until Lv 45')`), 'locked holes stay listed, greyed (Red Mantis Falls, Privateer Sterncastle)');
   await go('#/rod');
   check(await js(`document.body.textContent.includes('next 3h')`), 'Up soon uses the new horizon');
   await shot('home');

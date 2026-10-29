@@ -69,7 +69,8 @@ export function createModel(data) {
     const h = data.holes[hid];
     const z = data.zones[h.zone];
     if (profile.exp && !profile.exp.includes(z.exp)) return 'hide';
-    if (isLocked(hid, profile)) return profile.showAbove ? 'grey' : 'hide';
+    // Locked holes stay listed (greyed), like "undiscovered" in the game's log.
+    if (isLocked(hid, profile)) return 'grey';
     return 'show';
   }
 

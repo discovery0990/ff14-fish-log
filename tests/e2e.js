@@ -3,87 +3,25 @@
 // local server). Run:
 //   python3 -m http.server 8765 -d app --bind 127.0.0.1 &
 //   deno run -A tests/e2e.js [screenshot-dir]
-//
-// BROWSER defaults to Brave's flatpak; set BROWSER to a chromium binary to
-// use something else. Temp files live in /tmp so a sandboxed browser can see them.
+import { launch } from './cdp.js';
 
 const APP = Deno.env.get('APP_URL') ?? 'http://127.0.0.1:8765/';
-const PORT = 9333;
 const shotDir = Deno.args[0];
-const tmp = await Deno.makeTempDir({ dir: '/tmp', prefix: 'fishlog-e2e-' });
-const browserCmd = (Deno.env.get('BROWSER') ?? 'flatpak run com.brave.Browser').split(' ');
-
-const proc = new Deno.Command(browserCmd[0], {
-  args: [...browserCmd.slice(1), '--headless=new', '--disable-gpu', '--hide-scrollbars', `--remote-debugging-port=${PORT}`,
-    `--user-data-dir=${tmp}/profile`, '--window-size=390,1200', 'about:blank'],
-  stdout: 'null', stderr: 'null',
-}).spawn();
-
+const b = await launch();
+const { tmp, send, js, go, check, waitFor } = b;
+const shot = (name) => b.shot(shotDir, name);
 let failures = 0;
-const check = (cond, msg) => {
-  console.log(`${cond ? 'ok  ' : 'FAIL'} ${msg}`);
-  if (!cond) failures++;
-};
-
-async function waitFor(fn, what, ms = 15000) {
-  const end = Date.now() + ms;
-  while (Date.now() < end) {
-    try {
-      const v = await fn();
-      if (v) return v;
-    } catch { /* retry */ }
-    await new Promise((r) => setTimeout(r, 150));
-  }
-  throw new Error(`timed out waiting for ${what}`);
-}
-
-const target = await waitFor(async () => {
-  const r = await fetch(`http://127.0.0.1:${PORT}/json/list`);
-  return (await r.json()).find((t) => t.type === 'page');
-}, 'browser');
-
-const ws = new WebSocket(target.webSocketDebuggerUrl);
-await new Promise((r) => (ws.onopen = r));
-let nextId = 1;
-const pending = new Map();
-ws.onmessage = (ev) => {
-  const msg = JSON.parse(ev.data);
-  if (msg.id && pending.has(msg.id)) {
-    pending.get(msg.id)(msg);
-    pending.delete(msg.id);
-  }
-};
-const send = (method, params = {}) => new Promise((resolve, reject) => {
-  const id = nextId++;
-  pending.set(id, (m) => (m.error ? reject(new Error(`${method}: ${m.error.message}`)) : resolve(m.result)));
-  ws.send(JSON.stringify({ id, method, params }));
-});
-const js = async (expression) => {
-  const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-  if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? 'eval error');
-  return r.result.value;
-};
-const go = async (hash) => {
-  await js(`location.hash = ${JSON.stringify(hash)}`);
-  await new Promise((r) => setTimeout(r, 250));
-};
-const shot = async (name) => {
-  if (!shotDir) return;
-  const { data } = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
-  await Deno.writeFile(`${shotDir}/${name}.png`, Uint8Array.from(atob(data), (c) => c.charCodeAt(0)));
-};
 const stored = () => js(`JSON.parse(localStorage.getItem('fishlog:v1') || 'null')`);
 
 try {
-  await send('Page.enable');
-  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 1200, deviceScaleFactor: 1, mobile: true });
   await send('Page.navigate', { url: APP });
   await waitFor(() => js(`!!document.querySelector('.tabs')`), 'app load');
   check(true, 'app loads');
 
   // --- Hole: mark caught, discovery follows
   await go('#/hole/r5');
-  await js(`document.querySelector('.check').click()`);
+  // Tap a fish with no window: which fish sorts first depends on the time.
+  await js(`document.querySelector('.check[aria-label$="Mudcrab"]').click()`);
   let s = await stored();
   check(s.caught.length === 1, 'tapping the circle marks a fish caught');
   check(s.discovered.includes('r5'), 'marking caught discovers the hole');
@@ -201,18 +139,9 @@ try {
   failures++;
   console.log(`FAIL ${err.message}`);
 } finally {
-  ws.close();
-  try { proc.kill(); } catch { /* already gone */ }
-  // Stop only this run's browser (matched by its temp profile dir), never a
-  // browser the user has open.
-  // (No leading "--" in the pattern, or pkill parses it as an option.)
-  // Polite stop first; the sandbox wrapper and main process may need SIGKILL.
-  const stop = (sig) => new Deno.Command('pkill', { args: [sig, '-f', `user-data-dir=${tmp}/profile`], stdout: 'null', stderr: 'null' }).output().catch(() => {});
-  await stop('-TERM');
-  await new Promise((r) => setTimeout(r, 1000));
-  await stop('-KILL');
-  await Deno.remove(tmp, { recursive: true }).catch(() => {});
+  await b.close();
 }
 
+failures += b.failures();
 console.log(failures ? `\n${failures} FAILED` : '\nall e2e checks passed');
 Deno.exit(failures ? 1 : 0);

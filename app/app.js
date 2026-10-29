@@ -218,6 +218,58 @@ async function main() {
     if (document.visibilityState === 'visible' && !editing) render({ keepScroll: true });
   }, LIVE_REFRESH_MS);
   render();
+  // Ask the browser not to evict progress under storage pressure.
+  navigator.storage?.persist?.().catch(() => {});
+  registerServiceWorker();
+}
+
+// ------------------------------------------------------------ offline / updates
+
+// Off on localhost so editing files shows up on reload; the e2e test turns it
+// on with localStorage 'fishlog:sw' = '1' when serving the built dist/.
+const SW_ENABLED = 'serviceWorker' in navigator &&
+  (!['localhost', '127.0.0.1'].includes(location.hostname) || localStorage.getItem('fishlog:sw') === '1');
+
+async function registerServiceWorker() {
+  if (!SW_ENABLED) return;
+  let reg;
+  try {
+    reg = await navigator.serviceWorker.register('sw.js');
+  } catch {
+    return; // e.g. private mode; the app still works online
+  }
+  const offer = (worker) => showToast('A new version is available.', 'Reload', () => worker.postMessage('skip-waiting'));
+  if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+  reg.addEventListener('updatefound', () => {
+    const w = reg.installing;
+    w?.addEventListener('statechange', () => {
+      if (w.state === 'installed' && navigator.serviceWorker.controller) offer(w);
+    });
+  });
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!reloading) {
+      reloading = true;
+      location.reload();
+    }
+  });
+  // Home-screen apps can stay open for days; look for updates on return.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') reg.update().catch(() => {});
+  });
+}
+
+function showToast(text, action, onAction) {
+  const t = document.getElementById('toast');
+  t.innerHTML = '';
+  const msg = Object.assign(document.createElement('span'), { className: 'grow', textContent: text });
+  const btn = Object.assign(document.createElement('button'), { className: 'btn primary', textContent: action });
+  btn.addEventListener('click', () => {
+    t.hidden = true;
+    onAction();
+  });
+  t.append(msg, btn);
+  t.hidden = false;
 }
 
 main();

@@ -11,6 +11,9 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
 const TUG = { light: 'Light !', medium: 'Medium !!', heavy: 'Heavy !!!' };
 const HOOK = { powerful: 'Powerful', precision: 'Precision' };
+// Teamcraft enums (libs/types/src/lib/game/spearfishing-*.ts).
+const SPEED = ['Very slow', 'Slow', 'Average', 'Fast', 'Faster', 'Very fast'];
+const SHADOW = ['Small', 'Normal', 'Large'];
 
 /** "14m", "1h 52m", "2d 3h". */
 export function fmtDuration(ms) {
@@ -71,8 +74,9 @@ const checkSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5
 
 function baitLine(m, fid, hid, e) {
   if (m.data.fish[fid].log === 'spear') {
-    const size = m.data.recordTypes[m.data.fish[fid].rec]?.name;
-    return `<span class="sub">${size ? `${esc(size)} · ` : ''}Speed ${esc(e.speed ?? '?')}</span>`;
+    const shadow = SHADOW[e.size] ? `${SHADOW[e.size]} shadow` : 'Shadow ?';
+    const speed = SPEED[e.speed] ?? 'Speed ?';
+    return `<span class="sub"><span class="hi">${shadow}</span> · ${speed}</span>`;
   }
   const tug = e.tug ? `<span class="hi">${TUG[e.tug]}</span>` : '<span class="hi">Tug ?</span>';
   const hook = e.hook ? HOOK[e.hook] : 'Hookset ?';
@@ -313,7 +317,11 @@ export function profileView(ctx) {
       </div>
       <p class="note">Progress lives on this device only. Last export: ${s.lastExport ? daysAgo(s.lastExport, now) : 'never'}.</p>
     </section>
-    <p class="note">${store.caughtCount()} caught · data ${esc(m.data.meta.game)} · built ${esc(m.data.meta.built.slice(0, 10))}</p>`;
+    <p class="note">${store.caughtCount()} caught · data ${esc(m.data.meta.game)} · built ${esc(m.data.meta.built.slice(0, 10))}</p>
+    <p class="legal">FINAL FANTASY is a registered trademark of Square Enix Holdings Co., Ltd.
+      FINAL FANTASY XIV © SQUARE ENIX CO., LTD. All rights reserved. Game data and icons via XIVAPI;
+      catch conditions from FFXIV Teamcraft. Fish Log is an unofficial fan project, not affiliated with
+      or endorsed by Square Enix. Fonts: IBM Plex (SIL OFL 1.1).</p>`;
 }
 
 export function regionView(ctx, tab, rid) {
@@ -480,7 +488,7 @@ export function fishView(ctx, fid, fromHole) {
 
   const facts = [];
   if (f.log === 'spear') {
-    facts.push(['Size', rec ?? '?'], ['Speed', e.speed ?? '?']);
+    facts.push(['Shadow', SHADOW[e.size] ?? 'Unknown'], ['Speed', SPEED[e.speed] ?? 'Unknown']);
   } else if (!m.isMooch(e)) {
     facts.push(['Bait', e.bait ? m.fishName(e.bait) + (e.alts?.length ? ` (or ${e.alts.map(m.fishName).join(', ')})` : '') : 'Unknown'],
       ['Tug', e.tug ? TUG[e.tug] : 'Unknown'], ['Hookset', e.hook ? HOOK[e.hook] : 'Unknown']);

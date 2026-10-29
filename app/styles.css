@@ -1,3 +1,19 @@
+/* IBM Plex (SIL OFL 1.1, see fonts/OFL.txt), latin subset, self-hosted for offline use. */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(fonts/IBMPlexSans-latin.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(fonts/IBMPlexMono-500-latin.woff2) format('woff2');
+}
+
 :root {
   --bg: #0E1A24;
   --surface: #15263A;
@@ -170,6 +186,13 @@ section { display: flex; flex-direction: column; gap: 10px; }
 .switch span { width: 22px; height: 22px; border-radius: 11px; background: var(--text); }
 button.chip { background: none; }
 button.chip.on { background: var(--accent-bg); }
+
+/* Update toast */
+.toast { position: fixed; left: 16px; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); max-width: 528px; margin: 0 auto;
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--edge); box-shadow: 0 8px 24px rgba(0,0,0,.4); z-index: 10; }
+.toast[hidden] { display: none; }
+.toast .btn { height: 40px; padding: 0 16px; }
+.legal { margin: 0; font-size: 11px; line-height: 1.5; color: var(--muted); }
 
 @media (hover: hover) {
   .item:hover, .card:hover { background: #1A2D44; }

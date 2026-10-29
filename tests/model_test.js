@@ -1,7 +1,7 @@
 import { assert, assertEquals, assertStringIncludes } from 'jsr:@std/assert@1.0.13';
 import { createModel } from '../app/model.js';
-import { createStore } from '../app/store.js';
-import { esc, fishView, fmtDuration, holeView, homeView, regionView, zoneView } from '../app/views.js';
+import { createStore, makeBackup, parseBackup, shouldRemind } from '../app/store.js';
+import { esc, fishView, fmtDuration, holeView, homeView, profileView, regionView, zoneView } from '../app/views.js';
 import { fishWindows } from '../app/engine.js';
 
 const DATA = JSON.parse(await Deno.readTextFile(new URL('../app/data/fish.json', import.meta.url)));
@@ -111,7 +111,7 @@ Deno.test('store survives corrupt storage', () => {
 // ------------------------------------------------------------ views
 
 const ctxFor = (store, extra = {}) => ({
-  m, store, now: T, tab: 'rod',
+  m, store, now: T, tab: 'rod', query: '', showAllSoon: false, pendingImport: null, flash: '', remind: false,
   nextWindows: (fid, hid, count) => fishWindows(DATA, fid, hid, T, { count }),
   ...extra,
 });
@@ -125,6 +125,9 @@ Deno.test('every view renders for every region, zone, hole and fish', () => {
     for (const z of Object.keys(DATA.zones)) if (m.zoneHolesAll(tab, z).length) zoneView(ctx, tab, z);
   }
   for (const hid of Object.keys(DATA.holes)) holeView(ctx, hid);
+  profileView(ctx);
+  homeView({ ...ctx, query: 'goby' });
+  homeView({ ...ctx, remind: true, showAllSoon: true });
   for (const fid of Object.keys(DATA.fish)) fishView(ctx, fid, null);
 });
 
@@ -151,4 +154,104 @@ Deno.test('escaping and duration formatting', () => {
   assertEquals(fmtDuration(14 * 60000), '14m');
   assertEquals(fmtDuration(112 * 60000), '1h 52m');
   assertEquals(fmtDuration(51 * 3600000), '2d 3h');
+});
+
+// ------------------------------------------------------------ search
+
+Deno.test('search: prefix matches first, accent-insensitive, typed results', () => {
+  const r = m.search('hopeseed');
+  assertEquals(r[0], { type: 'hole', id: 'r5' });
+  assert(m.search('central shroud').some((x) => x.type === 'zone' && x.tab === 'rod'));
+  assertEquals(m.search('g'), []); // too short
+  const goby = m.search('goby').map((x) => m.fishName(x.id));
+  assert(goby.includes('Merlthor Goby'));
+  // accents: there is at least one fish with an accent in its name
+  const accented = Object.values(DATA.fish).find((f) => /[\u00C0-\u017F]/.test(f.name));
+  if (accented) {
+    const plain = accented.name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    assert(m.search(plain).some((x) => m.fishName(x.id) === accented.name));
+  }
+});
+
+// ------------------------------------------------------------ up soon
+
+Deno.test('up soon: within horizon, open first, uncaught, eligible, one per fish', () => {
+  const p = profile();
+  const opts = { now: T, horizonMs: 2 * 36e5, isCaught: () => false, profile: p };
+  const list = m.upSoon('rod', opts);
+  assert(list.length > 10);
+  const firstUpcoming = list.findIndex((x) => x.st.state === 'upcoming');
+  assert(list.slice(firstUpcoming).every((x) => x.st.state === 'upcoming'), 'open entries come first');
+  for (const x of list) {
+    if (x.st.state === 'upcoming') assert(x.st.start - T <= 2 * 36e5);
+    assert(!DATA.holes[x.hid].ocean);
+  }
+  assertEquals(new Set(list.map((x) => x.fid)).size, list.length);
+  // caught fish drop out
+  const caught = new Set([list[0].fid]);
+  assert(!m.upSoon('rod', { ...opts, isCaught: (f) => caught.has(f) }).some((x) => x.fid === list[0].fid));
+  // gathering shortfall drops out
+  const lowG = m.upSoon('rod', { ...opts, profile: profile({ gath: 0 }) });
+  assert(lowG.every((x) => !(DATA.fish[x.fid].at[x.hid].minG > 0)));
+  // level filter applies
+  const lv20 = m.upSoon('rod', { ...opts, profile: profile({ lvl: 20 }) });
+  assert(lv20.every((x) => DATA.holes[x.hid].lvl <= 20));
+});
+
+// ------------------------------------------------------------ backup
+
+Deno.test('backup round trip and validation', () => {
+  const s = createStore(memStorage());
+  s.toggleCaught('4964', 'r5');
+  s.setProfile({ lvl: 40, gath: 340, exp: [0, 1] });
+  const text = JSON.stringify(makeBackup(s.state, T));
+  const b = parseBackup(text, DATA);
+  assert(b.ok);
+  assertEquals(b.caught, ['4964']);
+  assertEquals(b.discovered, ['r5']);
+  assertEquals(b.profile, { lvl: 40, gath: 340, exp: [0, 1], showAbove: false });
+  assertEquals(b.exportedAt, T);
+
+  assertEquals(parseBackup('nope', DATA).ok, false);
+  assertEquals(parseBackup('{"app":"other"}', DATA).ok, false);
+  assertEquals(parseBackup('{"app":"fishlog","v":2,"caught":[],"discovered":[]}', DATA).ok, false);
+  const withJunk = parseBackup(JSON.stringify({ app: 'fishlog', v: 1, caught: ['4964', '999999', {}], discovered: ['r5', 'r99999'], profile: { lvl: 500 } }), DATA);
+  assert(withJunk.ok);
+  assertEquals(withJunk.caught, ['4964']);
+  assertEquals(withJunk.dropped, 2);
+  assertEquals(withJunk.profile.lvl, null);
+});
+
+Deno.test('import: merge unions, replace overwrites', () => {
+  const s = createStore(memStorage());
+  s.toggleCaught('4950', 'r5');
+  const b = parseBackup(JSON.stringify({ app: 'fishlog', v: 1, caught: ['4964'], discovered: ['r2'], profile: { lvl: 40 } }), DATA);
+  s.importBackup(b, 'merge');
+  assert(s.isCaught('4950') && s.isCaught('4964'));
+  assertEquals(s.state.profile.lvl, null); // merge keeps the profile
+  s.importBackup(b, 'replace');
+  assert(!s.isCaught('4950') && s.isCaught('4964'));
+  assert(s.isDiscovered('r2') && !s.isDiscovered('r5'));
+  assertEquals(s.state.profile.lvl, 40);
+});
+
+Deno.test('backup reminder: needs 14 days and 10 new catches; snooze 3 days', () => {
+  const DAY = 864e5;
+  const base = { lastExport: T, caughtAtLastExport: 100, createdAt: T - 30 * DAY, reminderDismissedAt: null };
+  assertEquals(shouldRemind(base, 120, T + 13 * DAY), false);
+  assertEquals(shouldRemind(base, 105, T + 20 * DAY), false);
+  assertEquals(shouldRemind(base, 110, T + 14 * DAY), true);
+  assertEquals(shouldRemind({ ...base, reminderDismissedAt: T + 14 * DAY }, 110, T + 16 * DAY), false);
+  assertEquals(shouldRemind({ ...base, reminderDismissedAt: T + 14 * DAY }, 110, T + 17 * DAY), true);
+  // never exported: counts from first use
+  assertEquals(shouldRemind({ ...base, lastExport: null, caughtAtLastExport: 0 }, 10, T), true);
+  assertEquals(shouldRemind({ ...base, lastExport: null, createdAt: null }, 50, T), false);
+});
+
+Deno.test('store: markExported resets the reminder baseline', () => {
+  const s = createStore(memStorage());
+  s.toggleCaught('4964', 'r5');
+  s.markExported(T);
+  assertEquals(s.state.lastExport, T);
+  assertEquals(s.state.caughtAtLastExport, 1);
 });

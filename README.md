@@ -24,6 +24,13 @@ deno task test
 
 These cover the engine in `app/engine.js` (Eorzea time, weather forecast, window finder). The forecast is checked against the upstream tracker's implementation, and the finder against brute-force sampling on real fish.
 
+There's also an end-to-end smoke test in a real headless browser (Brave flatpak by default; set `BROWSER` to use another Chromium):
+
+```sh
+python3 -m http.server 8765 -d app --bind 127.0.0.1 &
+deno run -A tests/e2e.js [screenshot-dir]
+```
+
 ## Sources
 
 Data comes from [XIVAPI](https://v2.xivapi.com) (game data) and [FFXIV Teamcraft](https://github.com/ffxiv-teamcraft/ffxiv-teamcraft) (MIT; catch conditions). Hand fixes go in `data/overrides.json`.

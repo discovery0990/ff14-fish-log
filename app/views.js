@@ -128,19 +128,43 @@ export function homeView(ctx) {
         ${progress(c, 'thin')}
       </a>`).join('');
 
-  return `
+  const searchBox = `
+    <label class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <span class="sr">Search</span>
+      <input id="search" type="search" placeholder="Fish, hole or zone" autocomplete="off" autocorrect="off"
+        spellcheck="false" enterkeyhint="search" value="${esc(ctx.query)}">
+    </label>`;
+
+  const header = `
     <header class="top">
       <div class="grow"><h1>Fish Log</h1><div class="sub">${prof} · ET <span class="num">${fmtEtClock(now)}</span></div></div>
       <a class="iconbtn" href="#/profile" aria-label="Profile and filters">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
       </a>
-    </header>
+    </header>`;
+
+  const reminder = ctx.remind ? `
+    <div class="banner row">
+      <span class="grow">${store.state.lastExport ? `Last backup ${daysAgo(store.state.lastExport, now)}` : 'No backup yet'} ·
+        ${store.caughtCount() - store.state.caughtAtLastExport} new catches. <a class="link" href="#/profile">Back up now</a></span>
+      <button class="x" data-act="dismiss-reminder" aria-label="Dismiss backup reminder">×</button>
+    </div>` : '';
+
+  return `
+    ${header}
+    ${reminder}
     <div class="stack-s">
       <div class="row sub"><span class="grow">Overall</span><span class="num hi">${store.caughtCount()} / ${total.toLocaleString()}</span></div>
       ${progress({ caught: store.caughtCount(), total })}
     </div>
     <nav class="tabs" role="tablist" aria-label="Fishing type">${tabs}</nav>
-    ${cont}
+    ${searchBox}
+    ${ctx.query.trim() ? searchResults(ctx) : `${cont}${upSoonSection(ctx)}${regionsBlock(regionRows, hidden)}`}`;
+}
+
+function regionsBlock(regionRows, hidden) {
+  return `
     <section><h2 class="sec">Regions</h2>
       <div class="list">${regionRows || '<p class="empty">Nothing matches your filters.</p>'}</div>
       ${hidden ? `<p class="note">${hidden} region${hidden > 1 ? 's' : ''} hidden by your level and expansion filters.</p>` : ''}
@@ -148,6 +172,138 @@ export function homeView(ctx) {
 }
 
 const countText = ({ caught, total }) => `${caught} / ${total}`;
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/** "Hole · Zone", or just the name when a hole is named after its zone. */
+function holePlace(m, hid) {
+  const h = m.data.holes[hid];
+  const z = m.data.zones[h.zone].name;
+  return h.name === z ? z : `${h.name} · ${z}`;
+}
+
+export function daysAgo(ms, now) {
+  const d = Math.floor((now - ms) / 864e5);
+  return d <= 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
+}
+
+const UP_SOON_SHOWN = 8;
+
+function upSoonSection(ctx) {
+  const { m, store, tab, now } = ctx;
+  if (tab === 'ocean') return '';
+  const hours = store.state.upSoonHours;
+  const all = m.upSoon(tab, { now, horizonMs: hours * 36e5, isCaught: store.isCaught, profile: store.state.profile });
+  const shown = ctx.showAllSoon ? all : all.slice(0, UP_SOON_SHOWN);
+  const rows = shown.map(({ fid, hid, st }) => {
+    const f = m.data.fish[fid];
+    const h = m.data.holes[hid];
+    const cond = condText(m, f.at[hid]);
+    return `
+      <a class="item row top-align" href="#/hole/${hid}">
+        ${icon(f.icon)}
+        <span class="grow stack-xs">
+          <span class="row"><span class="title grow">${esc(f.name)}</span>${statusPill(st, now)}</span>
+          <span class="sub">${esc(holePlace(m, hid))}${store.isDiscovered(hid) ? '' : ' · <span class="undisc-txt">undiscovered</span>'}</span>
+          <span class="sub">${esc(cond)}</span></span>
+      </a>`;
+  }).join('');
+  const more = all.length > UP_SOON_SHOWN
+    ? `<button class="more" data-act="soon-all">${ctx.showAllSoon ? 'Show fewer' : `Show all ${all.length}`}</button>` : '';
+  return `
+    <section>
+      <div class="row"><h2 class="sec grow">Up soon · uncaught</h2><span class="note">next ${hours}h</span></div>
+      ${rows ? `<div class="list">${rows}</div>${more}` : '<p class="note">Nothing opens in that time. Try a longer horizon in Profile.</p>'}
+    </section>`;
+}
+
+function searchResults(ctx) {
+  const { m, store } = ctx;
+  const results = m.search(ctx.query);
+  if (ctx.query.trim().length < 2) return '<p class="note">Keep typing…</p>';
+  if (!results.length) return '<p class="note">No fish, holes or zones match.</p>';
+  const rows = results.map((r) => {
+    if (r.type === 'fish') {
+      const f = m.data.fish[r.id];
+      const zones = [...new Set(m.fishHoles(r.id).map((h) => m.data.zones[m.data.holes[h].zone].name))];
+      const caught = store.isCaught(r.id) ? ' · <span class="link">caught</span>' : '';
+      return `<a class="item row" href="#/fish/${r.id}">${icon(f.icon)}<span class="grow"><span class="title">${esc(f.name)}</span>
+        <span class="sub">Fish · ${esc(zones.slice(0, 2).join(', '))}${zones.length > 2 ? ` +${zones.length - 2}` : ''}${caught}</span></span>${chevron}</a>`;
+    }
+    if (r.type === 'hole') {
+      const h = m.data.holes[r.id];
+      return `<a class="item row" href="#/hole/${r.id}"><span class="grow"><span class="title">${esc(h.name)}</span>
+        <span class="sub">Hole · ${esc(m.data.zones[h.zone].name)} · Lv ${h.lvl} · ${countText(m.count([r.id], store.isCaught))}</span></span>${chevron}</a>`;
+    }
+    const z = m.data.zones[r.id];
+    return `<a class="item row" href="#/${r.tab}/zone/${r.id}"><span class="grow"><span class="title">${esc(z.name)}</span>
+      <span class="sub">Zone · ${esc(m.data.regions[z.region].name)}</span></span>${chevron}</a>`;
+  }).join('');
+  return `<section><h2 class="sec">Results</h2><div class="list">${rows}</div></section>`;
+}
+
+export function profileView(ctx) {
+  const { m, store, now } = ctx;
+  const s = store.state;
+  const p = s.profile;
+  const stepper = (key, label, lo, hi) => `
+    <div class="item row">
+      <label class="grow" for="p-${key}">${label}</label>
+      <button class="step" data-act="step" data-key="${key}" data-d="-1" aria-label="Lower ${label}">−</button>
+      <input id="p-${key}" class="numin" type="number" inputmode="numeric" min="${lo}" max="${hi}"
+        data-profile="${key}" value="${p[key] ?? ''}" placeholder="—">
+      <button class="step" data-act="step" data-key="${key}" data-d="1" aria-label="Raise ${label}">+</button>
+    </div>`;
+
+  const expIds = Object.keys(m.data.expansions).map(Number);
+  const exps = expIds.map((id) => {
+    const on = !p.exp || p.exp.includes(id);
+    return `<button class="chip${on ? ' on' : ''}" data-act="exp" data-exp="${id}" aria-pressed="${on}">${esc(m.data.expansions[id])}</button>`;
+  }).join('');
+
+  const sw = (act, label, on) => `
+    <button class="item row switch-row" data-act="${act}" role="switch" aria-checked="${on}">
+      <span class="grow">${label}</span><span class="switch${on ? ' on' : ''}" aria-hidden="true"><span></span></span>
+    </button>`;
+
+  const horizons = [1, 2, 3, 6].map((h) =>
+    `<button class="chip${s.upSoonHours === h ? ' on' : ''}" data-act="horizon" data-h="${h}" aria-pressed="${s.upSoonHours === h}">${h}h</button>`).join('');
+
+  const pending = ctx.pendingImport;
+  const importPanel = pending ? `
+    <div class="banner stack-s">
+      <span class="hi">Backup from ${pending.exportedAt ? fmtWhen(pending.exportedAt, now) + ` (${daysAgo(pending.exportedAt, now)})` : 'an unknown date'}</span>
+      <span class="sub">${pending.caught.length} caught · ${plural(pending.discovered.length, 'hole')} discovered${pending.dropped ? ` · ${pending.dropped} unknown ids skipped` : ''}</span>
+      <div class="btns">
+        <button class="btn primary" data-act="import-merge">Merge</button>
+        <button class="btn" data-act="import-replace">Replace</button>
+        <button class="btn" data-act="import-cancel">Cancel</button>
+      </div>
+      <span class="note">Merge adds the backup to what's on this phone. Replace makes this phone match the backup exactly.</span>
+    </div>` : '';
+
+  return `
+    ${back('#/rod', 'Home')}
+    <h1>Profile &amp; filters</h1>
+    <section><h2 class="sec">My fisher</h2>
+      <div class="list">${stepper('lvl', 'Fisher level', 1, 100)}${stepper('gath', 'Gathering', 0, 9999)}</div>
+      <p class="note">Holes above your level are hidden. Fish needing more Gathering than you have are flagged at the hole and left out of Up soon. Leave blank to turn off.</p>
+    </section>
+    <section><h2 class="sec">Expansions unlocked</h2><div class="chips">${exps}</div></section>
+    <section><h2 class="sec">Show</h2>
+      <div class="list">${sw('show-above', 'Show holes above my level (greyed)', p.showAbove)}</div>
+    </section>
+    <section><h2 class="sec">Up soon looks ahead</h2><div class="chips">${horizons}</div></section>
+    <section><h2 class="sec">Backup</h2>
+      ${ctx.flash ? `<p class="note hi">${esc(ctx.flash)}</p>` : ''}
+      ${importPanel}
+      <div class="btns">
+        <button class="btn" data-act="export">Export progress</button>
+        <label class="btn">Import<input id="import-file" type="file" accept=".json,application/json" class="sr"></label>
+      </div>
+      <p class="note">Progress lives on this device only. Last export: ${s.lastExport ? daysAgo(s.lastExport, now) : 'never'}.</p>
+    </section>
+    <p class="note">${store.caughtCount()} caught · data ${esc(m.data.meta.game)} · built ${esc(m.data.meta.built.slice(0, 10))}</p>`;
+}
 
 export function regionView(ctx, tab, rid) {
   const { m, store, now } = ctx;
@@ -167,13 +323,13 @@ export function regionView(ctx, tab, rid) {
       <a class="card" href="#/${tab}/zone/${z}">
         <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span><span class="num">${countText(c)}</span></div>
         ${progress(c, 'thin')}
-        <div class="tags"><span class="sub">${vis.length} hole${vis.length > 1 ? 's' : ''} · ${lvText}</span>${areaTags(ctx, vis, c)}</div>
+        <div class="tags"><span class="sub">${plural(vis.length, 'hole')} · ${lvText}</span>${areaTags(ctx, vis, c)}</div>
       </a>`;
   }).join('');
   return `
     ${back(`#/${tab}`, 'Home')}
     <header class="stack-s"><h1>${esc(region.name)}</h1>
-      <div class="row sub"><span class="grow">${zones.length} zones · ${holeCount} holes</span><span class="num hi">${countText(all)} fish</span></div>
+      <div class="row sub"><span class="grow">${plural(zones.length, 'zone')} · ${plural(holeCount, 'hole')}</span><span class="num hi">${countText(all)} fish</span></div>
       ${progress(all)}</header>
     <section><h2 class="sec">Zones</h2><div class="cards">${cards}</div></section>`;
 }
@@ -232,7 +388,7 @@ export function zoneView(ctx, tab, zid, filter = 'all') {
   return `
     ${back(`#/${tab}/region/${zone.region}`, m.data.regions[zone.region].name)}
     <header class="stack-s"><h1>${esc(zone.name)}</h1>
-      <div class="row sub"><span class="grow">${vis.length} holes${undisc ? ` · ${undisc} undiscovered` : ''}</span><span class="num hi">${countText(c)} fish</span></div>
+      <div class="row sub"><span class="grow">${plural(vis.length, 'hole')}${undisc ? ` · ${undisc} undiscovered` : ''}</span><span class="num hi">${countText(c)} fish</span></div>
       ${progress(c)}</header>
     <div class="chips" role="group" aria-label="Show">${chips}</div>
     <section><h2 class="sec">Fishing holes</h2><div class="cards">${cards || '<p class="empty">No holes match.</p>'}</div></section>`;
@@ -353,7 +509,7 @@ export function fishView(ctx, fid, fromHole) {
 
   const found = holes.map((x) => {
     const hh = m.data.holes[x];
-    return `<a class="item row" href="#/hole/${x}"><span class="grow">${esc(hh.name)} · ${esc(m.data.zones[hh.zone].name)}</span><span class="num dim">Lv ${hh.lvl}</span></a>`;
+    return `<a class="item row" href="#/hole/${x}"><span class="grow">${esc(holePlace(m, x))}</span><span class="num dim">Lv ${hh.lvl}</span></a>`;
   }).join('');
 
   return `
@@ -373,6 +529,3 @@ export function notFound() {
   return `${back('#/rod', 'Home')}<h1>Not found</h1><p class="note">That page doesn't exist.</p>`;
 }
 
-export function placeholderView(title) {
-  return `${back('#/rod', 'Home')}<h1>${esc(title)}</h1><p class="note">Coming in the next part of milestone 3.</p>`;
-}

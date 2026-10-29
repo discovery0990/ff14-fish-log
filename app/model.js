@@ -131,7 +131,61 @@ export function createModel(data) {
   const gatheringShort = (entry, profile) =>
     profile.gath != null && entry.minG != null && entry.minG > profile.gath;
 
+  // Fish/hole pairs that have a time or weather window (ocean excluded).
+  const windowed = {}; // tab → [[fid, hid]]
+  for (const tab of TABS) windowed[tab] = [];
+  for (const [fid, f] of Object.entries(data.fish)) {
+    for (const [hid, e] of Object.entries(f.at)) {
+      const h = data.holes[hid];
+      if (h && !h.ocean && hasWindow(e)) windowed[holeTab(h)].push([fid, hid]);
+    }
+  }
+
+  /**
+   * Uncaught fish whose window is open or opens within the horizon, at holes
+   * the profile shows (discovered or not), skipping fish needing more
+   * Gathering. One entry per fish (its soonest hole); open windows first.
+   */
+  function upSoon(tab, { now, horizonMs, isCaught, profile }) {
+    const best = new Map();
+    for (const [fid, hid] of windowed[tab] ?? []) {
+      if (isCaught(fid) || holeVisibility(hid, profile) !== 'show') continue;
+      if (gatheringShort(data.fish[fid].at[hid], profile)) continue;
+      const st = status(fid, hid, now);
+      if (!st || st.state === 'rare') continue;
+      if (st.state === 'upcoming' && st.start - now > horizonMs) continue;
+      const key = st.state === 'open' ? [0, st.end] : [1, st.start];
+      const prev = best.get(fid);
+      if (!prev || key[0] < prev.key[0] || (key[0] === prev.key[0] && key[1] < prev.key[1])) {
+        best.set(fid, { fid, hid, st, key });
+      }
+    }
+    return [...best.values()].sort((a, b) => a.key[0] - b.key[0] || a.key[1] - b.key[1]);
+  }
+
+  // Search over fish, holes and zones (accent- and case-insensitive).
+  const norm = (s) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const index = [
+    ...Object.entries(data.fish).map(([id, f]) => ({ type: 'fish', id, key: norm(f.name) })),
+    ...Object.entries(data.holes).map(([id, h]) => ({ type: 'hole', id, key: norm(h.name) })),
+    ...Object.entries(data.zones).map(([id, z]) => ({ type: 'zone', id, key: norm(z.name) })),
+  ];
+  const zoneTab = (zid) => TABS.find((t) => zoneHoles[t][zid]);
+
+  function search(query, limit = 40) {
+    const q = norm(query.trim());
+    if (q.length < 2) return [];
+    const typeOrder = { zone: 0, hole: 1, fish: 2 };
+    return index
+      .filter((x) => x.key.includes(q))
+      .map((x) => ({ ...x, rank: x.key.startsWith(q) ? 0 : x.key.split(/[\s'-]/).some((w) => w.startsWith(q)) ? 1 : 2 }))
+      .sort((a, b) => a.rank - b.rank || typeOrder[a.type] - typeOrder[b.type] || a.key.localeCompare(b.key))
+      .slice(0, limit)
+      .map(({ type, id }) => (type === 'zone' ? { type, id, tab: zoneTab(id) } : { type, id }));
+  }
+
   return {
+    upSoon, search,
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
     isMooch, moochChain, moochTargets, status, weatherNow, gatheringShort,

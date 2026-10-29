@@ -13,5 +13,7 @@
 </head>
 <body>
   <main id="app" class="page"><p class="note">Loading…</p></main>
+  <!-- Outside #app so re-renders never replace it while the Files picker is open. -->
+  <input id="import-file" type="file" accept=".json,application/json" hidden>
 </body>
 </html>

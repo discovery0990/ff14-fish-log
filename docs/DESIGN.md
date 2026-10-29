@@ -316,5 +316,14 @@ return s2 % 100
 1. **Data build:** script, assertions, `fish.json`, icons.
 2. **Engine:** time, forecast and window finder, with tests.
 3. **App v1:** Rod and Spearfishing, the six screens, profile and filters, storage, export/import.
-4. **PWA:** manifest, service worker, Pages deploy, iPhone checks.
+4. **PWA:** manifest, service worker, Pages deploy, iPhone checks. Carried over from milestone 3:
+   - Self-host the IBM Plex fonts (they load from Google Fonts now, so not offline).
+   - Call `navigator.storage.persist()` on first run.
+   - Decode spearfishing `speed` (currently a raw 0–5).
+   - **On device, confirm:**
+     - The search keyboard stays up while typing.
+     - The share sheet works for export.
+     - The Files picker works for import.
+     - Taps aren't dropped and momentum scrolling isn't cut off by the 15-second refresh. If either happens, update only the clock and status-pill text instead of the whole page.
+   - The e2e test runs in desktop Chromium, so it can't cover these.
 5. **Ocean:** static lists (v1), then the schedule spike.

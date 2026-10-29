@@ -108,26 +108,6 @@ export function homeView(ctx) {
   const tabs = TABS.map((t) =>
     `<a role="tab" href="#/${t}" class="tab${t === tab ? ' on' : ''}" aria-selected="${t === tab}">${TAB_LABELS[t]}</a>`).join('');
 
-  const last = store.state.last && m.data.holes[store.state.last];
-  const cont = last ? `
-    <section><h2 class="sec">Continue</h2>
-      <a class="card row" href="#/hole/${store.state.last}">
-        <div class="grow"><div class="title">${esc(last.name)}</div>
-          <div class="sub">${esc(m.data.zones[last.zone].name)} · Lv ${last.lvl} ·
-            ${countText(m.count([store.state.last], store.isCaught))} caught</div></div>${chevron}
-      </a></section>` : '';
-
-  const regions = m.visibleRegions(tab, profile);
-  const allRegions = Object.keys(m.data.regions).filter((r) => m.regionHolesAll(tab, r).length);
-  const hidden = allRegions.length - regions.length;
-  const regionRows = regions
-    .map((r) => [r, m.count(m.regionHolesAll(tab, r), store.isCaught)])
-    .map(([r, c]) => `
-      <a class="item" href="#/${tab}/region/${r}">
-        <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span><span class="num">${countText(c)}</span></div>
-        ${progress(c, 'thin')}
-      </a>`).join('');
-
   const searchBox = `
     <label class="search">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
@@ -160,7 +140,38 @@ export function homeView(ctx) {
     </div>
     <nav class="tabs" role="tablist" aria-label="Fishing type">${tabs}</nav>
     ${searchBox}
-    ${ctx.query.trim() ? searchResults(ctx) : `${cont}${upSoonSection(ctx)}${regionsBlock(regionRows, hidden)}`}`;
+    <div id="home-body" class="stack-l">${homeBody(ctx)}</div>`;
+}
+
+/**
+ * Everything below the search box. Rendered on its own while typing, so the
+ * search input is never replaced (iOS closes the keyboard if it is).
+ */
+export function homeBody(ctx) {
+  const { m, store, tab } = ctx;
+  const { profile } = store.state;
+  if (ctx.query.trim()) return searchResults(ctx);
+  const last = store.state.last && m.data.holes[store.state.last];
+  const cont = last ? `
+    <section><h2 class="sec">Continue</h2>
+      <a class="card row" href="#/hole/${store.state.last}">
+        <div class="grow"><div class="title">${esc(last.name)}</div>
+          <div class="sub">${esc(m.data.zones[last.zone].name)} · Lv ${last.lvl} ·
+            ${countText(m.count([store.state.last], store.isCaught))} caught</div></div>${chevron}
+      </a></section>` : '';
+
+  const regions = m.visibleRegions(tab, profile);
+  const allRegions = Object.keys(m.data.regions).filter((r) => m.regionHolesAll(tab, r).length);
+  const hidden = allRegions.length - regions.length;
+  const regionRows = regions
+    .map((r) => [r, m.count(m.regionHolesAll(tab, r), store.isCaught)])
+    .map(([r, c]) => `
+      <a class="item" href="#/${tab}/region/${r}">
+        <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span><span class="num">${countText(c)}</span></div>
+        ${progress(c, 'thin')}
+      </a>`).join('');
+
+  return `${cont}${upSoonSection(ctx)}${regionsBlock(regionRows, hidden)}`;
 }
 
 function regionsBlock(regionRows, hidden) {
@@ -298,7 +309,7 @@ export function profileView(ctx) {
       ${importPanel}
       <div class="btns">
         <button class="btn" data-act="export">Export progress</button>
-        <label class="btn">Import<input id="import-file" type="file" accept=".json,application/json" class="sr"></label>
+        <button class="btn" data-act="import">Import</button>
       </div>
       <p class="note">Progress lives on this device only. Last export: ${s.lastExport ? daysAgo(s.lastExport, now) : 'never'}.</p>
     </section>
@@ -458,6 +469,8 @@ export function fishView(ctx, fid, fromHole) {
   if (!f) return notFound();
   const holes = m.fishHoles(fid);
   const hid = holes.includes(fromHole) ? fromHole : holes[0];
+  // Only a hole the user came from gets discovered when marking caught here.
+  const discoverHid = holes.includes(fromHole) ? fromHole : '';
   const e = f.at[hid] ?? {};
   const h = m.data.holes[hid];
   const caught = store.isCaught(fid);
@@ -517,7 +530,7 @@ export function fishView(ctx, fid, fromHole) {
     <header class="row">${icon(f.icon, 'icon lg')}
       <div class="grow"><h1>${esc(f.name)}</h1><div class="sub">Lv ${f.lvl}${stars}${rec ? ` · ${esc(rec)}` : ''}${!st ? ' · Always available' : ''}</div></div>
     </header>
-    <button class="big${caught ? ' done' : ''}" data-act="caught" data-fid="${fid}" data-hid="${hid}" aria-pressed="${caught}">${caught ? 'Caught — tap to undo' : 'Mark caught'}</button>
+    <button class="big${caught ? ' done' : ''}" data-act="caught" data-fid="${fid}" data-hid="${discoverHid}" aria-pressed="${caught}">${caught ? 'Caught — tap to undo' : 'Mark caught'}</button>
     ${banner}
     ${facts.length ? `<section><h2 class="sec">How to catch${holes.length > 1 ? ` · ${esc(h.name)}` : ''}</h2>
       <dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>` : ''}

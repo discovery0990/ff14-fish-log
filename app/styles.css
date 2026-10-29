@@ -175,3 +175,4 @@ button.chip.on { background: var(--accent-bg); }
   .item:hover, .card:hover { background: #1A2D44; }
 }
 .stack-xs { display: flex; flex-direction: column; gap: 2px; }
+.stack-l { display: flex; flex-direction: column; gap: 20px; }

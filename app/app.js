@@ -4,7 +4,7 @@ import { fishWindows } from './engine.js';
 import { TABS, createModel } from './model.js';
 import { createStore, makeBackup, parseBackup, shouldRemind } from './store.js';
 import {
-  fishView, holeView, homeView, notFound, profileView, regionView, zoneView,
+  fishView, holeView, homeBody, homeView, notFound, profileView, regionView, zoneView,
 } from './views.js';
 
 const LIVE_REFRESH_MS = 15_000;
@@ -22,15 +22,19 @@ function parseRoute() {
   return { parts: path.split('/').filter(Boolean), params: new URLSearchParams(query) };
 }
 
-function view() {
-  const { parts, params } = parseRoute();
+function makeCtx(parts) {
   const now = Date.now();
-  const ctx = {
+  return {
     m: model, store, now, ...ui,
     tab: TABS.includes(parts[0]) ? parts[0] : 'rod',
     remind: shouldRemind(store.state, store.caughtCount(), now),
     nextWindows: (fid, hid, count) => fishWindows(model.data, fid, hid, now, { count }),
   };
+}
+
+function view() {
+  const { parts, params } = parseRoute();
+  const ctx = makeCtx(parts);
   const [a, b, c] = parts;
   if (!a || (TABS.includes(a) && !b)) return homeView(ctx);
   if (TABS.includes(a) && b === 'region') return regionView(ctx, a, c);
@@ -105,6 +109,23 @@ async function exportProgress() {
   store.markExported(now);
 }
 
+// The file input lives outside #app (index.html) so re-renders can never
+// detach it while the iOS Files picker is open.
+const fileInput = document.getElementById('import-file');
+fileInput.addEventListener('change', () => {
+  const f = fileInput.files?.[0];
+  fileInput.value = ''; // allow picking the same file again
+  if (f) readImportFile(f);
+});
+
+/** Update only the results under the search box; the input stays put. */
+function updateSearch(value) {
+  ui.query = value;
+  const body = document.getElementById('home-body');
+  if (body) body.innerHTML = homeBody(makeCtx(parseRoute().parts));
+  else render({ keepScroll: true });
+}
+
 async function readImportFile(file) {
   const res = parseBackup(await file.text(), model.data);
   ui.pendingImport = res.ok ? res : null;
@@ -147,6 +168,7 @@ root.addEventListener('click', (ev) => {
     case 'show-above': store.setProfile({ showAbove: !store.state.profile.showAbove }); break;
     case 'horizon': store.setPrefs({ upSoonHours: Number(d.h) }); break;
     case 'export': exportProgress(); break;
+    case 'import': fileInput.click(); break;
     case 'import-merge': applyImport('merge'); break;
     case 'import-replace': applyImport('replace'); break;
     case 'import-cancel': ui.pendingImport = null; render({ keepScroll: true }); break;
@@ -154,23 +176,19 @@ root.addEventListener('click', (ev) => {
 });
 
 root.addEventListener('input', (ev) => {
-  if (ev.target.id === 'search') {
-    ui.query = ev.target.value;
-    render({ keepScroll: true });
-  }
+  if (ev.target.id === 'search') updateSearch(ev.target.value);
 });
 
 root.addEventListener('change', (ev) => {
   const t = ev.target;
   if (t.dataset.profile) setProfileNumber(t.dataset.profile, t.value);
-  else if (t.id === 'import-file' && t.files?.[0]) readImportFile(t.files[0]);
 });
 
 root.addEventListener('keydown', (ev) => {
   if (ev.key === 'Enter' && ev.target.dataset?.profile) ev.target.blur(); // commits via change
   if (ev.key === 'Escape' && ev.target.id === 'search') {
-    ui.query = '';
-    render();
+    ev.target.value = '';
+    updateSearch('');
   }
 });
 
@@ -192,11 +210,11 @@ async function main() {
     render();
     window.scrollTo(0, 0);
   });
-  // Keep timers and the ET clock live. Skip while hidden, or while a number
-  // field is being edited (a re-render would discard the half-typed value).
+  // Keep timers and the ET clock live. Skip while hidden, or while any field
+  // has focus: replacing a focused input closes the iOS keyboard and would
+  // discard a half-typed number.
   setInterval(() => {
-    const a = document.activeElement;
-    const editing = a?.tagName === 'INPUT' && a.type !== 'search';
+    const editing = document.activeElement?.tagName === 'INPUT';
     if (document.visibilityState === 'visible' && !editing) render({ keepScroll: true });
   }, LIVE_REFRESH_MS);
   render();

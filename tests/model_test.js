@@ -255,3 +255,11 @@ Deno.test('store: markExported resets the reminder baseline', () => {
   assertEquals(s.state.lastExport, T);
   assertEquals(s.state.caughtAtLastExport, 1);
 });
+
+Deno.test('fish view without a source hole does not discover any hole when marking caught', () => {
+  const store = createStore(memStorage());
+  const html = fishView(ctxFor(store), byName('Black Ghost'), null);
+  assertStringIncludes(html, 'data-act="caught" data-fid="4964" data-hid=""');
+  const fromHole = fishView(ctxFor(store), byName('Black Ghost'), 'r5');
+  assertStringIncludes(fromHole, 'data-act="caught" data-fid="4964" data-hid="r5"');
+});

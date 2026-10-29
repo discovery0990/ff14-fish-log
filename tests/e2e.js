@@ -95,15 +95,31 @@ try {
   await go('#/rod');
   check(await js(`document.querySelector('a.card[href="#/hole/r5"]') !== null`), 'Continue card points at the last hole');
   check(await js(`document.querySelector('.list .item .pill') !== null`), 'Up soon list renders with status pills');
-  await js(`document.getElementById('search').focus()`);
+  await js(`(() => { const i = document.getElementById('search'); i.__mark = 1; i.focus(); })()`);
   for (const ch of 'hopes') await send('Input.insertText', { text: ch });
-  check(await js(`document.activeElement.id`) === 'search', 'search keeps focus across re-renders');
+  check(await js(`document.getElementById('search').__mark === 1`), 'search input is never replaced while typing (iOS keyboard stays up)');
+  check(await js(`document.activeElement.id`) === 'search', 'search keeps focus');
   check(await js(`document.getElementById('search').value`) === 'hopes', 'search keeps every typed character');
   check(await js(`document.body.textContent.includes('Hopeseed Pond')`), 'search finds Hopeseed Pond');
   await shot('search');
   await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape' });
   await new Promise((r) => setTimeout(r, 150));
   check(await js(`document.getElementById('search').value`) === '', 'Escape clears search');
+
+  // --- Catching from a search result must not discover any hole
+  const discBefore = (await stored()).discovered.length;
+  await js(`(() => { const i = document.getElementById('search'); i.value = 'junkmonger'; i.dispatchEvent(new Event('input', {bubbles: true})); })()`);
+  await js(`document.querySelector('#home-body a[href^="#/fish/"]').click()`);
+  await new Promise((r) => setTimeout(r, 250));
+  await js(`document.querySelector('button.big').click()`);
+  s = await stored();
+  check(s.caught.includes('7684'), 'Mark caught works from a search result');
+  check(s.discovered.length === discBefore, 'catching from search does not discover a hole');
+  await js(`document.querySelector('button.big').click()`); // undo
+  // The query is kept when coming back (handy after opening a result); clear it.
+  await go('#/rod');
+  check(await js(`document.getElementById('search').value`) === 'junkmonger', 'search query is kept when coming back');
+  await js(`(() => { const i = document.getElementById('search'); i.value = ''; i.dispatchEvent(new Event('input', {bubbles: true})); })()`);
 
   // --- Profile: level filter, stepper, gathering, expansions
   await go('#/profile');
@@ -150,6 +166,10 @@ try {
   check((await stored()).caught.length === 3, 'caught two more fish (3 total)');
 
   await go('#/profile');
+  await js(`document.getElementById('import-file').__mark = 1`);
+  await js(`document.querySelector('[data-act=horizon][data-h="2"]').click()`); // forces a re-render
+  check(await js(`document.getElementById('import-file').__mark === 1`), 'file input survives re-renders (iOS Files picker)');
+  check(await js(`!document.getElementById('app').contains(document.getElementById('import-file'))`), 'file input lives outside #app');
   const doc = await send('DOM.getDocument');
   const { nodeId } = await send('DOM.querySelector', { nodeId: doc.root.nodeId, selector: '#import-file' });
   await send('DOM.setFileInputFiles', { nodeId, files: [file] });

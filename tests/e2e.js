@@ -94,11 +94,11 @@ try {
   check(await js(`document.body.textContent.includes("can't cast here until Fisher Lv 45")`), 'locked hole explains why');
   // North Isle of Endless Summer (r156) is Lv 50 but not restricted.
   await go('#/hole/r156');
-  check(await js(`document.body.textContent.includes('Not marked on your map until Lv 50, but you can fish here')`), 'unmarked hole says it is fishable');
+  check(await js(`!document.querySelector('.banner')`), 'an above-level, unrestricted hole has no lock note');
   check(await js(`document.body.textContent.includes('X 36.0 Y 26.6')`), 'hole shows map coordinates');
   await go('#/rod/zone/32'); // Eastern La Noscea
   check(await js(`document.body.textContent.includes('North Isle of Endless Summer')`), 'unmarked hole is listed in its zone');
-  check(await js(`document.body.textContent.includes('Not on your map')`), 'zone tags unmarked holes');
+  check(await js(`document.body.textContent.includes('Privateer Forecastle') && !document.body.textContent.includes('Privateer Sterncastle')`), 'Lv 40: Forecastle shown, restricted Sterncastle hidden');
   check(await js(`document.body.textContent.includes('2 locked holes hidden')`), 'zone says how many locked holes are hidden (Red Mantis Falls, Privateer Sterncastle)');
   await go('#/rod');
   check(await js(`document.body.textContent.includes('next 3h')`), 'Up soon uses the new horizon');

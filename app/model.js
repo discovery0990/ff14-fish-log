@@ -60,8 +60,10 @@ export function createModel(data) {
 
   /**
    * 'show' | 'grey' | 'hide' for a hole under the profile filters. Only
-   * restricted holes are level-locked (you can't cast below their level);
-   * other holes above your level are fishable, just not marked on your map.
+   * restricted holes are level-locked: below their level they're not on your
+   * map and casting fails. Every other hole is on the map and fishable at any
+   * level (confirmed in game: Lv 44 fishes the Lv 50 Privateer Forecastle,
+   * not the restricted Sterncastle).
    */
   function holeVisibility(hid, profile) {
     const h = data.holes[hid];
@@ -74,10 +76,6 @@ export function createModel(data) {
   /** Restricted hole above your level: casting there fails. */
   const isLocked = (hid, profile) =>
     profile.lvl != null && !!data.holes[hid].restricted && data.holes[hid].lvl > profile.lvl;
-
-  /** Fishable hole above your level, so not marked on your in-game map. */
-  const isUnmarked = (hid, profile) =>
-    profile.lvl != null && !data.holes[hid].restricted && data.holes[hid].lvl > profile.lvl;
 
   const visibleHoles = (tab, zone, profile) =>
     (zoneHoles[tab][zone] ?? []).filter((hid) => holeVisibility(hid, profile) !== 'hide');
@@ -197,7 +195,7 @@ export function createModel(data) {
   }
 
   return {
-    upSoon, search, isLocked, isUnmarked,
+    upSoon, search, isLocked,
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
     isMooch, moochChain, moochTargets, status, weatherNow, gatheringShort,

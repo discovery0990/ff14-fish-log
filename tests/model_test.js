@@ -50,7 +50,7 @@ Deno.test('ocean holes are only in the Ocean tab', () => {
 
 // ------------------------------------------------------------ filters
 
-Deno.test('level only locks restricted holes; other above-level holes are shown as unmarked', () => {
+Deno.test('level only locks restricted holes; other above-level holes are shown', () => {
   // Hidden Falls (r54) is a restricted Lv 35 hole.
   assertEquals(m.holeVisibility('r54', profile({ lvl: 34 })), 'hide');
   assertEquals(m.holeVisibility('r54', profile({ lvl: 35 })), 'show');
@@ -59,9 +59,10 @@ Deno.test('level only locks restricted holes; other above-level holes are shown 
   // Hopeseed Pond (r5, Lv 35) and North Isle of Endless Summer (r156, Lv 50) are not restricted.
   assertEquals(m.holeVisibility('r5', profile({ lvl: 10 })), 'show');
   assertEquals(m.holeVisibility('r156', profile({ lvl: 40 })), 'show');
-  assert(m.isUnmarked('r156', profile({ lvl: 40 })));
-  assert(!m.isUnmarked('r156', profile({ lvl: 50 })));
-  assert(!m.isUnmarked('r156', profile())); // no level set
+  // Confirmed in game at Lv 44: Privateer Forecastle (r? Lv 50) fishable, Sterncastle locked.
+  const priv = (n) => Object.keys(DATA.holes).find((h) => DATA.holes[h].name === `Rhotano Sea (Privateer ${n})`);
+  assertEquals(m.holeVisibility(priv('Forecastle'), profile({ lvl: 44 })), 'show');
+  assertEquals(m.holeVisibility(priv('Sterncastle'), profile({ lvl: 44 })), 'hide');
 });
 
 Deno.test('every hole has map coordinates', () => {

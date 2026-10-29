@@ -53,4 +53,4 @@ Data comes from [XIVAPI](https://v2.xivapi.com) (game data) and [FFXIV Teamcraft
 
 FINAL FANTASY is a registered trademark of Square Enix Holdings Co., Ltd. FINAL FANTASY XIV © SQUARE ENIX CO., LTD. All rights reserved. Game data and icons are served via XIVAPI. Fish Log is an unofficial fan project, not affiliated with or endorsed by Square Enix.
 
-Code licence: not chosen yet. Fonts: IBM Plex, SIL Open Font License 1.1 (`app/fonts/OFL.txt`).
+Code: MIT (see `LICENSE`); this covers the code only, not game data or icons. Fonts: IBM Plex, SIL Open Font License 1.1 (`app/fonts/OFL.txt`).

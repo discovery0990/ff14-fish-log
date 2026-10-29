@@ -50,10 +50,25 @@ Deno.test('ocean holes are only in the Ocean tab', () => {
 
 // ------------------------------------------------------------ filters
 
-Deno.test('level filter hides holes above level; showAbove greys them', () => {
-  assertEquals(m.holeVisibility('r5', profile({ lvl: 34 })), 'hide'); // Hopeseed Pond is Lv 35
-  assertEquals(m.holeVisibility('r5', profile({ lvl: 35 })), 'show');
-  assertEquals(m.holeVisibility('r5', profile({ lvl: 34, showAbove: true })), 'grey');
+Deno.test('level only locks restricted holes; other above-level holes are shown as unmarked', () => {
+  // Hidden Falls (r54) is a restricted Lv 35 hole.
+  assertEquals(m.holeVisibility('r54', profile({ lvl: 34 })), 'hide');
+  assertEquals(m.holeVisibility('r54', profile({ lvl: 35 })), 'show');
+  assertEquals(m.holeVisibility('r54', profile({ lvl: 34, showAbove: true })), 'grey');
+  assert(m.isLocked('r54', profile({ lvl: 34 })));
+  // Hopeseed Pond (r5, Lv 35) and North Isle of Endless Summer (r156, Lv 50) are not restricted.
+  assertEquals(m.holeVisibility('r5', profile({ lvl: 10 })), 'show');
+  assertEquals(m.holeVisibility('r156', profile({ lvl: 40 })), 'show');
+  assert(m.isUnmarked('r156', profile({ lvl: 40 })));
+  assert(!m.isUnmarked('r156', profile({ lvl: 50 })));
+  assert(!m.isUnmarked('r156', profile())); // no level set
+});
+
+Deno.test('every hole has map coordinates', () => {
+  for (const [hid, h] of Object.entries(DATA.holes)) {
+    assert(Array.isArray(h.xy) && h.xy.every((v) => v >= 1 && v <= 45), `${hid} ${h.name} ${h.xy}`);
+  }
+  assertEquals(DATA.holes.r156.xy, [36, 26.6]);
 });
 
 Deno.test('expansion filter hides zones; empty regions disappear', () => {
@@ -195,7 +210,8 @@ Deno.test('up soon: within horizon, open first, uncaught, eligible, one per fish
   assert(lowG.every((x) => !(DATA.fish[x.fid].at[x.hid].minG > 0)));
   // level filter applies
   const lv20 = m.upSoon('rod', { ...opts, profile: profile({ lvl: 20 }) });
-  assert(lv20.every((x) => DATA.holes[x.hid].lvl <= 20));
+  assert(lv20.every((x) => DATA.holes[x.hid].lvl <= 20 || !DATA.holes[x.hid].restricted), 'no locked holes');
+  assert(lv20.some((x) => DATA.holes[x.hid].lvl > 20), 'unmarked above-level holes are included');
 });
 
 // ------------------------------------------------------------ backup

@@ -69,7 +69,10 @@ The mockup is at https://claude.ai/artifact/528uaT9rVpkYAw5xb5dgAz.
 
 ### Filtering rules
 
-- Hole level greater than fisher level → the hole is hidden (greyed if the toggle is on). A zone or region with no visible holes is hidden too.
+- **Locked holes:** the game's 47 "restricted" rod holes (`FishingSpot.Rare`, sparkling icon in the in-game log) can't be cast at below their level. The game says "You can sense something swimming below, but are uncertain where." (LogMessage 1125). With fisher level < hole level they're hidden (greyed if the toggle is on). A zone or region with no visible holes is hidden too.
+- **Unmarked holes:** any other hole can be fished at any level. Since patch 6.0, Gulleye only marks holes at or below your level on the map. Above-level unrestricted holes are shown with a "Not on your map" tag and their map coordinates, and are included in Up soon.
+- **Coordinates:** every hole shows map coordinates, computed from `FishingSpot.X/Z` (or `SpearfishingNotebook.X/Y`) and the zone map's `SizeFactor`. The build checks them against Teamcraft's coordinates for the 328 rod holes it covers.
+- Spearfishing holes have no known restricted flag, so they're never locked.
 - Zone expansion not unlocked → the zone is hidden.
 - Fish needs more Gathering than the profile → the fish is shown at the hole with a warning, and left out of Up soon.
 - Progress totals always count all fish, whatever the filters.

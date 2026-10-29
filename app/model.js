@@ -58,14 +58,26 @@ export function createModel(data) {
     return { caught, total: all.size };
   }
 
-  /** 'show' | 'grey' | 'hide' for a hole under the profile filters. */
+  /**
+   * 'show' | 'grey' | 'hide' for a hole under the profile filters. Only
+   * restricted holes are level-locked (you can't cast below their level);
+   * other holes above your level are fishable, just not marked on your map.
+   */
   function holeVisibility(hid, profile) {
     const h = data.holes[hid];
     const z = data.zones[h.zone];
     if (profile.exp && !profile.exp.includes(z.exp)) return 'hide';
-    if (profile.lvl != null && h.lvl > profile.lvl) return profile.showAbove ? 'grey' : 'hide';
+    if (isLocked(hid, profile)) return profile.showAbove ? 'grey' : 'hide';
     return 'show';
   }
+
+  /** Restricted hole above your level: casting there fails. */
+  const isLocked = (hid, profile) =>
+    profile.lvl != null && !!data.holes[hid].restricted && data.holes[hid].lvl > profile.lvl;
+
+  /** Fishable hole above your level, so not marked on your in-game map. */
+  const isUnmarked = (hid, profile) =>
+    profile.lvl != null && !data.holes[hid].restricted && data.holes[hid].lvl > profile.lvl;
 
   const visibleHoles = (tab, zone, profile) =>
     (zoneHoles[tab][zone] ?? []).filter((hid) => holeVisibility(hid, profile) !== 'hide');
@@ -185,7 +197,7 @@ export function createModel(data) {
   }
 
   return {
-    upSoon, search,
+    upSoon, search, isLocked, isUnmarked,
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
     isMooch, moochChain, moochTargets, status, weatherNow, gatheringShort,

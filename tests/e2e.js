@@ -84,14 +84,22 @@ try {
 
   await go('#/rod');
   check(await js(`document.body.textContent.includes('hidden by your level and expansion filters')`), 'home reports hidden regions');
-  check(await js(`!document.body.textContent.includes('Norvrandt')`), 'Lv 40 hides Norvrandt');
-  await js(`(() => { const i = document.getElementById('search'); i.value = 'endless summer'; i.dispatchEvent(new Event('input', {bubbles: true})); })()`);
-  check(await js(`document.getElementById('home-body').textContent.includes('Above your level (Lv 50)')`), 'search labels holes hidden by the level filter');
+  check(await js(`!document.body.textContent.includes('Yok Tural')`), 'Dawntrail off hides its regions');
+  check(await js(`document.body.textContent.includes('Norvrandt')`), 'Lv 40 still shows higher regions (most holes are fishable at any level)');
+  // Red Mantis Falls (r58) is a restricted Lv 45 hole: locked at Lv 40.
+  await js(`(() => { const i = document.getElementById('search'); i.value = 'red mantis falls'; i.dispatchEvent(new Event('input', {bubbles: true})); })()`);
+  check(await js(`document.getElementById('home-body').textContent.includes('Locked until Lv 45')`), 'search labels locked holes');
   await js(`document.querySelector('[data-act="clear-search"]').click()`);
+  await go('#/hole/r58');
+  check(await js(`document.body.textContent.includes("can't cast here until Fisher Lv 45")`), 'locked hole explains why');
+  // North Isle of Endless Summer (r156) is Lv 50 but not restricted.
   await go('#/hole/r156');
-  check(await js(`document.body.textContent.includes('Hidden while browsing')`), 'hidden hole explains why it is hidden');
+  check(await js(`document.body.textContent.includes('Not marked on your map until Lv 50, but you can fish here')`), 'unmarked hole says it is fishable');
+  check(await js(`document.body.textContent.includes('X 36.0 Y 26.6')`), 'hole shows map coordinates');
   await go('#/rod/zone/32'); // Eastern La Noscea
-  check(await js(`document.body.textContent.includes('above your level are hidden')`), 'zone says how many holes the level filter hides');
+  check(await js(`document.body.textContent.includes('North Isle of Endless Summer')`), 'unmarked hole is listed in its zone');
+  check(await js(`document.body.textContent.includes('Not on your map')`), 'zone tags unmarked holes');
+  check(await js(`document.body.textContent.includes('2 locked holes hidden')`), 'zone says how many locked holes are hidden (Red Mantis Falls, Privateer Sterncastle)');
   await go('#/rod');
   check(await js(`document.body.textContent.includes('next 3h')`), 'Up soon uses the new horizon');
   await shot('home');

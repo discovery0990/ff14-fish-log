@@ -195,9 +195,11 @@ function hiddenWhy(m, hid, profile) {
   const h = m.data.holes[hid];
   const z = m.data.zones[h.zone];
   if (profile.exp && !profile.exp.includes(z.exp)) return `${m.data.expansions[z.exp]} is off`;
-  if (profile.lvl != null && h.lvl > profile.lvl) return `Above your level (Lv ${h.lvl})`;
+  if (m.isLocked(hid, profile)) return `Locked until Lv ${h.lvl}`;
   return null;
 }
+
+const xyText = (h) => (h.xy ? `X ${h.xy[0].toFixed(1)} Y ${h.xy[1].toFixed(1)}` : '');
 
 const hiddenTag = (why) => (why ? ` <span class="tag">${esc(why)}</span>` : '');
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -263,7 +265,7 @@ function searchResults(ctx) {
     if (r.type === 'hole') {
       const h = m.data.holes[r.id];
       return `<a class="item row" href="#/hole/${r.id}"><span class="grow"><span class="title">${esc(h.name)}</span>
-        <span class="sub">Hole · ${esc(m.data.zones[h.zone].name)} · Lv ${h.lvl} · ${countText(m.count([r.id], store.isCaught))}${hiddenTag(hiddenWhy(m, r.id, profile))}</span></span>${chevron}</a>`;
+        <span class="sub">Hole · ${esc(m.data.zones[h.zone].name)} · Lv ${h.lvl} · ${xyText(h)} · ${countText(m.count([r.id], store.isCaught))}${hiddenTag(hiddenWhy(m, r.id, profile))}</span></span>${chevron}</a>`;
     }
     const z = m.data.zones[r.id];
     return `<a class="item row" href="#/${r.tab}/zone/${r.id}"><span class="grow"><span class="title">${esc(z.name)}</span>
@@ -317,11 +319,11 @@ export function profileView(ctx) {
     <h1>Profile &amp; filters</h1>
     <section><h2 class="sec">My fisher</h2>
       <div class="list">${stepper('lvl', 'Fisher level', 1, 100)}${stepper('gath', 'Gathering', 0, 9999)}</div>
-      <p class="note">Holes above your level are hidden. Fish needing more Gathering than you have are flagged at the hole and left out of Up soon. Leave blank to turn off.</p>
+      <p class="note">Most holes can be fished at any level; above your level they're just not marked on your map, so the app shows their coordinates. A few holes are locked until you reach their level and are hidden until then. Fish needing more Gathering than you have are flagged at the hole and left out of Up soon. Leave blank to turn off.</p>
     </section>
     <section><h2 class="sec">Expansions unlocked</h2><div class="chips">${exps}</div></section>
     <section><h2 class="sec">Show</h2>
-      <div class="list">${sw('show-above', 'Show holes above my level (greyed)', p.showAbove)}</div>
+      <div class="list">${sw('show-above', 'Show locked holes (greyed)', p.showAbove)}</div>
     </section>
     <section><h2 class="sec">Up soon looks ahead</h2><div class="chips">${horizons}</div></section>
     <section><h2 class="sec">Backup</h2>
@@ -413,7 +415,8 @@ export function zoneView(ctx, tab, zid, filter = 'all') {
     }
     if (timed) tags.push(`<span class="tag">${timed} timed</span>`);
     if (!disc) tags.push('<span class="tag undisc">Not discovered</span>');
-    if (grey) tags.push('<span class="tag">Above your level</span>');
+    if (grey) tags.push(`<span class="tag">Locked until Lv ${h.lvl}</span>`);
+    if (m.isUnmarked(hid, profile)) tags.push('<span class="tag">Not on your map</span>');
     return `
       <a class="card${disc ? '' : ' dashed'}${grey ? ' grey' : ''}" href="#/hole/${hid}">
         <div class="row"><span class="num lv">Lv ${h.lvl}</span><span class="title grow">${esc(h.name)}</span><span class="num">${countText(hc)}</span></div>
@@ -428,7 +431,7 @@ export function zoneView(ctx, tab, zid, filter = 'all') {
       ${progress(c)}</header>
     <div class="chips" role="group" aria-label="Show">${chips}</div>
     <section><h2 class="sec">Fishing holes</h2><div class="cards">${cards || '<p class="empty">No holes match.</p>'}</div>
-      ${hiddenHoles ? `<p class="note">${plural(hiddenHoles, 'hole')} above your level ${hiddenHoles === 1 ? 'is' : 'are'} hidden. <a class="link" href="#/profile">Profile</a> can show ${hiddenHoles === 1 ? 'it' : 'them'} greyed.</p>` : ''}
+      ${hiddenHoles ? `<p class="note">${plural(hiddenHoles, 'locked hole')} hidden until you reach ${hiddenHoles === 1 ? 'its' : 'their'} level. <a class="link" href="#/profile">Profile</a> can show ${hiddenHoles === 1 ? 'it' : 'them'} greyed.</p>` : ''}
     </section>`;
 }
 
@@ -479,13 +482,17 @@ export function holeView(ctx, hid) {
     <header class="stack-s">
       <div class="row top-align">
         <div class="grow"><h1>${esc(h.name)}</h1>
-          <div class="sub">Lv ${h.lvl} · ET <span class="num hi">${fmtEtClock(now)}</span>${w != null ? ` · <span class="hi">${esc(m.data.weathers[w]?.name)}</span>` : ''}</div></div>
+          <div class="sub">Lv ${h.lvl}${h.restricted ? ' · <span class="hi">Locked hole</span>' : ''} · <span class="num hi">${xyText(h)}</span></div>
+          <div class="sub">ET <span class="num hi">${fmtEtClock(now)}</span>${w != null ? ` · <span class="hi">${esc(m.data.weathers[w]?.name)}</span>` : ''}</div></div>
         <button class="toggle${disc ? ' on' : ''}" data-act="disc" data-hid="${hid}" aria-pressed="${disc}">${disc ? 'Discovered' : 'Not discovered'}</button>
       </div>
       <div class="row sub"><span class="grow">Tap the circle to mark caught</span><span class="num hi">${countText(c)}</span></div>
       ${progress(c)}
     </header>
-    ${why ? `<p class="banner">Hidden while browsing: ${esc(why)}. Change it in <a class="link" href="#/profile">Profile</a>.</p>` : ''}
+    ${why ? `<p class="banner">${m.isLocked(hid, profile)
+      ? `Locked: you can't cast here until Fisher Lv ${h.lvl}. Hidden while browsing.`
+      : `Hidden while browsing: ${esc(why)}. Change it in <a class="link" href="#/profile">Profile</a>.`}</p>` : ''}
+    ${m.isUnmarked(hid, profile) ? `<p class="banner">Not marked on your map until Lv ${h.lvl}, but you can fish here. Look for it at <span class="num hi">${xyText(h)}</span>.</p>` : ''}
     <div class="fishes">${main}</div>
     ${extras.length ? `<section><h2 class="sec">Also caught here</h2><p class="note">Reported by players; not in the in-game guide for this hole.</p>
       <div class="fishes">${extras.map(row).join('')}</div></section>` : ''}
@@ -551,7 +558,7 @@ export function fishView(ctx, fid, fromHole) {
 
   const found = holes.map((x) => {
     const hh = m.data.holes[x];
-    return `<a class="item row" href="#/hole/${x}"><span class="grow">${esc(holePlace(m, x))}</span><span class="num dim">Lv ${hh.lvl}</span></a>`;
+    return `<a class="item row" href="#/hole/${x}"><span class="grow">${esc(holePlace(m, x))}<span class="sub">${xyText(hh)}</span></span><span class="num dim">Lv ${hh.lvl}</span></a>`;
   }).join('');
 
   return `

@@ -153,7 +153,7 @@ def build(fetch, skip_icons):
 
     # --- Holes -------------------------------------------------------------
     rod_spots = fetch.sheet_all('FishingSpot', 'PlaceName@as(raw),PlaceName.Name,GatheringLevel,'
-                                'TerritoryType@as(raw),Item@as(raw),X,Z,Radius,FishingSpotCategory')
+                                'TerritoryType@as(raw),Item@as(raw),X,Z,Radius,FishingSpotCategory,Rare')
     notebooks = fetch.sheet_all('SpearfishingNotebook', 'PlaceName@as(raw),PlaceName.Name,GatheringLevel,'
                                 'TerritoryType@as(raw),IsShadowNode,GatheringPointBase.Item@as(raw),X,Y,Radius')
 
@@ -168,7 +168,14 @@ def build(fetch, skip_icons):
         listed = [i for i in s['Item@as(raw)'] if i in rod_log]
         holes[f'r{sid}'] = {'kind': 'rod', 'name': name_of(s['PlaceName']), 'place': s['PlaceName@as(raw)'],
                             'terr': s['TerritoryType@as(raw)'], 'lvl': s['GatheringLevel'],
-                            'cat': s['FishingSpotCategory'], 'fish': listed, 'extra': []}
+                            'cat': s['FishingSpotCategory'], 'fish': listed, 'extra': [],
+                            'raw': (s['X'], s['Z'])}
+        # "Rare" spots are the restricted holes (sparkling icon in the log):
+        # casting needs Fisher level >= the hole's level ("…but are uncertain
+        # where" otherwise). Any other hole can be fished at any level; above
+        # your level it just isn't marked on your map (Gulleye, patch 6.0).
+        if s['Rare']:
+            holes[f'r{sid}']['restricted'] = True
     for nid, n in notebooks.items():
         if not n['TerritoryType@as(raw)']:
             continue
@@ -176,7 +183,8 @@ def build(fetch, skip_icons):
         listed = [i for i in items if i in spear_log]
         holes[f's{nid}'] = {'kind': 'spear', 'name': name_of(n['PlaceName']), 'place': n['PlaceName@as(raw)'],
                             'terr': n['TerritoryType@as(raw)'], 'lvl': n['GatheringLevel'],
-                            'shadow': bool(n['IsShadowNode']), 'fish': listed, 'extra': []}
+                            'shadow': bool(n['IsShadowNode']), 'fish': listed, 'extra': [],
+                            'raw': (n['X'], n['Y'])}
 
     # --- Catch info per fish per hole --------------------------------------
     fish = {}
@@ -280,7 +288,7 @@ def build(fetch, skip_icons):
     # --- Zones, regions, weather -------------------------------------------
     terrs = fetch.sheet_rows('TerritoryType', {h['terr'] for h in holes.values()},
                              'PlaceName@as(raw),PlaceName.Name,PlaceNameRegion@as(raw),PlaceNameRegion.Name,'
-                             'ExVersion@as(raw),WeatherRate@as(raw)')
+                             'ExVersion@as(raw),WeatherRate@as(raw),Map.SizeFactor')
     # Ocean fishing holes: weather follows the voyage, not the zone's odds, so
     # the engine must never forecast them.
     ikd = fetch.sheet_all('IKDSpot', 'SpotMain@as(raw),SpotSub@as(raw)')
@@ -293,6 +301,10 @@ def build(fetch, skip_icons):
         check(rid != 0, f'hole {hid} ({h["name"]}) has a zone with no region')
         h['zone'] = zid
         h['wr'] = t['WeatherRate@as(raw)']
+        # Map coordinates from 2048-px map-texture positions (as shown in game).
+        scale = t['Map']['fields']['SizeFactor'] / 100
+        rx, ry = h.pop('raw')
+        h['xy'] = [round(41 / scale * rx / 2048 + 1, 1), round(41 / scale * ry / 2048 + 1, 1)]
         if hid in ocean_spots:
             h['ocean'] = True
         z = zones.setdefault(zid, {'name': name_of(t['PlaceName']), 'region': rid,
@@ -304,6 +316,17 @@ def build(fetch, skip_icons):
         if zid not in r['zones']:
             r['zones'].append(zid)
         del h['place']
+
+    coord_off = []
+    for hid, h in holes.items():
+        tcs = tc_spots.get(int(hid[1:])) if h['kind'] == 'rod' else None
+        if tcs and tcs.get('coords'):
+            if max(abs(h['xy'][0] - tcs['coords']['x']), abs(h['xy'][1] - tcs['coords']['y'])) > 0.15:
+                coord_off.append(f'{h["name"]} {h["xy"]} vs {tcs["coords"]}')
+    check(not coord_off, f'map coordinates disagree with Teamcraft: {coord_off[:5]}')
+    by_name = {h['name']: h for h in holes.values() if h['kind'] == 'rod'}
+    check(by_name.get('Hidden Falls', {}).get('restricted') is True, 'Hidden Falls should be restricted')
+    check('restricted' not in by_name.get('North Bloodshore', {'restricted': 1}), 'North Bloodshore should not be restricted')
 
     wr_rows = fetch.sheet_rows('WeatherRate', {h['wr'] for h in holes.values()}, 'Weather@as(raw),Rate')
     weather_rates = {}
@@ -382,6 +405,7 @@ def build(fetch, skip_icons):
         'rod': len(rod_log), 'spear': len(spear_log), 'total': len(fish),
         'holes_rod': sum(1 for h in holes.values() if h['kind'] == 'rod'),
         'holes_spear': sum(1 for h in holes.values() if h['kind'] == 'spear'),
+        'holes_restricted': sum(1 for h in holes.values() if h.get('restricted')),
         'extra_pairs': sum(len(h['extra']) for h in holes.values()),
         'zones': len(zones), 'regions': len(regions),
         'no_catch_info': sum(1 for f in fish.values() if f['log'] == 'rod'

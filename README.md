@@ -16,4 +16,14 @@ On patch day:
 2. Run the build with `--refresh`.
 3. Review the stats and diff it prints.
 
+## Tests
+
+```sh
+deno task test
+```
+
+These cover the engine in `app/engine.js` (Eorzea time, weather forecast, window finder). The forecast is checked against the upstream tracker's implementation, and the finder against brute-force sampling on real fish.
+
+## Sources
+
 Data comes from [XIVAPI](https://v2.xivapi.com) (game data) and [FFXIV Teamcraft](https://github.com/ffxiv-teamcraft/ffxiv-teamcraft) (MIT; catch conditions). Hand fixes go in `data/overrides.json`.

@@ -335,7 +335,7 @@ export function profileView(ctx) {
       </div>
       <p class="note">Progress lives on this device only. Last export: ${s.lastExport ? daysAgo(s.lastExport, now) : 'never'}.</p>
     </section>
-    <p class="note">${store.caughtCount()} caught · data ${esc(m.data.meta.game)} · built ${esc(m.data.meta.built.slice(0, 10))}</p>
+    <p class="note">${store.caughtCount()} caught · data ${esc(m.data.meta.game)} · built ${esc(m.data.meta.built.slice(0, 10))} · app ${esc(ctx.appVersion ?? 'dev')}</p>
     <p class="legal">FINAL FANTASY is a registered trademark of Square Enix Holdings Co., Ltd.
       FINAL FANTASY XIV © SQUARE ENIX CO., LTD. All rights reserved. Game data and icons via XIVAPI;
       catch conditions from FFXIV Teamcraft. Fish Log is an unofficial fan project, not affiliated with

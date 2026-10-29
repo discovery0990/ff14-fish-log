@@ -8,6 +8,8 @@ import {
 } from './views.js';
 
 const LIVE_REFRESH_MS = 15_000;
+// Filled in by tools/build_site.py with the deploy's content hash.
+const APP_VERSION = '__APP_VERSION__';
 
 const root = document.getElementById('app');
 const store = createStore();
@@ -25,7 +27,7 @@ function parseRoute() {
 function makeCtx(parts) {
   const now = Date.now();
   return {
-    m: model, store, now, ...ui,
+    m: model, store, now, ...ui, appVersion: APP_VERSION.startsWith('__') ? 'dev' : APP_VERSION,
     tab: TABS.includes(parts[0]) ? parts[0] : 'rod',
     remind: shouldRemind(store.state, store.caughtCount(), now),
     nextWindows: (fid, hid, count) => fishWindows(model.data, fid, hid, now, { count }),

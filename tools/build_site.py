@@ -41,6 +41,14 @@ def main():
             return 1
     sw.write_text(src.replace("'__VERSION__'", json.dumps(version))
                      .replace('__PRECACHE__', json.dumps(['./', *precache])))
+    # Show the version in the app (Profile) so a device can be checked against
+    # a deploy. Stamped after hashing; the hash covers the unstamped source.
+    app_js = DIST / 'app.js'
+    a = app_js.read_text()
+    if "'__APP_VERSION__'" not in a:
+        print('app.js is missing __APP_VERSION__', file=sys.stderr)
+        return 1
+    app_js.write_text(a.replace("'__APP_VERSION__'", json.dumps(version)))
     # Lets a deploy be checked against a commit.
     (DIST / 'version.txt').write_text(version + '\n')
 

@@ -37,7 +37,7 @@ The second checks the PWA against the built site: offline use and the update pro
 
 ```sh
 python3 tools/build_site.py
-python3 -m http.server 8766 -d dist --bind 127.0.0.1 &
+python3 tests/serve_pages.py 8766 dist &   # sends Pages' max-age=600
 deno run -A tests/e2e_pwa.js
 ```
 

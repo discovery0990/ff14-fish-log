@@ -9,7 +9,11 @@ const SHELL = `shell-${VERSION}`;
 const ICONS = 'icons-v1'; // icon files are keyed by game icon id and never change
 
 self.addEventListener('install', (ev) => {
-  ev.waitUntil(caches.open(SHELL).then((c) => c.addAll(PRECACHE)));
+  // cache: 'reload' bypasses the browser's HTTP cache. GitHub Pages serves
+  // files with max-age=600, so without it a deploy within 10 minutes of the
+  // last one could store stale files under the new version.
+  ev.waitUntil(caches.open(SHELL).then((c) =>
+    c.addAll(PRECACHE.map((url) => new Request(url, { cache: 'reload' })))));
 });
 
 self.addEventListener('activate', (ev) => {

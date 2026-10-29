@@ -118,6 +118,8 @@ export function homeView(ctx) {
       <span class="sr">Search</span>
       <input id="search" type="search" placeholder="Fish, hole or zone" autocomplete="off" autocorrect="off"
         spellcheck="false" enterkeyhint="search" value="${esc(ctx.query)}">
+      <button type="button" class="clear" data-act="clear-search" aria-label="Clear search"${ctx.query ? '' : ' hidden'}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg></button>
     </label>`;
 
   const header = `
@@ -187,6 +189,17 @@ function regionsBlock(regionRows, hidden) {
 }
 
 const countText = ({ caught, total }) => `${caught} / ${total}`;
+
+/** Why browsing hides a hole under the current profile, or null. */
+function hiddenWhy(m, hid, profile) {
+  const h = m.data.holes[hid];
+  const z = m.data.zones[h.zone];
+  if (profile.exp && !profile.exp.includes(z.exp)) return `${m.data.expansions[z.exp]} is off`;
+  if (profile.lvl != null && h.lvl > profile.lvl) return `Above your level (Lv ${h.lvl})`;
+  return null;
+}
+
+const hiddenTag = (why) => (why ? ` <span class="tag">${esc(why)}</span>` : '');
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /** "Hole · Zone", or just the name when a hole is named after its zone. */
@@ -233,6 +246,7 @@ function upSoonSection(ctx) {
 
 function searchResults(ctx) {
   const { m, store } = ctx;
+  const { profile } = store.state;
   const results = m.search(ctx.query);
   if (ctx.query.trim().length < 2) return '<p class="note">Keep typing…</p>';
   if (!results.length) return '<p class="note">No fish, holes or zones match.</p>';
@@ -241,17 +255,19 @@ function searchResults(ctx) {
       const f = m.data.fish[r.id];
       const zones = [...new Set(m.fishHoles(r.id).map((h) => m.data.zones[m.data.holes[h].zone].name))];
       const caught = store.isCaught(r.id) ? ' · <span class="link">caught</span>' : '';
+      const whys = m.fishHoles(r.id).map((h) => hiddenWhy(m, h, profile));
+      const hidden = whys.every(Boolean) ? hiddenTag(whys[0]) : '';
       return `<a class="item row" href="#/fish/${r.id}">${icon(f.icon)}<span class="grow"><span class="title">${esc(f.name)}</span>
-        <span class="sub">Fish · ${esc(zones.slice(0, 2).join(', '))}${zones.length > 2 ? ` +${zones.length - 2}` : ''}${caught}</span></span>${chevron}</a>`;
+        <span class="sub">Fish · ${esc(zones.slice(0, 2).join(', '))}${zones.length > 2 ? ` +${zones.length - 2}` : ''}${caught}${hidden}</span></span>${chevron}</a>`;
     }
     if (r.type === 'hole') {
       const h = m.data.holes[r.id];
       return `<a class="item row" href="#/hole/${r.id}"><span class="grow"><span class="title">${esc(h.name)}</span>
-        <span class="sub">Hole · ${esc(m.data.zones[h.zone].name)} · Lv ${h.lvl} · ${countText(m.count([r.id], store.isCaught))}</span></span>${chevron}</a>`;
+        <span class="sub">Hole · ${esc(m.data.zones[h.zone].name)} · Lv ${h.lvl} · ${countText(m.count([r.id], store.isCaught))}${hiddenTag(hiddenWhy(m, r.id, profile))}</span></span>${chevron}</a>`;
     }
     const z = m.data.zones[r.id];
     return `<a class="item row" href="#/${r.tab}/zone/${r.id}"><span class="grow"><span class="title">${esc(z.name)}</span>
-      <span class="sub">Zone · ${esc(m.data.regions[z.region].name)}</span></span>${chevron}</a>`;
+      <span class="sub">Zone · ${esc(m.data.regions[z.region].name)}${m.visibleHoles(r.tab, r.id, profile).length ? '' : hiddenTag(hiddenWhy(m, m.zoneHolesAll(r.tab, r.id)[0], profile))}</span></span>${chevron}</a>`;
   }).join('');
   return `<section><h2 class="sec">Results</h2><div class="list">${rows}</div></section>`;
 }
@@ -373,6 +389,7 @@ export function zoneView(ctx, tab, zid, filter = 'all') {
   const zone = m.data.zones[zid];
   if (!zone) return notFound();
   const vis = m.visibleHoles(tab, zid, profile);
+  const hiddenHoles = m.zoneHolesAll(tab, zid).length - vis.length;
   const c = m.count(m.zoneHolesAll(tab, zid), store.isCaught);
   const undisc = vis.filter((h) => !store.isDiscovered(h)).length;
   const chips = [['all', 'All'], ['incomplete', 'Incomplete'], ['undiscovered', 'Undiscovered']].map(([k, l]) =>
@@ -410,7 +427,9 @@ export function zoneView(ctx, tab, zid, filter = 'all') {
       <div class="row sub"><span class="grow">${plural(vis.length, 'hole')}${undisc ? ` · ${undisc} undiscovered` : ''}</span><span class="num hi">${countText(c)} fish</span></div>
       ${progress(c)}</header>
     <div class="chips" role="group" aria-label="Show">${chips}</div>
-    <section><h2 class="sec">Fishing holes</h2><div class="cards">${cards || '<p class="empty">No holes match.</p>'}</div></section>`;
+    <section><h2 class="sec">Fishing holes</h2><div class="cards">${cards || '<p class="empty">No holes match.</p>'}</div>
+      ${hiddenHoles ? `<p class="note">${plural(hiddenHoles, 'hole')} above your level ${hiddenHoles === 1 ? 'is' : 'are'} hidden. <a class="link" href="#/profile">Profile</a> can show ${hiddenHoles === 1 ? 'it' : 'them'} greyed.</p>` : ''}
+    </section>`;
 }
 
 export function holeView(ctx, hid) {
@@ -423,6 +442,7 @@ export function holeView(ctx, hid) {
   const disc = store.isDiscovered(hid);
   const targets = m.moochTargets(hid);
   const w = m.weatherNow(hid, now);
+  const why = hiddenWhy(m, hid, profile);
 
   const rows = m.holeFish(hid).map((x) => {
     const st = m.status(x.fid, hid, now);
@@ -465,6 +485,7 @@ export function holeView(ctx, hid) {
       <div class="row sub"><span class="grow">Tap the circle to mark caught</span><span class="num hi">${countText(c)}</span></div>
       ${progress(c)}
     </header>
+    ${why ? `<p class="banner">Hidden while browsing: ${esc(why)}. Change it in <a class="link" href="#/profile">Profile</a>.</p>` : ''}
     <div class="fishes">${main}</div>
     ${extras.length ? `<section><h2 class="sec">Also caught here</h2><p class="note">Reported by players; not in the in-game guide for this hole.</p>
       <div class="fishes">${extras.map(row).join('')}</div></section>` : ''}

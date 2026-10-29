@@ -40,6 +40,11 @@ try {
   check(await js(`document.getElementById('search').value`) === 'hopes', 'search keeps every typed character');
   check(await js(`document.body.textContent.includes('Hopeseed Pond')`), 'search finds Hopeseed Pond');
   await shot('search');
+  check(await js(`!document.querySelector('[data-act="clear-search"]').hidden`), 'clear button appears while there is a query');
+  await js(`document.querySelector('[data-act="clear-search"]').click()`);
+  check(await js(`document.getElementById('search').value === '' && document.getElementById('search').__mark === 1`), 'clear button empties search in one tap, same input');
+  check(await js(`document.querySelector('[data-act="clear-search"]').hidden && !!document.querySelector('#home-body .sec')`), 'after clearing: button hides, home sections return');
+  await js(`(() => { const i = document.getElementById('search'); i.value = 'hopes'; i.dispatchEvent(new Event('input', {bubbles: true})); })()`);
   await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape' });
   await new Promise((r) => setTimeout(r, 150));
   check(await js(`document.getElementById('search').value`) === '', 'Escape clears search');
@@ -80,6 +85,14 @@ try {
   await go('#/rod');
   check(await js(`document.body.textContent.includes('hidden by your level and expansion filters')`), 'home reports hidden regions');
   check(await js(`!document.body.textContent.includes('Norvrandt')`), 'Lv 40 hides Norvrandt');
+  await js(`(() => { const i = document.getElementById('search'); i.value = 'endless summer'; i.dispatchEvent(new Event('input', {bubbles: true})); })()`);
+  check(await js(`document.getElementById('home-body').textContent.includes('Above your level (Lv 50)')`), 'search labels holes hidden by the level filter');
+  await js(`document.querySelector('[data-act="clear-search"]').click()`);
+  await go('#/hole/r156');
+  check(await js(`document.body.textContent.includes('Hidden while browsing')`), 'hidden hole explains why it is hidden');
+  await go('#/rod/zone/32'); // Eastern La Noscea
+  check(await js(`document.body.textContent.includes('above your level are hidden')`), 'zone says how many holes the level filter hides');
+  await go('#/rod');
   check(await js(`document.body.textContent.includes('next 3h')`), 'Up soon uses the new horizon');
   await shot('home');
 

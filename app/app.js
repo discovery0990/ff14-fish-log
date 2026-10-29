@@ -121,6 +121,8 @@ fileInput.addEventListener('change', () => {
 /** Update only the results under the search box; the input stays put. */
 function updateSearch(value) {
   ui.query = value;
+  const clear = document.querySelector('[data-act="clear-search"]');
+  if (clear) clear.hidden = !value;
   const body = document.getElementById('home-body');
   if (body) body.innerHTML = homeBody(makeCtx(parseRoute().parts));
   else render({ keepScroll: true });
@@ -167,6 +169,13 @@ root.addEventListener('click', (ev) => {
     }
     case 'show-above': store.setProfile({ showAbove: !store.state.profile.showAbove }); break;
     case 'horizon': store.setPrefs({ upSoonHours: Number(d.h) }); break;
+    case 'clear-search': {
+      const input = document.getElementById('search');
+      input.value = '';
+      updateSearch('');
+      input.focus(); // ready for the next search
+      break;
+    }
     case 'export': exportProgress(); break;
     case 'import': fileInput.click(); break;
     case 'import-merge': applyImport('merge'); break;

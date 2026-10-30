@@ -462,6 +462,21 @@ def diff_summary(old, new):
     return lines or ['no fish or holes added or removed']
 
 
+def dump_lines(data):
+    """Compact JSON with one entry of each top-level table per line (one fish,
+    one hole, …), so a patch-day git diff shows what changed."""
+    def compact(v):
+        return json.dumps(v, separators=(',', ':'), ensure_ascii=False)
+
+    def table(t):
+        rows = [f'{compact(str(k))}:{compact(v)}' for k, v in t.items()]
+        return '{\n' + ',\n'.join(rows) + '\n}'
+
+    parts = [f'{compact(k)}:{table(v) if isinstance(v, dict) and v and k != "meta" else compact(v)}'
+             for k, v in data.items()]
+    return '{\n' + ',\n'.join(parts) + '\n}\n'
+
+
 def same_except_built(old, new):
     """Whether two data files differ only in meta.built."""
     def strip(d):
@@ -493,7 +508,7 @@ def main():
     # JSON object keys must be strings; ints become strings here and the app
     # reads them back as such.
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(data, separators=(',', ':'), ensure_ascii=False))
+    OUT.write_text(dump_lines(data))
     print(json.dumps(data['meta']['stats'], indent=2))
     for line in diff_summary(old and {k: {str(i) for i in old[k]} for k in ('fish', 'holes')},
                              {k: {str(i) for i in data[k]} for k in ('fish', 'holes')}):

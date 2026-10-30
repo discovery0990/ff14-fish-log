@@ -510,6 +510,10 @@ export function holeView(ctx, hid) {
 // Where a fish screen's Back goes when it was opened from Home or Up soon.
 const FROM = /^(rod|spear|ocean)(\/soon)?$/;
 
+// Ocean holes get no window status (their weather follows the voyage), so
+// no status there doesn't mean the fish is always up.
+const availability = (h, st) => (h.ocean ? ' · Ocean fishing' : st ? '' : ' · Always available');
+
 export function fishView(ctx, fid, fromHole, from = null) {
   const { m, store, now } = ctx;
   const f = m.data.fish[fid];
@@ -576,7 +580,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
   return `
     ${FROM.test(from ?? '') ? back(`#/${from}`, from.endsWith('/soon') ? 'Up soon' : 'Home') : back(`#/hole/${hid}`, h.name)}
     <header class="row">${icon(f.icon, 'icon lg')}
-      <div class="grow"><h1>${esc(f.name)}</h1><div class="sub">Lv ${f.lvl}${stars}${rec ? ` · ${esc(rec)}` : ''}${!st ? ' · Always available' : ''}</div></div>
+      <div class="grow"><h1>${esc(f.name)}</h1><div class="sub">Lv ${f.lvl}${stars}${rec ? ` · ${esc(rec)}` : ''}${availability(h, st)}</div></div>
     </header>
     <button class="big${caught ? ' done' : ''}" data-act="caught" data-fid="${fid}" data-hid="${discoverHid}" aria-pressed="${caught}">${caught ? 'Caught — tap to undo' : 'Mark caught'}</button>
     ${banner}

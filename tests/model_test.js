@@ -284,6 +284,18 @@ Deno.test('fish view without a source hole does not discover any hole when marki
   assertStringIncludes(fromHole, 'data-act="caught" data-fid="4964" data-hid="r5"');
 });
 
+Deno.test('fish view: ocean fish are labelled ocean fishing, never always available', () => {
+  const ctx = ctxFor(createStore(memStorage()));
+  const ocean = Object.keys(DATA.fish).filter((f) => Object.keys(DATA.fish[f].at).every((h) => DATA.holes[h].ocean));
+  assert(ocean.length > 0);
+  for (const fid of ocean) {
+    const html = fishView(ctx, fid, null);
+    assertStringIncludes(html, 'Ocean fishing');
+    assert(!html.includes('Always available'), DATA.fish[fid].name);
+  }
+  assertStringIncludes(fishView(ctx, byName('Mudcrab'), 'r5'), 'Always available');
+});
+
 Deno.test('regions, zones, holes and fish follow the in-game Fishing Log order', () => {
   const p = { lvl: null, gath: null, exp: null };
   const name = (kind) => (id) => DATA[kind][id].name;

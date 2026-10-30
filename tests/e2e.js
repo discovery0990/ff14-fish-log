@@ -100,6 +100,23 @@ try {
   check(await js(`document.body.textContent.includes('hidden by your level and expansion filters')`), 'home reports hidden regions');
   check(await js(`!document.body.textContent.includes('Yok Tural')`), 'Dawntrail off hides its regions');
   check(await js(`document.body.textContent.includes('Norvrandt')`), 'Lv 40 still shows higher regions (most holes are fishable at any level)');
+  // --- Up soon rows open the fish; Back returns to where you came from
+  const soonHref = await js(`document.querySelector('.list .item').getAttribute('href')`);
+  check(/^#\/fish\/\d+\?h=r\d+&from=rod$/.test(soonHref), `Home Up soon row opens the fish (${soonHref})`);
+  await go(soonHref);
+  check(await js(`document.querySelector('.back').getAttribute('href')`) === '#/rod', 'fish from Home: Back goes Home');
+  await go('#/rod/soon');
+  const soonHref2 = await js(`document.querySelector('.list .item').getAttribute('href')`);
+  await js(`window.scrollTo(0, 600)`);
+  await go(soonHref2);
+  check(await js(`document.querySelector('.back').getAttribute('href') === '#/rod/soon' && document.querySelector('.back').textContent.includes('Up soon')`), 'fish from the Up soon screen: Back goes to Up soon');
+  await js(`history.back()`);
+  await sleep(300);
+  check(await js(`Math.abs(window.scrollY - 600) < 5`), 'Up soon restores its scroll position after Back');
+  await go('#/fish/4950?h=r5&from=javascript:alert(1)');
+  check(await js(`document.querySelector('.back').getAttribute('href')`) === '#/hole/r5', 'unknown from falls back to the hole');
+  await go('#/rod');
+
   // --- Undiscovered holes: dashed hole names with a legend
   check(await js(`[...document.querySelectorAll('.list .item .undisc-name')].length > 0 && !!document.querySelector('.legend .undisc-name')`), 'Up soon outlines undiscovered hole names and explains the outline');
   await js(`(() => { const i = document.getElementById('search'); i.value = 'costa del sol'; i.dispatchEvent(new Event('input', {bubbles: true})); })()`);

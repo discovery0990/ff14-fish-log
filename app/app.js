@@ -16,7 +16,7 @@ const store = createStore();
 let model = null;
 
 // Transient UI state (not persisted).
-const ui = { query: '', openRegion: null, homeY: 0, showCaught: false, pendingImport: null, flash: '' };
+const ui = { query: '', openRegion: null, listY: {}, showCaught: false, pendingImport: null, flash: '' };
 
 function parseRoute() {
   const raw = location.hash.replace(/^#\/?/, '');
@@ -51,7 +51,7 @@ function view() {
     return zoneView(ctx, a, c, params.get('f') ?? 'all');
   }
   if (a === 'hole' && b) return holeView(ctx, b);
-  if (a === 'fish' && b) return fishView(ctx, b, params.get('h'));
+  if (a === 'fish' && b) return fishView(ctx, b, params.get('h'), params.get('from'));
   if (a === 'profile') return profileView(ctx);
   return notFound();
 }
@@ -227,18 +227,24 @@ async function main() {
     return;
   }
   store.subscribe(() => render({ keepScroll: true }));
-  // Returning Home (from a zone, say) restores where you were on it.
-  const isHome = () => { const p = parseRoute().parts; return !p.length || (TABS.includes(p[0]) && !p[1]); };
-  let wasHome = isHome();
+  // Returning to a list (Home or Up soon) from a screen it opened restores
+  // where you were on it. Switching tabs starts at the top.
+  const listKey = () => {
+    const p = parseRoute().parts;
+    if (!p.length) return 'rod';
+    if (!TABS.includes(p[0])) return null;
+    return !p[1] ? p[0] : p[1] === 'soon' ? `${p[0]}/soon` : null;
+  };
+  let lastList = listKey();
   window.addEventListener('hashchange', () => {
-    if (wasHome) ui.homeY = window.scrollY;
-    const home = isHome();
+    if (lastList) ui.listY[lastList] = window.scrollY;
+    const key = listKey();
     ui.flash = '';
     ui.pendingImport = null;
     ui.showCaught = false;
     render();
-    window.scrollTo(0, home && !wasHome ? ui.homeY : 0);
-    wasHome = home;
+    window.scrollTo(0, key && !lastList ? ui.listY[key] ?? 0 : 0);
+    lastList = key;
   });
   // Keep timers and the ET clock live. Skip while hidden, or while any field
   // has focus: replacing a focused input closes the iOS keyboard and would

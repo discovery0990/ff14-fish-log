@@ -258,7 +258,7 @@ function upSoonRows(ctx, list) {
   return list.map(({ fid, hid, st }) => {
     const f = m.data.fish[fid];
     return `
-      <a class="item row" href="#/hole/${hid}">
+      <a class="item row" href="#/fish/${fid}?h=${hid}&from=${encodeURIComponent(ctx.from)}">
         ${icon(f.icon)}
         <span class="grow stack-xs">
           <span class="row"><span class="title grow">${esc(f.name)}</span>${statusPill(st, now)}</span>
@@ -278,7 +278,7 @@ function upSoonSection(ctx) {
   return `
     <section>
       <div class="row"><h2 class="sec grow">Up soon · uncaught</h2><a class="note" href="#/${tab}/soon">next ${store.state.upSoonHours}h</a></div>
-      ${all.length ? `<div class="list">${upSoonRows(ctx, shown)}</div>${legend}${more}` : `<p class="note">Nothing opens in that time. <a href="#/${tab}/soon">Look further ahead</a>.</p>`}
+      ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: tab }, shown)}</div>${legend}${more}` : `<p class="note">Nothing opens in that time. <a href="#/${tab}/soon">Look further ahead</a>.</p>`}
     </section>`;
 }
 
@@ -298,7 +298,7 @@ export function soonView(ctx, tab) {
       <div class="sub">Uncaught ${tab === 'spear' ? 'spearfishing ' : ''}fish with a window open now or within ${hours}h</div></header>
     <div class="chips" role="group" aria-label="Look ahead">${chips}</div>
     ${all.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : ''}
-    ${all.length ? `<div class="list">${upSoonRows(ctx, all)}</div>` : '<p class="empty">Nothing opens in that time. Try looking further ahead.</p>'}`;
+    ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: `${tab}/soon` }, all)}</div>` : '<p class="empty">Nothing opens in that time. Try looking further ahead.</p>'}`;
 }
 
 function searchResults(ctx) {
@@ -314,7 +314,7 @@ function searchResults(ctx) {
       const caught = store.isCaught(r.id) ? ' · <span class="link">caught</span>' : '';
       const whys = m.fishHoles(r.id).map((h) => hiddenWhy(m, h, profile));
       const hidden = whys.every(Boolean) ? hiddenTag(whys[0]) : '';
-      return `<a class="item row" href="#/fish/${r.id}">${icon(f.icon)}<span class="grow"><span class="title">${esc(f.name)}</span>
+      return `<a class="item row" href="#/fish/${r.id}?from=${ctx.tab}">${icon(f.icon)}<span class="grow"><span class="title">${esc(f.name)}</span>
         <span class="sub">Fish · ${esc(zones.slice(0, 2).join(', '))}${zones.length > 2 ? ` +${zones.length - 2}` : ''}${caught}${hidden}</span></span>${chevron}</a>`;
     }
     if (r.type === 'hole') {
@@ -510,7 +510,10 @@ export function holeView(ctx, hid) {
       <div class="fishes">${extras.map(row).join('')}</div></section>` : ''}`;
 }
 
-export function fishView(ctx, fid, fromHole) {
+// Where a fish screen's Back goes when it was opened from Home or Up soon.
+const FROM = /^(rod|spear|ocean)(\/soon)?$/;
+
+export function fishView(ctx, fid, fromHole, from = null) {
   const { m, store, now } = ctx;
   const f = m.data.fish[fid];
   if (!f) return notFound();
@@ -573,7 +576,7 @@ export function fishView(ctx, fid, fromHole) {
   }).join('');
 
   return `
-    ${back(`#/hole/${hid}`, h.name)}
+    ${FROM.test(from ?? '') ? back(`#/${from}`, from.endsWith('/soon') ? 'Up soon' : 'Home') : back(`#/hole/${hid}`, h.name)}
     <header class="row">${icon(f.icon, 'icon lg')}
       <div class="grow"><h1>${esc(f.name)}</h1><div class="sub">Lv ${f.lvl}${stars}${rec ? ` · ${esc(rec)}` : ''}${!st ? ' · Always available' : ''}</div></div>
     </header>

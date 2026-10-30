@@ -151,8 +151,7 @@ Deno.test('hole view: Hopeseed Pond shows mooch, warning and feeds lines', () =>
   const store = createStore(memStorage());
   store.setProfile({ gath: 340 });
   const html = holeView(ctxFor(store), 'r5');
-  assertStringIncludes(html, 'MOOCH');
-  assertStringIncludes(html, 'Midge Basket → Ala Mhigan Fighting Fish');
+  assertStringIncludes(html, 'Midge Basket <span class="arrow" aria-label="then mooch">→</span> Ala Mhigan Fighting Fish');
   assertStringIncludes(html, 'Needs Gathering 345 — you have 340');
   assertStringIncludes(html, 'Mooch bait for Black Ghost');
   assertStringIncludes(html, '0 / 8');

@@ -211,6 +211,26 @@ try {
   await send('Page.reload');
   await waitFor(() => js(`!!document.querySelector('h1')`), 'reload');
   check((await stored()).caught.length === 1 && (await stored()).profile.lvl === 40, 'progress and profile survive a reload');
+
+  // --- Completed regions, zones and holes fold away (Mor Dhona: region 26, zone 67)
+  await js(`fetch('data/fish.json').then((r) => r.json()).then((d) => {
+    const st = JSON.parse(localStorage.getItem('fishlog:v1'));
+    const holes = Object.values(d.holes).filter((h) => h.zone === 67);
+    st.caught = [...new Set([...st.caught, ...holes.flatMap((h) => [...h.fish, ...h.extra]).map(String)])];
+    localStorage.setItem('fishlog:v1', JSON.stringify(st));
+  })`);
+  await go('#/rod');
+  await send('Page.reload');
+  await waitFor(() => js(`!!document.querySelector('.tabs')`), 'reload after catching Mor Dhona');
+  check(await js(`!document.querySelector('[data-rid="26"]') && document.querySelector('[data-act=fold][data-key="regions:rod"]')?.textContent.includes('Completed regions (1)')`), 'a completed region folds into Completed regions (1)');
+  await js(`document.querySelector('[data-act=fold][data-key="regions:rod"]').click()`);
+  check(await js(`!!document.querySelector('[data-rid="26"]')`), 'tapping Completed regions shows them');
+  await js(`document.querySelector('[data-rid="26"]').click()`);
+  check(await js(`document.querySelector('[data-act=fold][data-key="zones:rod:26"]')?.textContent.includes('Completed zones (1)')`), 'completed zones fold inside an open region');
+  await go('#/rod/zone/67');
+  check(await js(`!document.querySelector('a.card') && /Completed holes \\(\\d+\\)/.test(document.querySelector('[data-act=fold]')?.textContent ?? '')`), 'completed holes fold on the zone screen');
+  check(await js(`[...document.querySelectorAll('.chip')].map((c) => c.textContent).join(',')`) === 'All,Undiscovered', 'zone chips are All and Undiscovered');
+  await shot('folds');
 } catch (err) {
   failures++;
   console.log(`FAIL ${err.message}`);

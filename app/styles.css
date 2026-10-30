@@ -111,6 +111,9 @@ button.item { width: 100%; text-align: left; background: none; border: 0; border
 .item.region .chev { transition: transform .15s; }
 .item.region.open .chev { transform: rotate(90deg); }
 .item.region.open .bar { display: none; }
+button.fold { color: var(--muted); }
+button.fold .title { font-weight: 500; }
+button.fold-card { border: 0; text-align: left; color: var(--muted); }
 button.caught-group { border: 0; border-radius: 14px; background: var(--surface); }
 .item.zone { padding-left: 28px; gap: 4px; background: rgba(0, 0, 0, .14); }
 .cards { display: flex; flex-direction: column; gap: 10px; }

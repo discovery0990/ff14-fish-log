@@ -159,15 +159,16 @@ export function homeBody(ctx) {
   const regions = m.visibleRegions(tab, profile);
   const allRegions = Object.keys(m.data.regions).filter((r) => m.regionHolesAll(tab, r).length);
   const hidden = allRegions.length - regions.length;
-  const regionRows = regions.map((r) => {
-    const c = m.count(m.regionHolesAll(tab, r), store.isCaught);
+  const row = ([r, c]) => {
     const open = ctx.openRegion === r;
     return `
       <button class="item region${open ? ' open' : ''}" data-act="region" data-rid="${r}" aria-expanded="${open}">
         <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span><span class="num${done(c) ? ' done' : ''}">${countText(c)}</span>${chevron}</div>
         ${progress(c, 'thin')}
       </button>${open ? zoneRows(ctx, r) : ''}`;
-  }).join('');
+  };
+  const regionRows = folded(ctx, `regions:${tab}`, 'Completed regions', 'item region',
+    regions.map((r) => [r, m.count(m.regionHolesAll(tab, r), store.isCaught)]), ([, c]) => done(c), row);
 
   return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden)}`;
 }
@@ -183,13 +184,28 @@ function regionsBlock(regionRows, hidden) {
 const countText = ({ caught, total }) => `${caught} / ${total}`;
 const done = ({ caught, total }) => total > 0 && caught === total;
 
+/**
+ * Rows with the completed ones folded under a "Completed (N)" row, which
+ * expands in place (like caught fish at a hole). Open folds last the session.
+ */
+function folded(ctx, key, label, cls, items, isDone, render) {
+  const todo = items.filter((x) => !isDone(x));
+  const finished = items.filter(isDone);
+  if (!finished.length) return todo.map(render).join('');
+  const open = ctx.folds?.has(key);
+  return `${todo.map(render).join('')}
+    <button class="${cls} fold${open ? ' open' : ''}" data-act="fold" data-key="${key}" aria-expanded="${!!open}">
+      <div class="row"><span class="title grow">${label} (${finished.length})</span>${chevron}</div></button>
+    ${open ? finished.map(render).join('') : ''}`;
+}
+
 /** A region's zones, shown under it on Home when it's expanded. */
 function zoneRows(ctx, rid) {
   const { m, store, tab } = ctx;
   const { profile } = store.state;
-  return m.visibleZones(tab, rid, profile).map((z) => {
+  const zones = m.visibleZones(tab, rid, profile).map((z) => [z, m.count(m.zoneHolesAll(tab, z), store.isCaught)]);
+  return folded(ctx, `zones:${tab}:${rid}`, 'Completed zones', 'item zone', zones, ([, c]) => done(c), ([z, c]) => {
     const vis = m.visibleHoles(tab, z, profile);
-    const c = m.count(m.zoneHolesAll(tab, z), store.isCaught);
     const lv = vis.map((h) => m.data.holes[h].lvl);
     const lvText = Math.min(...lv) === Math.max(...lv) ? `Lv ${lv[0]}` : `Lv ${Math.min(...lv)}–${Math.max(...lv)}`;
     const open = openCount(ctx, vis);
@@ -198,7 +214,7 @@ function zoneRows(ctx, rid) {
         <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span><span class="num${done(c) ? ' done' : ''}">${countText(c)}</span></div>
         <div class="row"><span class="sub grow">${plural(vis.length, 'hole')} · ${lvText}</span>${open ? `<span class="tag open">${open} open now</span>` : ''}</div>
       </a>`;
-  }).join('');
+  });
 }
 
 /** Uncaught fish whose window is open now across these holes. */
@@ -398,15 +414,15 @@ export function zoneView(ctx, tab, zid, filter = 'all') {
   const vis = m.visibleHoles(tab, zid, profile);
   const c = m.count(m.zoneHolesAll(tab, zid), store.isCaught);
   const undisc = vis.filter((h) => !store.isDiscovered(h)).length;
-  const chips = [['all', 'All'], ['incomplete', 'Incomplete'], ['undiscovered', 'Undiscovered']].map(([k, l]) =>
+  if (filter !== 'undiscovered') filter = 'all'; // 'incomplete' is gone: completed holes fold away
+  const chips = [['all', 'All'], ['undiscovered', 'Undiscovered']].map(([k, l]) =>
     `<a class="chip${k === filter ? ' on' : ''}" href="#/${tab}/zone/${zid}${k === 'all' ? '' : `?f=${k}`}" aria-pressed="${k === filter}">${l}</a>`).join('');
 
-  const cards = vis.map((hid) => {
+  const holes = vis.filter((hid) => filter !== 'undiscovered' || !store.isDiscovered(hid))
+    .map((hid) => [hid, m.count([hid], store.isCaught)]);
+  const cards = folded(ctx, `holes:${tab}:${zid}`, 'Completed holes', 'card fold-card', holes, ([, hc]) => done(hc), ([hid, hc]) => {
     const h = m.data.holes[hid];
-    const hc = m.count([hid], store.isCaught);
     const disc = store.isDiscovered(hid);
-    if (filter === 'incomplete' && hc.caught === hc.total) return '';
-    if (filter === 'undiscovered' && disc) return '';
     const grey = m.holeVisibility(hid, profile) === 'grey';
     // Only what's actionable: fish open now, or why the hole is locked.
     // The dashed border marks undiscovered holes; the count turns teal when complete.
@@ -423,13 +439,12 @@ export function zoneView(ctx, tab, zid, filter = 'all') {
       }
       if (open.length > 2) tags.push(`<span class="tag open">+${open.length - 2} more open</span>`);
     }
-    const done = hc.total && hc.caught === hc.total;
     return `
       <a class="card${disc ? '' : ' dashed'}${grey ? ' grey' : ''}" href="#/hole/${hid}">
-        <div class="row"><span class="num lv">Lv ${h.lvl}</span><span class="title grow">${esc(h.name)}</span><span class="num${done ? ' done' : ''}">${countText(hc)}</span></div>
+        <div class="row"><span class="num lv">Lv ${h.lvl}</span><span class="title grow">${esc(h.name)}</span><span class="num${done(hc) ? ' done' : ''}">${countText(hc)}</span></div>
         ${tags.length ? `<div class="tags indent">${tags.join('')}</div>` : ''}
       </a>`;
-  }).join('');
+  });
 
   return `
     ${back(`#/${tab}`, 'Home')}

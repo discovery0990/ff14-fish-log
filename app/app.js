@@ -16,7 +16,7 @@ const store = createStore();
 let model = null;
 
 // Transient UI state (not persisted).
-const ui = { query: '', openRegion: null, listY: {}, showCaught: false, pendingImport: null, flash: '' };
+const ui = { query: '', openRegion: null, listY: {}, folds: new Set(), showCaught: false, pendingImport: null, flash: '' };
 
 function parseRoute() {
   const raw = location.hash.replace(/^#\/?/, '');
@@ -174,6 +174,10 @@ root.addEventListener('click', (ev) => {
       store.setProfile({ exp: next.length === all.length ? null : next });
       break;
     }
+    case 'fold':
+      if (!ui.folds.delete(d.key)) ui.folds.add(d.key);
+      render({ keepScroll: true });
+      break;
     case 'show-caught':
       ui.showCaught = !ui.showCaught;
       render({ keepScroll: true });

@@ -462,6 +462,16 @@ def diff_summary(old, new):
     return lines or ['no fish or holes added or removed']
 
 
+def same_except_built(old, new):
+    """Whether two data files differ only in meta.built."""
+    def strip(d):
+        # Round-trip so int keys compare as the strings the file stores.
+        d = json.loads(json.dumps(d))
+        d['meta'].pop('built', None)
+        return d
+    return strip(old) == strip(new)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--refresh', action='store_true', help='ignore the response cache')
@@ -475,6 +485,11 @@ def main():
         return 1
 
     old = json.loads(OUT.read_text()) if OUT.exists() else None
+    # Keep the old build time when nothing else changed: fish.json then stays
+    # byte-identical, so the deploy version (a hash of the app files) does too
+    # and installed apps aren't asked to reload for nothing.
+    if old and same_except_built(old, data):
+        data['meta']['built'] = old['meta']['built']
     # JSON object keys must be strings; ints become strings here and the app
     # reads them back as such.
     OUT.parent.mkdir(parents=True, exist_ok=True)

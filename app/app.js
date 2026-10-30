@@ -288,10 +288,16 @@ async function main() {
   // Keep timers and the ET clock live. Skip while hidden, or while any field
   // has focus: replacing a focused input closes the iOS keyboard and would
   // discard a half-typed number.
-  setInterval(() => {
+  const refresh = () => {
     const editing = document.activeElement?.tagName === 'INPUT';
     if (document.visibilityState === 'visible' && !editing) render({ keepScroll: true });
-  }, LIVE_REFRESH_MS);
+  };
+  setInterval(refresh, LIVE_REFRESH_MS);
+  // The timer doesn't run in the background, so coming back to the app (or
+  // iOS restoring it from memory) would show hours-old times until the next
+  // tick. Redraw at once instead.
+  document.addEventListener('visibilitychange', refresh);
+  window.addEventListener('pageshow', refresh);
   render();
   // Ask the browser not to evict progress under storage pressure.
   navigator.storage?.persist?.().catch(() => {});

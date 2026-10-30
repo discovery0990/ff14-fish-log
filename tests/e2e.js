@@ -127,6 +127,11 @@ try {
   check(await js(`document.querySelector('.back').getAttribute('href')`) === '#/hole/r5', 'unknown from falls back to the hole');
   await go('#/rod');
 
+  // --- Returning to the app redraws at once (no stale times until the next tick)
+  await js(`document.querySelector('.top').__mark = 1`);
+  await js(`document.dispatchEvent(new Event('visibilitychange'))`);
+  check(await js(`!document.querySelector('.top').__mark`), 'becoming visible redraws immediately');
+
   // --- Undiscovered holes: dashed hole names with a legend
   check(await js(`[...document.querySelectorAll('.list .item .undisc-name')].length > 0 && !!document.querySelector('.legend .undisc-name')`), 'Up soon outlines undiscovered hole names and explains the outline');
   await js(`(() => { const i = document.getElementById('search'); i.value = 'costa del sol'; i.dispatchEvent(new Event('input', {bubbles: true})); })()`);

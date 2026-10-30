@@ -245,8 +245,8 @@ function holeRows(ctx, zid) {
     }
     return `
       <a class="item hole${grey ? ' grey' : ''}" href="#/hole/${hid}">
-        <div class="row"><span class="num lv">Lv ${h.lvl}</span><span class="title grow">${holeName(m, store, hid)}</span><span class="num${done(hc) ? ' done' : ''}">${countText(hc)}</span></div>
-        ${tags.length ? `<div class="tags indent">${tags.join('')}</div>` : ''}
+        <div class="row"><span class="title grow">${holeName(m, store, hid)}<span class="lv">Lv ${h.lvl}</span></span><span class="num${done(hc) ? ' done' : ''}">${countText(hc)}</span></div>
+        ${tags.length ? `<div class="tags">${tags.join('')}</div>` : ''}
       </a>`;
   });
 }

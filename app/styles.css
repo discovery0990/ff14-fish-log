@@ -115,20 +115,28 @@ button.fold { color: var(--muted); }
 button.fold .title { font-weight: 500; }
 button.fold-card { border: 0; text-align: left; color: var(--muted); }
 button.caught-group { border: 0; border-radius: 14px; background: var(--surface); }
-.item.hole { padding-left: 42px; gap: 4px; background: rgba(0, 0, 0, .28); }
+/* Home tree: each level steps down in type size, and rails at the parents'
+   text edge tie zones to their region and holes to their zone. */
+.item.region > .row .title { font-size: 17px; font-weight: 700; }
+.item.zone { padding-left: 32px; gap: 4px;
+  background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat, rgba(0, 0, 0, .14); }
+.item.zone > .row .title { font-size: 15px; font-weight: 600; }
+.item.zone.open .chev { stroke: var(--accent); }
+.item.hole { padding-left: 50px; gap: 4px;
+  background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat,
+    linear-gradient(var(--accent), var(--accent)) 32px 0 / 2px 100% no-repeat, rgba(0, 0, 0, .28); }
+.item.hole .title { font-size: 14px; font-weight: 500; }
 .item.hole.grey { opacity: .55; }
-.item.zone { padding-left: 28px; gap: 4px; background: rgba(0, 0, 0, .14); }
+.item.hole .lv { margin-left: 6px; font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; }
 .cards { display: flex; flex-direction: column; gap: 10px; }
 .card { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--surface); }
 .card.row { flex-direction: row; }
 .card.dashed { outline: 1px dashed var(--undisc); outline-offset: -1px; }
 .num.done { color: var(--accent-text); }
 .card.grey { opacity: .55; }
-.lv { width: 44px; color: var(--muted); font-size: 12px; flex: none; }
 
 /* Tags and pills */
 .tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.tags.indent { padding-left: 54px; }
 .tag { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--track); color: var(--text); }
 .tag.done { background: var(--accent-bg); color: var(--accent-text); }
 .tag.open { background: var(--open); color: var(--open-text); }

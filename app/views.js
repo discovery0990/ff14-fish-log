@@ -86,14 +86,13 @@ const homeSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 
 
 /**
  * Back to the previous screen on the path taken, or, with no path (a deep
- * link, a fresh start), up to `href`. Plus a Home button on `tab`, unless
- * Back already goes Home.
+ * link, a fresh start), up to `href`. Plus a Home button on `tab`, always
+ * in the same place so it can be found without looking.
  */
 function back(ctx, href, label, tab = 'rod') {
   const prevName = ctx?.prev && screenName(ctx.m, ctx.prev);
   const [to, text, act] = prevName ? [ctx.prev, prevName, ' data-act="back"'] : [href, label, ''];
-  const home = text === 'Home' ? ''
-    : `<a class="home" href="#/${tab}" aria-label="Home">${homeSvg}</a>`;
+  const home = `<a class="home" href="#/${tab}" aria-label="Home">${homeSvg}</a>`;
   return `<nav class="topnav"><a class="back" href="${esc(to)}"${act}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${esc(text)}</span></a>${home}</nav>`;
 }
 

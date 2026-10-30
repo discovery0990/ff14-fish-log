@@ -188,7 +188,7 @@ try {
   // --- A hole names its region › zone; each opens Home there. Home button below Home.
   await go('#/hole/r156');
   check(await js(`[...document.querySelectorAll('.place a')].map((a) => a.getAttribute('href')).join(' ')`) === '#/rod/region/22 #/rod/zone/32', 'hole shows region › zone, linked');
-  check(await js(`!document.querySelector('.home')`), 'no Home button when Back already goes Home');
+  check(await js(`document.querySelector('.home')?.getAttribute('href')`) === '#/rod', 'Home button shows even when Back goes Home');
   await js(`document.querySelector('.fish a.body').click()`);
   await sleep(250);
   check(await js(`document.querySelector('.home')?.getAttribute('href')`) === '#/rod', 'a fish opened from a hole has a Home button');

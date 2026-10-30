@@ -46,7 +46,7 @@ There's no way to import in-game progress (PS5, no plugins), so all progress is 
 
 The mockup is at https://claude.ai/artifact/528uaT9rVpkYAw5xb5dgAz.
 
-**Back** retraces the path you took: it goes to the previous screen and names it (e.g. a hole opened from a fish's Found at list goes back to that fish, then to the hole you started from). Each history entry keeps the screens before it, so this survives a reload. With no path behind a screen (a deep link, a fresh start), Back goes up instead: a fish to Home or Up soon if opened from there, else to its hole; everything else to Home. Screens below Home also get a Home button at the top right (left out when Back already goes Home).
+**Back** retraces the path you took: it goes to the previous screen and names it (e.g. a hole opened from a fish's Found at list goes back to that fish, then to the hole you started from). Each history entry keeps the screens before it, so this survives a reload. With no path behind a screen (a deep link, a fresh start), Back goes up instead: a fish to Home or Up soon if opened from there, else to its hole; everything else to Home. Screens below Home also get a Home button at the top right, always, so it's found without looking.
 
 Regions, zones, holes and fish all follow the in-game Fishing Log order: FishingSpot.Order for rod holes (zones and regions by their first hole; Elysian Fields has 0 and goes last), SpearfishingNotebook row order for spearfishing, and each hole's own item list for fish.
 

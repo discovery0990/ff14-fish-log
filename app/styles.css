@@ -30,6 +30,7 @@
   --open-text: #1A1204;
   --open-bg: #2A2410;
   --warn: #E8968A;
+  --undisc: color-mix(in srgb, var(--muted) 70%, transparent);
   --mooch: #C9BFFF;
   --mooch-bg: #2B2350;
   --sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
@@ -115,7 +116,7 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .cards { display: flex; flex-direction: column; gap: 10px; }
 .card { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--surface); }
 .card.row { flex-direction: row; }
-.card.dashed { outline: 1px dashed color-mix(in srgb, var(--muted) 50%, transparent); outline-offset: -1px; }
+.card.dashed { outline: 1px dashed var(--undisc); outline-offset: -1px; }
 .num.done { color: var(--accent-text); }
 .card.grey { opacity: .55; }
 .lv { width: 44px; color: var(--muted); font-size: 12px; flex: none; }
@@ -126,7 +127,6 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .tag { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--track); color: var(--text); }
 .tag.done { background: var(--accent-bg); color: var(--accent-text); }
 .tag.open { background: var(--open); color: var(--open-text); }
-.tag.undisc { background: none; outline: 1px dashed var(--muted); outline-offset: -1px; }
 .arrow { color: var(--mooch); font-weight: 700; }
 .pill { font-family: var(--mono); font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--track); white-space: nowrap; }
 .pill.open { background: var(--open); color: var(--open-text); }
@@ -182,7 +182,8 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .search .clear svg { width: 20px; height: 20px; stroke: var(--muted); stroke-width: 2.2; }
 .search input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.undisc-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; border: 1px dashed var(--muted); vertical-align: 1px; }
+.undisc-name { padding: 0 5px; border-radius: 5px; outline: 1px dashed var(--undisc); outline-offset: -1px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.legend { font-size: 12px; }
 .item .title, .item .sub { display: block; }
 
 /* Buttons and controls */

@@ -225,6 +225,12 @@ function hiddenWhy(m, hid, profile) {
 const xyText = (h) => (h.xy ? `X ${h.xy[0].toFixed(1)} Y ${h.xy[1].toFixed(1)}` : '');
 
 const hiddenTag = (why) => (why ? ` <span class="tag">${esc(why)}</span>` : '');
+// A dashed outline means "not discovered yet" everywhere: hole cards, the
+// hole's toggle, and hole names in lists. undiscLegend explains it.
+const holeName = (m, store, hid) => (store.isDiscovered(hid)
+  ? esc(m.data.holes[hid].name)
+  : `<span class="undisc-name" title="Not discovered yet">${esc(m.data.holes[hid].name)}</span>`);
+const undiscLegend = '<p class="note legend"><span class="undisc-name">Hole</span> not discovered yet</p>';
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /** "Hole · Zone", or just the name when a hole is named after its zone. */
@@ -246,18 +252,17 @@ function upSoonList(ctx) {
   return m.upSoon(tab, { now, horizonMs: store.state.upSoonHours * 36e5, isCaught: store.isCaught, profile: store.state.profile });
 }
 
-/** Two lines: fish and status, then hole and condition. A dashed dot marks an undiscovered hole. */
+/** Two lines: fish and status, then hole and condition. */
 function upSoonRows(ctx, list) {
   const { m, store, now } = ctx;
   return list.map(({ fid, hid, st }) => {
     const f = m.data.fish[fid];
-    const disc = store.isDiscovered(hid);
     return `
       <a class="item row" href="#/hole/${hid}">
         ${icon(f.icon)}
         <span class="grow stack-xs">
           <span class="row"><span class="title grow">${esc(f.name)}</span>${statusPill(st, now)}</span>
-          <span class="sub">${disc ? '' : '<span class="undisc-dot" title="Undiscovered hole" aria-label="Undiscovered hole"></span>'}${esc(m.data.holes[hid].name)} · ${esc(condText(m, f.at[hid]))}</span></span>
+          <span class="sub">${holeName(m, store, hid)} · ${esc(condText(m, f.at[hid]))}</span></span>
       </a>`;
   }).join('');
 }
@@ -266,12 +271,14 @@ function upSoonSection(ctx) {
   const { store, tab } = ctx;
   if (tab === 'ocean') return '';
   const all = upSoonList(ctx);
+  const shown = all.slice(0, UP_SOON_SHOWN);
+  const legend = shown.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : '';
   const more = all.length > UP_SOON_SHOWN
     ? `<a class="more" href="#/${tab}/soon">See all ${all.length}</a>` : '';
   return `
     <section>
       <div class="row"><h2 class="sec grow">Up soon · uncaught</h2><a class="note" href="#/${tab}/soon">next ${store.state.upSoonHours}h</a></div>
-      ${all.length ? `<div class="list">${upSoonRows(ctx, all.slice(0, UP_SOON_SHOWN))}</div>${more}` : `<p class="note">Nothing opens in that time. <a href="#/${tab}/soon">Look further ahead</a>.</p>`}
+      ${all.length ? `<div class="list">${upSoonRows(ctx, shown)}</div>${legend}${more}` : `<p class="note">Nothing opens in that time. <a href="#/${tab}/soon">Look further ahead</a>.</p>`}
     </section>`;
 }
 
@@ -290,6 +297,7 @@ export function soonView(ctx, tab) {
     <header class="stack-s"><h1>Up soon</h1>
       <div class="sub">Uncaught ${tab === 'spear' ? 'spearfishing ' : ''}fish with a window open now or within ${hours}h</div></header>
     <div class="chips" role="group" aria-label="Look ahead">${chips}</div>
+    ${all.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : ''}
     ${all.length ? `<div class="list">${upSoonRows(ctx, all)}</div>` : '<p class="empty">Nothing opens in that time. Try looking further ahead.</p>'}`;
 }
 
@@ -311,7 +319,7 @@ function searchResults(ctx) {
     }
     if (r.type === 'hole') {
       const h = m.data.holes[r.id];
-      return `<a class="item row" href="#/hole/${r.id}"><span class="grow"><span class="title">${esc(h.name)}</span>
+      return `<a class="item row" href="#/hole/${r.id}"><span class="grow"><span class="title">${holeName(m, store, r.id)}</span>
         <span class="sub">Hole · ${esc(m.data.zones[h.zone].name)} · Lv ${h.lvl} · ${xyText(h)} · ${countText(m.count([r.id], store.isCaught))}${hiddenTag(hiddenWhy(m, r.id, profile))}</span></span>${chevron}</a>`;
     }
     const z = m.data.zones[r.id];
@@ -426,7 +434,7 @@ export function zoneView(ctx, tab, zid, filter = 'all') {
   return `
     ${back(`#/${tab}`, 'Home')}
     <header class="stack-s"><h1>${esc(zone.name)}</h1>
-      <div class="row sub"><span class="grow">${plural(vis.length, 'hole')}${undisc ? ` · ${undisc} undiscovered` : ''}</span><span class="num hi">${countText(c)} fish</span></div>
+      <div class="row sub"><span class="grow">${plural(vis.length, 'hole')}${undisc ? ` · <span class="undisc-name">${undisc} not discovered</span>` : ''}</span><span class="num hi">${countText(c)} fish</span></div>
       ${progress(c)}</header>
     <div class="chips" role="group" aria-label="Show">${chips}</div>
     <section><h2 class="sec">Fishing holes</h2><div class="cards">${cards || '<p class="empty">No holes match.</p>'}</div>

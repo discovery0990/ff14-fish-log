@@ -49,7 +49,7 @@ The mockup is at https://claude.ai/artifact/528uaT9rVpkYAw5xb5dgAz.
 1. **Home**
    - Header: profile summary, ET, and overall caught count with a thin bar. Rod / Spearfishing / Ocean tabs.
    - Search box (fish, hole or zone).
-   - **Up soon**: the first 5 uncaught, eligible, condition fish whose window opens within the horizon (undiscovered holes marked with a dashed dot). "See all" opens an Up soon screen with every match and the 1/2/3/6h horizon chips.
+   - **Up soon**: the first 5 uncaught, eligible, condition fish whose window opens within the horizon (undiscovered hole names get a dashed outline, explained by a one-line legend; the same outline is used in search results and the zone header, matching the dashed hole cards and "Not discovered" toggle). "See all" opens an Up soon screen with every match and the 1/2/3/6h horizon chips.
    - Region list with progress. Regions hidden by filters are summarised in a "N regions hidden" line. Tapping a region expands its zones in place (one open at a time): name, caught/total, hole count, level range and an open-now tag. Back from a zone returns Home with that region open and the scroll restored.
 2. **Zone**: holes sorted by level, with caught/total, tags, and All / Incomplete / Undiscovered chips.
 3. **Hole** (the main screen)

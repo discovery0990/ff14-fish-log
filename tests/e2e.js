@@ -165,7 +165,7 @@ try {
   check(await js(`Math.abs(window.scrollY - ${y}) < 5`), 'Home restores its scroll position after Back');
   await go('#/rod/zone/54');
   check(await js(`location.hash === '#/rod' && document.querySelector('[data-zid="54"]')?.getAttribute('aria-expanded') === 'true' && document.querySelector('[data-rid="23"]')?.getAttribute('aria-expanded') === 'true'`), 'zone links (from search) open Home with that zone expanded');
-  check(await js(`Math.abs(document.querySelector('[data-zid="54"]').getBoundingClientRect().top) < 5`), 'a zone link scrolls to the zone');
+  check(await js(`(() => { const t = document.querySelector('[data-zid="54"]').getBoundingClientRect().top; return t >= 8 && t < 20; })()`), 'a zone link scrolls to the zone, just below the top edge');
   await shot('regions');
   await js(`document.querySelector('[data-act=region][data-rid="23"]').click()`);
   check(await js(`!document.querySelector('.item.zone')`), 'tapping an open region collapses it');

@@ -39,7 +39,12 @@
 }
 
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%;
+  /* Jumping to a row (search → zone) stops below the status bar and notch,
+     which the page draws under (viewport-fit=cover). */
+  scroll-padding-top: calc(env(safe-area-inset-top) + 12px);
+}
 body {
   margin: 0;
   background: var(--bg);

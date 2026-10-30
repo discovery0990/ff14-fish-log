@@ -172,6 +172,13 @@ try {
   await js(`document.querySelector('[data-act=region][data-rid="23"]').click()`);
   check(await js(`!document.querySelector('.item.zone')`), 'tapping an open region collapses it');
 
+  // --- Redraws keep loaded icons (no flash when tapping the accordion)
+  await waitFor(() => js(`[...document.querySelectorAll('.list .item img')].every((i) => i.complete)`), 'Up soon icons');
+  await js(`document.querySelector('.list .item img').__mark = 1`);
+  await js(`document.querySelector('[data-act=region]').click()`);
+  check(await js(`document.querySelector('.list .item img').__mark === 1`), 'tapping a region keeps the Up soon icon elements');
+  await js(`document.querySelector('[data-act=region]').click()`);
+
   // Red Mantis Falls (r58) is a restricted Lv 45 hole: locked at Lv 40.
   await js(`(() => { const i = document.getElementById('search'); i.value = 'red mantis falls'; i.dispatchEvent(new Event('input', {bubbles: true})); })()`);
   check(await js(`document.getElementById('home-body').textContent.includes('Locked until Lv 45')`), 'search labels locked holes');

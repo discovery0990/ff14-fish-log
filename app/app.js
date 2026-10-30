@@ -89,7 +89,20 @@ function render({ keepScroll = false } = {}) {
     sel = focusId ? [active.selectionStart, active.selectionEnd] : null;
   } catch { /* number inputs have no selection */ }
 
+  // Keep already-loaded icons: a fresh <img> has to decode again, which
+  // flashes. Swap each new one for an old element with the same src.
+  const loaded = new Map();
+  for (const img of root.querySelectorAll('img')) {
+    if (img.complete && img.naturalWidth) (loaded.get(img.src) ?? loaded.set(img.src, []).get(img.src)).push(img);
+  }
   root.innerHTML = view();
+  for (const img of root.querySelectorAll('img')) {
+    const old = loaded.get(img.src)?.pop();
+    if (old) {
+      old.className = img.className;
+      img.replaceWith(old);
+    }
+  }
 
   if (focusId) {
     const el = document.getElementById(focusId);

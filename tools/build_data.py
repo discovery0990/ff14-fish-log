@@ -153,7 +153,7 @@ def build(fetch, skip_icons):
 
     # --- Holes -------------------------------------------------------------
     rod_spots = fetch.sheet_all('FishingSpot', 'PlaceName@as(raw),PlaceName.Name,GatheringLevel,'
-                                'TerritoryType@as(raw),Item@as(raw),X,Z,Radius,FishingSpotCategory,Rare')
+                                'TerritoryType@as(raw),Item@as(raw),X,Z,Radius,FishingSpotCategory,Rare,Order')
     notebooks = fetch.sheet_all('SpearfishingNotebook', 'PlaceName@as(raw),PlaceName.Name,GatheringLevel,'
                                 'TerritoryType@as(raw),IsShadowNode,GatheringPointBase.Item@as(raw),X,Y,Radius')
 
@@ -169,6 +169,9 @@ def build(fetch, skip_icons):
         holes[f'r{sid}'] = {'kind': 'rod', 'name': name_of(s['PlaceName']), 'place': s['PlaceName@as(raw)'],
                             'terr': s['TerritoryType@as(raw)'], 'lvl': s['GatheringLevel'],
                             'cat': s['FishingSpotCategory'], 'fish': listed, 'extra': [],
+                            # The in-game Fishing Log's order. Elysian Fields
+                            # (Island Sanctuary) has 0: put it last.
+                            'ord': s['Order'] or 99999,
                             'raw': (s['X'], s['Z'])}
         # "Rare" spots are the restricted holes (sparkling icon in the log):
         # casting needs Fisher level >= the hole's level ("…but are uncertain
@@ -184,6 +187,7 @@ def build(fetch, skip_icons):
         holes[f's{nid}'] = {'kind': 'spear', 'name': name_of(n['PlaceName']), 'place': n['PlaceName@as(raw)'],
                             'terr': n['TerritoryType@as(raw)'], 'lvl': n['GatheringLevel'],
                             'shadow': bool(n['IsShadowNode']), 'fish': listed, 'extra': [],
+                            'ord': nid,  # the sheet has no Order column; row order is the log's
                             'raw': (n['X'], n['Y'])}
 
     # --- Catch info per fish per hole --------------------------------------

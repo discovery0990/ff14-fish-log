@@ -468,12 +468,8 @@ export function holeView(ctx, hid) {
   const w = m.weatherNow(hid, now);
   const why = hiddenWhy(m, hid, profile);
 
-  const rows = m.holeFish(hid).map((x) => {
-    const st = m.status(x.fid, hid, now);
-    const caught = store.isCaught(x.fid);
-    const rank = caught ? [3, 0] : st?.state === 'open' ? [0, st.end] : st?.state === 'upcoming' ? [1, st.start] : [2, 0];
-    return { ...x, st, caught, rank };
-  }).sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1]);
+  // In the game's order, so the list can be checked against the Fishing Log.
+  const rows = m.holeFish(hid).map((x) => ({ ...x, st: m.status(x.fid, hid, now), caught: store.isCaught(x.fid) }));
 
   const row = (r) => {
     const f = m.data.fish[r.fid];

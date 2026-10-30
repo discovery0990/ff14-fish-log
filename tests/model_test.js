@@ -280,3 +280,16 @@ Deno.test('fish view without a source hole does not discover any hole when marki
   const fromHole = fishView(ctxFor(store), byName('Black Ghost'), 'r5');
   assertStringIncludes(fromHole, 'data-act="caught" data-fid="4964" data-hid="r5"');
 });
+
+Deno.test('regions, zones, holes and fish follow the in-game Fishing Log order', () => {
+  const p = { lvl: null, gath: null, exp: null };
+  const name = (kind) => (id) => DATA[kind][id].name;
+  assertEquals(m.visibleRegions('rod', p).slice(0, 5).map(name('regions')),
+    ['La Noscea', 'The Black Shroud', 'Thanalan', 'Coerthas', 'Mor Dhona']);
+  assertEquals(m.visibleZones('rod', '22', p).slice(0, 3).map(name('zones')),
+    ['Limsa Lominsa Upper Decks', 'Limsa Lominsa Lower Decks', 'Middle La Noscea']);
+  const eln = m.visibleHoles('rod', '32', p).map(name('holes'));
+  assertEquals(eln[0], 'South Bloodshore');
+  assertEquals(eln.at(-1), 'North Isle of Endless Summer'); // added in 4.0: last
+  assertEquals(m.holeFish('r5').map((x) => DATA.fish[x.fid].name).slice(0, 2), ['Mudcrab', 'Black Eel']);
+});

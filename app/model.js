@@ -34,8 +34,17 @@ export function createModel(data) {
     if (!zs.includes(zone)) zs.push(zone);
     for (const fid of [...h.fish, ...h.extra]) (fishHoles[String(fid)] ??= []).push(hid);
   }
+  // In-game Fishing Log order: holes by their Order, and zones and regions
+  // by their first hole.
+  const ordOf = (hid) => data.holes[hid].ord;
+  const byOrd = (a, b) => ordOf(a) - ordOf(b) || (a < b ? -1 : 1);
+  const regionOrder = {}; // tab → [region]
   for (const tab of TABS) {
-    for (const hs of Object.values(zoneHoles[tab])) hs.sort((a, b) => data.holes[a].lvl - data.holes[b].lvl);
+    for (const hs of Object.values(zoneHoles[tab])) hs.sort(byOrd);
+    const first = (z) => ordOf(zoneHoles[tab][z][0]);
+    for (const zs of Object.values(regionZones[tab])) zs.sort((a, b) => first(a) - first(b));
+    regionOrder[tab] = Object.keys(regionZones[tab])
+      .sort((a, b) => first(regionZones[tab][a][0]) - first(regionZones[tab][b][0]));
   }
 
   const fishName = (id) => data.fish[id]?.name ?? data.baits[id]?.name ?? data.names?.[id] ?? `#${id}`;
@@ -86,7 +95,7 @@ export function createModel(data) {
   }
 
   function visibleRegions(tab, profile) {
-    return Object.keys(regionZones[tab]).filter((r) => visibleZones(tab, r, profile).length);
+    return regionOrder[tab].filter((r) => visibleZones(tab, r, profile).length);
   }
 
   const zoneHolesAll = (tab, zone) => zoneHoles[tab][zone] ?? [];

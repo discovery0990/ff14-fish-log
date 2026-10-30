@@ -20,8 +20,14 @@ const profile = (p = {}) => ({ lvl: null, gath: null, exp: null, ...p });
 
 // ------------------------------------------------------------ counts
 
-Deno.test('overall total is 1,806 unique fish', () => {
-  assertEquals(Object.keys(DATA.fish).length, 1806);
+// The build already pins the log sizes (EXPECTED_ROD/SPEAR), so this only
+// checks the two logs don't overlap. The zone and region counts below are
+// pinned on purpose: they test the counting on old (ARR) zones that patches
+// don't touch. If one fails after a data update, check the game before
+// changing the number.
+Deno.test('every fish is in exactly one log', () => {
+  const { rod, spear } = DATA.meta.stats;
+  assertEquals(Object.keys(DATA.fish).length, rod + spear);
 });
 
 Deno.test('Central Shroud: 5 holes, 28 distinct fish (27 listed + Copperfish reported at The Vein)', () => {

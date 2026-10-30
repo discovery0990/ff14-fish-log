@@ -119,6 +119,10 @@ try {
   await js(`history.back()`);
   await sleep(300);
   check(await js(`Math.abs(window.scrollY - 600) < 5`), 'Up soon restores its scroll position after Back');
+  await go('#/fish/4911'); // Rock Lobster: 4 holes, none discovered
+  check(await js(`document.querySelectorAll('.list .item .undisc-name').length === 4 && !!document.querySelector('.legend')`), 'Found at outlines undiscovered holes, with the legend');
+  await go('#/fish/4950'); // Mudcrab, caught at Hopeseed Pond (discovered)
+  check(await js(`![...document.querySelectorAll('.list .item')].find((i) => i.getAttribute('href') === '#/hole/r5').querySelector('.undisc-name')`), 'Found at leaves discovered holes plain');
   await go('#/fish/4950?h=r5&from=javascript:alert(1)');
   check(await js(`document.querySelector('.back').getAttribute('href')`) === '#/hole/r5', 'unknown from falls back to the hole');
   await go('#/rod');

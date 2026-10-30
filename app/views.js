@@ -249,13 +249,6 @@ const holeName = (m, store, hid) => (store.isDiscovered(hid)
 const undiscLegend = '<p class="note legend"><span class="undisc-name">Hole</span> not discovered yet</p>';
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-/** "Hole · Zone", or just the name when a hole is named after its zone. */
-function holePlace(m, hid) {
-  const h = m.data.holes[hid];
-  const z = m.data.zones[h.zone].name;
-  return h.name === z ? z : `${h.name} · ${z}`;
-}
-
 export function daysAgo(ms, now) {
   const d = Math.floor((now - ms) / 864e5);
   return d <= 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
@@ -592,7 +585,8 @@ export function fishView(ctx, fid, fromHole, from = null) {
 
   const found = holes.map((x) => {
     const hh = m.data.holes[x];
-    return `<a class="item row" href="#/hole/${x}"><span class="grow">${esc(holePlace(m, x))}<span class="sub">${xyText(hh)}</span></span><span class="num dim">Lv ${hh.lvl}</span></a>`;
+    const z = m.data.zones[hh.zone].name;
+    return `<a class="item row" href="#/hole/${x}"><span class="grow">${holeName(m, store, x)}${hh.name === z ? '' : ` · ${esc(z)}`}<span class="sub">${xyText(hh)}</span></span><span class="num dim">Lv ${hh.lvl}</span></a>`;
   }).join('');
 
   return `
@@ -605,7 +599,8 @@ export function fishView(ctx, fid, fromHole, from = null) {
     ${facts.length ? `<section><h2 class="sec">How to catch${holes.length > 1 ? ` · ${esc(h.name)}` : ''}</h2>
       <dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>` : ''}
     ${chain}${windows}
-    <section><h2 class="sec">Found at</h2><div class="list">${found}</div></section>`;
+    <section><h2 class="sec">Found at</h2><div class="list">${found}</div>
+      ${holes.some((x) => !store.isDiscovered(x)) ? undiscLegend : ''}</section>`;
 }
 
 export function notFound() {

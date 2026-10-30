@@ -61,6 +61,17 @@ function view() {
   return notFound();
 }
 
+/**
+ * Re-render after expanding or collapsing a row, keeping that row where it
+ * was on screen: rows collapsing above it would otherwise pull it up.
+ */
+function renderPinned(el, selector) {
+  const top = el.getBoundingClientRect().top;
+  render({ keepScroll: true });
+  const now = document.querySelector(selector);
+  if (now) window.scrollBy(0, now.getBoundingClientRect().top - top);
+}
+
 /** Expand a zone (and its region) on Home; scroll it into view on the next render. */
 function openZone(zid, scroll) {
   ui.openRegion = String(model.data.zones[zid].region);
@@ -194,7 +205,7 @@ root.addEventListener('click', (ev) => {
     }
     case 'fold':
       if (!ui.folds.delete(d.key)) ui.folds.add(d.key);
-      render({ keepScroll: true });
+      renderPinned(el, `[data-act=fold][data-key="${d.key}"]`);
       break;
     case 'show-caught':
       ui.showCaught = !ui.showCaught;
@@ -203,12 +214,12 @@ root.addEventListener('click', (ev) => {
     case 'region':
       ui.openRegion = ui.openRegion === d.rid ? null : d.rid;
       ui.openZone = null;
-      render({ keepScroll: true });
+      renderPinned(el, `[data-rid="${d.rid}"]`);
       break;
     case 'zone':
       if (ui.openZone === d.zid) ui.openZone = null;
-      else openZone(d.zid, true);
-      render({ keepScroll: true });
+      else openZone(d.zid, false);
+      renderPinned(el, `[data-zid="${d.zid}"]`);
       break;
     case 'soon-holes': store.setPrefs({ upSoonHoles: d.f }); break;
     case 'horizon': store.setPrefs({ upSoonHours: Number(d.h) }); break;

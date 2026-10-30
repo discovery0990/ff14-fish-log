@@ -140,9 +140,17 @@ try {
   check(await js(`!document.querySelector('.item.zone')`), 'tapping an open region collapses it');
   await js(`document.querySelector('[data-act=region][data-rid="22"]').click()`);
   check(await js(`!!document.querySelector('[data-act=zone][data-zid="32"]')`), 'tapping La Noscea lists its zones on Home');
+  await js(`window.scrollTo(0, 300)`);
   await js(`document.querySelector('[data-act=zone][data-zid="32"]').click()`);
+  check(await js(`Math.abs(window.scrollY - 300) < 5`), 'opening a zone keeps the scroll position (no jump)');
   check(await js(`[...document.querySelectorAll('a.item.hole')].some((a) => a.getAttribute('href') === '#/hole/r156')`), 'tapping Eastern La Noscea lists its holes on Home');
-  check(await js(`Math.abs(document.querySelector('[data-zid="32"]').getBoundingClientRect().top) < 5`), 'the opened zone scrolls to the top');
+  // Open a zone below the open one: the tapped row stays put as the other collapses.
+  const z2 = await js(`(() => { const z = document.querySelector('[data-act=zone][data-zid="32"]'); let n = z.nextElementSibling; while (n && !n.matches('[data-act=zone]')) n = n.nextElementSibling; return n.dataset.zid; })()`);
+  await js(`document.querySelector('[data-zid="32"]').scrollIntoView({ block: 'start' })`);
+  const before = await js(`document.querySelector('[data-zid="${z2}"]').getBoundingClientRect().top`);
+  await js(`document.querySelector('[data-zid="${z2}"]').click()`);
+  check(await js(`Math.abs(document.querySelector('[data-zid="${z2}"]').getBoundingClientRect().top - ${before}) < 2`), 'the tapped zone stays where it was while the one above collapses');
+  await js(`document.querySelector('[data-act=zone][data-zid="32"]').click()`);
   const y = await js(`window.scrollY`);
   await go('#/hole/r156');
   check(await js(`document.querySelector('.back').getAttribute('href')`) === '#/rod', 'hole Back goes to Home');
@@ -152,6 +160,7 @@ try {
   check(await js(`Math.abs(window.scrollY - ${y}) < 5`), 'Home restores its scroll position after Back');
   await go('#/rod/zone/54');
   check(await js(`location.hash === '#/rod' && document.querySelector('[data-zid="54"]')?.getAttribute('aria-expanded') === 'true' && document.querySelector('[data-rid="23"]')?.getAttribute('aria-expanded') === 'true'`), 'zone links (search, old links) open Home with that zone expanded');
+  check(await js(`Math.abs(document.querySelector('[data-zid="54"]').getBoundingClientRect().top) < 5`), 'a zone link scrolls to the zone');
   await go('#/rod/region/23');
   check(await js(`location.hash === '#/rod' && document.querySelector('[data-rid="23"]')?.getAttribute('aria-expanded') === 'true'`), 'old region links open Home with that region expanded');
   await shot('regions');

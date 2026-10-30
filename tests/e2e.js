@@ -164,7 +164,7 @@ try {
   check(await js(`!document.querySelector('.item.zone')`), 'tapping an open region collapses it');
   await js(`document.querySelector('[data-act=region][data-rid="22"]').click()`);
   check(await js(`!!document.querySelector('[data-act=zone][data-zid="32"]')`), 'tapping La Noscea lists its zones on Home');
-  check(await js(`/^\\d+ undiscovered$/.test(document.querySelector('[data-act=zone][data-zid="32"] .sub .undisc-name')?.textContent)`), 'a zone row counts its undiscovered holes, dashed');
+  check(await js(`/^\\d+ new$/.test(document.querySelector('[data-act=zone][data-zid="32"] .sub .undisc-name')?.textContent)`), 'a zone row counts its undiscovered holes as new, dashed');
   await js(`window.scrollTo(0, 300)`);
   await js(`document.querySelector('[data-act=zone][data-zid="32"]').click()`);
   check(await js(`Math.abs(window.scrollY - 300) < 5`), 'opening a zone keeps the scroll position (no jump)');

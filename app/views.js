@@ -236,12 +236,14 @@ function zoneRows(ctx, rid) {
     const lv = vis.map((h) => m.data.holes[h].lvl);
     const lvText = Math.min(...lv) === Math.max(...lv) ? `Lv ${lv[0]}` : `Lv ${Math.min(...lv)}–${Math.max(...lv)}`;
     const open = openCount(ctx, vis);
-    const undisc = vis.filter((h) => !store.isDiscovered(h)).length;
+    // Locked holes can't be discovered yet, so they're counted apart.
+    const locked = vis.filter((h) => m.isLocked(h, profile)).length;
+    const undisc = vis.filter((h) => !store.isDiscovered(h) && !m.isLocked(h, profile)).length;
     const expanded = ctx.openZone === z;
     return `
       <button class="item zone region${expanded ? ' open' : ''}" data-act="zone" data-zid="${z}" aria-expanded="${expanded}">
         <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span><span class="num${done(c) ? ' done' : ''}">${countText(c)}</span>${chevron}</div>
-        <div class="row"><span class="sub grow">${plural(vis.length, 'hole')}${undisc ? ` · <span class="undisc-name">${undisc} undiscovered</span>` : ''} · ${lvText}</span>${open ? `<span class="tag open">${open} open now</span>` : ''}</div>
+        <div class="row"><span class="sub grow">${plural(vis.length, 'hole')}${undisc ? ` · <span class="undisc-name">${undisc} new</span>` : ''}${locked ? ` · ${locked} locked` : ''} · ${lvText}</span>${open ? `<span class="tag open">${open} open now</span>` : ''}</div>
       </button>${expanded ? holeRows(ctx, z) : ''}`;
   });
 }
@@ -263,7 +265,7 @@ function holeRows(ctx, zid) {
       tags.push(`<span class="tag">Locked until Lv ${h.lvl}</span>`);
     } else {
       const open = m.holeFish(hid)
-        .filter(({ fid }) => !store.isCaught(fid))
+        .filter(({ fid, entry }) => !store.isCaught(fid) && !m.gatheringShort(entry, profile))
         .map(({ fid }) => [fid, m.status(fid, hid, now)])
         .filter(([, st]) => st?.state === 'open');
       for (const [fid, st] of open.slice(0, 2)) {
@@ -279,13 +281,19 @@ function holeRows(ctx, zid) {
   });
 }
 
-/** Uncaught fish whose window is open now across these holes. */
+/**
+ * Uncaught fish you could catch right now across these holes: window open,
+ * hole not locked, and enough Gathering.
+ */
 function openCount(ctx, hids) {
   const { m, store, now } = ctx;
+  const { profile } = store.state;
   let n = 0;
   for (const hid of hids) {
-    for (const { fid } of m.holeFish(hid)) {
-      if (!store.isCaught(fid) && m.status(fid, hid, now)?.state === 'open') n++;
+    if (m.isLocked(hid, profile)) continue;
+    for (const { fid, entry } of m.holeFish(hid)) {
+      if (store.isCaught(fid) || m.gatheringShort(entry, profile)) continue;
+      if (m.status(fid, hid, now)?.state === 'open') n++;
     }
   }
   return n;
@@ -488,7 +496,8 @@ export function holeView(ctx, hid) {
   const row = (r) => {
     const f = m.data.fish[r.fid];
     const e = r.entry;
-    const open = r.st?.state === 'open' && !r.caught;
+    // Out of Gathering reach: still listed with its window, but not lit up as open.
+    const open = r.st?.state === 'open' && !r.caught && !m.gatheringShort(e, profile);
     const cond = r.st && !r.caught
       ? `<span class="cond"><span class="hi">${esc(condText(m, e))}</span> ${statusPill(r.st, now)}</span>` : '';
     const warn = !r.caught && m.gatheringShort(e, profile)

@@ -1,6 +1,6 @@
 import { assert, assertEquals, assertThrows } from 'jsr:@std/assert@1.0.13';
 import {
-  ET_HOUR_MS, PERIOD_MS, eorzeaClock, fishWindows, forecastTarget, nextWindows,
+  ET_HOUR_MS, PERIOD_MS, eorzeaClock, forecastTarget, nextWindows,
   toEtHours, weatherForTarget, windowStatus, zoneWeather,
 } from '../app/engine.js';
 import { calculateForecastTarget } from './fixtures/upstream_weather.js';
@@ -166,22 +166,4 @@ Deno.test('finder agrees with brute-force sampling on real fish', () => {
       assertEquals(inWin(t), holds(t), `${DATA.fish[fid].name} @ ${DATA.holes[hid].name}, t=${t}`);
     }
   }
-});
-
-// ------------------------------------------------------------ data glue
-
-Deno.test('fishWindows: Black Eel at Hopeseed Pond is ET 17:00–10:00', () => {
-  const eel = Object.entries(DATA.fish).find(([, f]) => f.name === 'Black Eel')[0];
-  const [win] = fishWindows(DATA, eel, 'r5', T2026);
-  assertEquals(toEtHours(win.start) % 24, 17);
-  assertEquals((toEtHours(win.end) - toEtHours(win.start)), 17);
-});
-
-Deno.test('fishWindows: null for unconditional fish and ocean holes', () => {
-  const mudcrab = Object.entries(DATA.fish).find(([, f]) => f.name === 'Mudcrab')[0];
-  assertEquals(fishWindows(DATA, mudcrab, 'r5', T2026), null);
-  const oceanCase = Object.entries(DATA.fish).flatMap(([fid, f]) =>
-    Object.entries(f.at).filter(([hid, e]) => DATA.holes[hid].ocean && e.w).map(([hid]) => [fid, hid]))[0];
-  assert(oceanCase, 'expected an ocean fish with weather');
-  assertEquals(fishWindows(DATA, oceanCase[0], oceanCase[1], T2026), null);
 });

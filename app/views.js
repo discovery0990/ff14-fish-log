@@ -562,7 +562,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
   let windows = '';
   let banner = '';
   if (st) {
-    const wins = ctx.nextWindows(fid, hid, 4) ?? [];
+    const wins = m.windows(fid, hid, now, 4) ?? [];
     windows = `<section><h2 class="sec">Next windows</h2><div class="list">${wins.map((w) => `
       <div class="item row"><span class="grow">${w.start <= now ? 'Now' : fmtWhen(w.start, now)}</span><span class="num dim">${fmtDuration(w.end - Math.max(w.start, now))}</span></div>`).join('')}</div></section>`;
     banner = st.state === 'open'

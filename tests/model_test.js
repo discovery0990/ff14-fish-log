@@ -2,7 +2,7 @@ import { assert, assertEquals, assertStringIncludes } from 'jsr:@std/assert@1.0.
 import { createModel } from '../app/model.js';
 import { createStore, makeBackup, parseBackup, shouldRemind } from '../app/store.js';
 import { esc, fishView, fmtDuration, holeView, homeView, profileView, soonView } from '../app/views.js';
-import { fishWindows } from '../app/engine.js';
+import { toEtHours } from '../app/engine.js';
 
 const DATA = JSON.parse(await Deno.readTextFile(new URL('../app/data/fish.json', import.meta.url)));
 const m = createModel(DATA);
@@ -123,11 +123,26 @@ Deno.test('store survives corrupt storage', () => {
   assertEquals(createStore(storage).caughtCount(), 0);
 });
 
+Deno.test('windows: Black Eel at Hopeseed Pond is ET 17:00–10:00', () => {
+  const [win] = m.windows(byName('Black Eel'), 'r5', T, 1);
+  assertEquals(toEtHours(win.start) % 24, 17);
+  assertEquals(toEtHours(win.end) - toEtHours(win.start), 17);
+});
+
+Deno.test('windows and status: null for unconditional fish and ocean holes', () => {
+  assertEquals(m.windows(byName('Mudcrab'), 'r5', T, 1), null);
+  assertEquals(m.status(byName('Mudcrab'), 'r5', T), null);
+  const oceanCase = Object.entries(DATA.fish).flatMap(([fid, f]) =>
+    Object.entries(f.at).filter(([hid, e]) => DATA.holes[hid].ocean && e.w).map(([hid]) => [fid, hid]))[0];
+  assert(oceanCase, 'expected an ocean fish with weather');
+  assertEquals(m.windows(oceanCase[0], oceanCase[1], T, 1), null);
+  assertEquals(m.status(oceanCase[0], oceanCase[1], T), null);
+});
+
 // ------------------------------------------------------------ views
 
 const ctxFor = (store, extra = {}) => ({
   m, store, now: T, tab: 'rod', query: '', showAllSoon: false, pendingImport: null, flash: '', remind: false,
-  nextWindows: (fid, hid, count) => fishWindows(DATA, fid, hid, T, { count }),
   ...extra,
 });
 

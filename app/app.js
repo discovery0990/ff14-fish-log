@@ -1,6 +1,5 @@
 // Entry point: loads data, routes on the URL hash, renders, handles input.
 
-import { fishWindows } from './engine.js';
 import { TABS, createModel } from './model.js';
 import { createStore, makeBackup, parseBackup, shouldRemind } from './store.js';
 import {
@@ -30,7 +29,6 @@ function makeCtx(parts) {
     m: model, store, now, ...ui, appVersion: APP_VERSION.startsWith('__') ? 'dev' : APP_VERSION,
     tab: TABS.includes(parts[0]) ? parts[0] : 'rod',
     remind: shouldRemind(store.state, store.caughtCount(), now),
-    nextWindows: (fid, hid, count) => fishWindows(model.data, fid, hid, now, { count }),
   };
 }
 

@@ -1,7 +1,7 @@
 // Derived views of the data file: grouping, counts, filters, mooch chains
 // and live window status. Pure functions over (data, progress, profile).
 
-import { hasWindow, periodOf, windowStatus, zoneWeather } from './engine.js';
+import { hasWindow, nextWindows, periodOf, windowStatus, zoneWeather } from './engine.js';
 
 export const TABS = ['rod', 'spear', 'ocean'];
 export const TAB_LABELS = { rod: 'Rod', spear: 'Spearfishing', ocean: 'Ocean' };
@@ -137,12 +137,25 @@ export function createModel(data) {
     return out;
   }
 
+  /**
+   * The fish's catch entry at a hole if it has a window we can forecast,
+   * else null. Ocean holes never do: their weather follows the voyage.
+   */
+  function windowedEntry(fid, hid) {
+    const e = data.fish[fid]?.at[hid];
+    return e && !data.holes[hid].ocean && hasWindow(e) ? e : null;
+  }
+
   /** Live window status, or null if the fish has no window here. */
   function status(fid, hid, now) {
-    const h = data.holes[hid];
-    const e = data.fish[fid]?.at[hid];
-    if (!e || h.ocean || !hasWindow(e)) return null;
-    return windowStatus(e, weatherOf(hid), now);
+    const e = windowedEntry(fid, hid);
+    return e && windowStatus(e, weatherOf(hid), now);
+  }
+
+  /** The next `count` windows ([{start, end}] in ms), or null if none here. */
+  function windows(fid, hid, now, count) {
+    const e = windowedEntry(fid, hid);
+    return e && nextWindows(e, weatherOf(hid), now, { count });
   }
 
   /** Current weather id at a hole (null for ocean holes). */
@@ -155,9 +168,8 @@ export function createModel(data) {
   const windowed = {}; // tab → [[fid, hid]]
   for (const tab of TABS) windowed[tab] = [];
   for (const [fid, f] of Object.entries(data.fish)) {
-    for (const [hid, e] of Object.entries(f.at)) {
-      const h = data.holes[hid];
-      if (h && !h.ocean && hasWindow(e)) windowed[holeTab(h)].push([fid, hid]);
+    for (const hid of Object.keys(f.at)) {
+      if (windowedEntry(fid, hid)) windowed[holeTab(data.holes[hid])].push([fid, hid]);
     }
   }
 
@@ -209,6 +221,6 @@ export function createModel(data) {
     upSoon, search, isLocked,
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
-    isMooch, moochChain, moochTargets, status, weatherNow, gatheringShort,
+    isMooch, moochChain, moochTargets, status, windows, weatherNow, gatheringShort,
   };
 }

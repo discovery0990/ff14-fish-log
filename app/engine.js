@@ -128,15 +128,3 @@ export function windowStatus(cond, weatherOf, nowMs, opts) {
   if (!w) return { state: 'rare' };
   return w.start <= nowMs ? { state: 'open', start: w.start, end: w.end } : { state: 'upcoming', start: w.start, end: w.end };
 }
-
-/**
- * Windows for a fish at a hole using the built data file, or null when the
- * fish has no condition there, or the hole is an ocean-fishing hole (its
- * weather follows the voyage, so it must never be forecast).
- */
-export function fishWindows(data, fishId, holeId, fromMs, opts) {
-  const hole = data.holes[holeId];
-  const cond = data.fish[fishId]?.at[holeId];
-  if (!hole || !cond || hole.ocean || !hasWindow(cond)) return null;
-  return nextWindows(cond, zoneWeather(data.weatherRates[hole.wr]), fromMs, opts);
-}

@@ -45,6 +45,18 @@ html {
      which the page draws under (viewport-fit=cover). */
   scroll-padding-top: calc(env(safe-area-inset-top) + 12px);
 }
+/* A solid strip behind the iPhone status bar, so lists scroll under it
+   cleanly instead of showing through the clock and camera. Zero height
+   where there's no safe area. Below the toast (z-index 10). */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: env(safe-area-inset-top);
+  background: var(--bg);
+  z-index: 5;
+  pointer-events: none;
+}
 body {
   margin: 0;
   background: var(--bg);

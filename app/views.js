@@ -9,7 +9,7 @@ import { TABS, TAB_LABELS, holeTab } from './model.js';
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
-const TUG = { light: 'Light !', medium: 'Medium !!', heavy: 'Heavy !!!' };
+const TUG = { light: '!', medium: '!!', heavy: '!!!' };
 const HOOK = { powerful: 'Powerful', precision: 'Precision' };
 // Teamcraft enums (libs/types/src/lib/game/spearfishing-*.ts).
 const SPEED = ['Very slow', 'Slow', 'Average', 'Fast', 'Faster', 'Very fast'];
@@ -79,13 +79,12 @@ function baitLine(m, fid, hid, e) {
     const speed = SPEED[e.speed] ?? 'Speed ?';
     return `<span class="sub"><span class="hi">${shadow}</span> · ${speed}</span>`;
   }
-  const tug = e.tug ? `<span class="hi">${TUG[e.tug]}</span>` : '<span class="hi">Tug ?</span>';
+  const tug = `<span class="hi">${e.tug ? TUG[e.tug] : 'Tug ?'}</span>`;
   const hook = e.hook ? HOOK[e.hook] : 'Hookset ?';
   if (m.isMooch(e)) {
     const chain = m.moochChain(fid, hid).steps.map((s) => (s.unknown ? '?' : esc(m.fishName(s.id))));
     chain.pop(); // the fish itself
-    return `<span class="sub"><span class="tag mooch">MOOCH</span> ${chain.join(' → ')}</span>
-      <span class="sub">${tug} · ${hook}</span>`;
+    return `<span class="sub"><span class="tag mooch">MOOCH</span> ${chain.join(' → ')} · ${tug} · ${hook}</span>`;
   }
   const bait = e.bait ? esc(m.fishName(e.bait)) : 'Bait unknown';
   const alts = e.alts?.length ? ` <span class="dim">(or ${e.alts.map((b) => esc(m.fishName(b))).join(', ')})</span>` : '';
@@ -471,7 +470,14 @@ export function holeView(ctx, hid) {
         </a>
       </div>`;
   };
-  const main = rows.filter((r) => !r.extra).map(row).join('');
+  const mainRows = rows.filter((r) => !r.extra);
+  const main = mainRows.filter((r) => !r.caught).map(row).join('');
+  // Caught fish fold away under one row; tap it to see (and unmark) them.
+  const caughtRows = mainRows.filter((r) => r.caught);
+  const caughtGroup = caughtRows.length ? `
+    <button class="item region caught-group${ctx.showCaught ? ' open' : ''}" data-act="show-caught" aria-expanded="${!!ctx.showCaught}">
+      <div class="row"><span class="title grow">Caught (${caughtRows.length})</span>${chevron}</div></button>
+    ${ctx.showCaught ? `<div class="fishes">${caughtRows.map(row).join('')}</div>` : ''}` : '';
   const extras = rows.filter((r) => r.extra);
   const c = m.count([hid], store.isCaught);
 
@@ -484,16 +490,15 @@ export function holeView(ctx, hid) {
           <div class="sub">ET <span class="num hi">${fmtEtClock(now)}</span>${w != null ? ` · <span class="hi">${esc(m.data.weathers[w]?.name)}</span>` : ''}</div></div>
         <button class="toggle${disc ? ' on' : ''}" data-act="disc" data-hid="${hid}" aria-pressed="${disc}">${disc ? 'Discovered' : 'Not discovered'}</button>
       </div>
-      <div class="row sub"><span class="grow">Tap the circle to mark caught</span><span class="num hi">${countText(c)}</span></div>
-      ${progress(c)}
+      <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c)}</span></div>
     </header>
     ${why ? `<p class="banner">${m.isLocked(hid, profile)
       ? `Locked: you can't cast here until Fisher Lv ${h.lvl}.`
       : `Hidden while browsing: ${esc(why)}. Change it in <a class="link" href="#/profile">Profile</a>.`}</p>` : ''}
-    <div class="fishes">${main}</div>
+    ${main ? `<div class="fishes">${main}</div>` : ''}
+    ${caughtGroup}
     ${extras.length ? `<section><h2 class="sec">Also caught here</h2><p class="note">Reported by players; not in the in-game guide for this hole.</p>
-      <div class="fishes">${extras.map(row).join('')}</div></section>` : ''}
-    <p class="note center">Marking a fish caught also marks the hole discovered.</p>`;
+      <div class="fishes">${extras.map(row).join('')}</div></section>` : ''}`;
 }
 
 export function fishView(ctx, fid, fromHole) {

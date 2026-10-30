@@ -16,7 +16,7 @@ const store = createStore();
 let model = null;
 
 // Transient UI state (not persisted).
-const ui = { query: '', openRegion: null, homeY: 0, pendingImport: null, flash: '' };
+const ui = { query: '', openRegion: null, homeY: 0, showCaught: false, pendingImport: null, flash: '' };
 
 function parseRoute() {
   const raw = location.hash.replace(/^#\/?/, '');
@@ -174,6 +174,10 @@ root.addEventListener('click', (ev) => {
       store.setProfile({ exp: next.length === all.length ? null : next });
       break;
     }
+    case 'show-caught':
+      ui.showCaught = !ui.showCaught;
+      render({ keepScroll: true });
+      break;
     case 'region':
       ui.openRegion = ui.openRegion === d.rid ? null : d.rid;
       render({ keepScroll: true });
@@ -231,6 +235,7 @@ async function main() {
     const home = isHome();
     ui.flash = '';
     ui.pendingImport = null;
+    ui.showCaught = false;
     render();
     window.scrollTo(0, home && !wasHome ? ui.homeY : 0);
     wasHome = home;

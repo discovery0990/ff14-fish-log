@@ -26,8 +26,12 @@ try {
   check(s.caught.length === 1, 'tapping the circle marks a fish caught');
   check(s.discovered.includes('r5'), 'marking caught discovers the hole');
   check(await js(`document.querySelector('.toggle').textContent.trim()`) === 'Discovered', 'discovered toggle shows Discovered');
-  check(await js(`document.querySelectorAll('.fish.caught').length`) === 1, 'caught fish is styled as caught');
-  check(await js(`[...document.querySelectorAll('.fish')].at(-1).classList.contains('caught')`), 'caught fish sorts last');
+  check(await js(`!document.querySelector('.fish.caught') && document.querySelector('[data-act=show-caught]')?.textContent.includes('Caught (1)')`), 'caught fish fold into a Caught (1) row');
+  await js(`document.querySelector('[data-act=show-caught]').click()`);
+  check(await js(`document.querySelectorAll('.fish.caught').length`) === 1, 'tapping Caught shows the caught fish, styled as caught');
+  check(await js(`[...document.querySelectorAll('.fish')].at(-1).classList.contains('caught')`), 'caught fish sit below the rest');
+  check(await js(`document.body.textContent.includes('Honey Worm · ! · Precision')`), 'tug shows as ! marks with dot separators');
+  check(await js(`[...document.querySelectorAll('.fish')].some((f) => f.textContent.includes('Ala Mhigan Fighting Fish · !! · Powerful') && f.textContent.includes('MOOCH'))`), 'mooch chain, tug and hookset share one line');
 
   // --- Home: search keeps focus while typing
   await go('#/rod');

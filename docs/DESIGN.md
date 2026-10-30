@@ -55,7 +55,8 @@ The mockup is at https://claude.ai/artifact/528uaT9rVpkYAw5xb5dgAz.
 3. **Hole** (the main screen)
    - Header: hole name, level, water type, current ET and weather, and a discovered toggle.
    - Each fish shows: a caught toggle (44px target), name, bait or **mooch chain**, tug and hookset, its condition with a live status pill, a Gathering-shortfall warning, and "mooch bait for X".
-   - Sort order: open windows, then soonest window, then everything else, with caught fish last.
+   - Tug is shown as ! / !! / !!! (no Light/Medium/Heavy), e.g. "Honey Worm · ! · Precision"; a mooch fish puts its chain in the bait slot on the same line.
+   - Sort order: open windows, then soonest window, then everything else. Caught fish fold into a "Caught (N)" row at the bottom; tap to show them.
    - **Also caught here** section: community-reported fish (see Data).
    - Spearfishing holes show speed and shadow size instead of bait, tug and hookset.
    - There's no "mark all caught" action.

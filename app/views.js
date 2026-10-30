@@ -168,7 +168,7 @@ export function homeBody(ctx) {
         ${progress(c, 'thin')}
       </a>`).join('');
 
-  return `${cont}${upSoonSection(ctx)}${regionsBlock(regionRows, hidden)}`;
+  return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden)}`;
 }
 
 function regionsBlock(regionRows, hidden) {
@@ -391,21 +391,25 @@ export function zoneView(ctx, tab, zid, filter = 'all') {
     if (filter === 'incomplete' && hc.caught === hc.total) return '';
     if (filter === 'undiscovered' && disc) return '';
     const grey = m.holeVisibility(hid, profile) === 'grey';
+    // Only what's actionable: fish open now, or why the hole is locked.
+    // The dashed border marks undiscovered holes; the count turns teal when complete.
     const tags = [];
-    if (hc.caught === hc.total) tags.push('<span class="tag done">Complete</span>');
-    let timed = 0;
-    for (const { fid } of m.holeFish(hid)) {
-      if (store.isCaught(fid)) continue;
-      const st = m.status(fid, hid, now);
-      if (st?.state === 'open') tags.push(`<span class="tag open">${esc(m.data.fish[fid].name)} open · ${fmtDuration(st.end - now)}</span>`);
-      else if (st) timed++;
+    if (grey) {
+      tags.push(`<span class="tag">Locked until Lv ${h.lvl}</span>`);
+    } else {
+      const open = m.holeFish(hid)
+        .filter(({ fid }) => !store.isCaught(fid))
+        .map(({ fid }) => [fid, m.status(fid, hid, now)])
+        .filter(([, st]) => st?.state === 'open');
+      for (const [fid, st] of open.slice(0, 2)) {
+        tags.push(`<span class="tag open">${esc(m.data.fish[fid].name)} open · ${fmtDuration(st.end - now)}</span>`);
+      }
+      if (open.length > 2) tags.push(`<span class="tag open">+${open.length - 2} more open</span>`);
     }
-    if (timed) tags.push(`<span class="tag">${timed} timed</span>`);
-    if (!disc) tags.push('<span class="tag undisc">Not discovered</span>');
-    if (grey) tags.push(`<span class="tag">Locked until Lv ${h.lvl}</span>`);
+    const done = hc.total && hc.caught === hc.total;
     return `
       <a class="card${disc ? '' : ' dashed'}${grey ? ' grey' : ''}" href="#/hole/${hid}">
-        <div class="row"><span class="num lv">Lv ${h.lvl}</span><span class="title grow">${esc(h.name)}</span><span class="num">${countText(hc)}</span></div>
+        <div class="row"><span class="num lv">Lv ${h.lvl}</span><span class="title grow">${esc(h.name)}</span><span class="num${done ? ' done' : ''}">${countText(hc)}</span></div>
         ${tags.length ? `<div class="tags indent">${tags.join('')}</div>` : ''}
       </a>`;
   }).join('');

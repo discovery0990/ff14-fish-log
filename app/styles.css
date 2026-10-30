@@ -79,6 +79,9 @@ section { display: flex; flex-direction: column; gap: 10px; }
 .stack-s { display: flex; flex-direction: column; gap: 8px; }
 .top { display: flex; align-items: center; gap: 12px; }
 .top h1 { font-size: 24px; }
+.top .iconbtn { align-self: flex-start; }
+.overall { gap: 6px; margin-top: 4px; }
+.overall .grow { margin-left: 6px; }
 
 /* Back link */
 .back { display: flex; align-items: center; gap: 6px; height: 44px; margin-bottom: -8px; color: var(--muted); font-size: 15px; }

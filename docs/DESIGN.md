@@ -47,7 +47,7 @@ There's no way to import in-game progress (PS5, no plugins), so all progress is 
 The mockup is at https://claude.ai/artifact/528uaT9rVpkYAw5xb5dgAz.
 
 1. **Home**
-   - Profile summary, overall progress, Rod / Spearfishing / Ocean tabs.
+   - Header: profile summary, ET, and overall caught count with a thin bar. Rod / Spearfishing / Ocean tabs.
    - Search box (fish, hole or zone).
    - **Up soon**: the first 5 uncaught, eligible, condition fish whose window opens within the horizon (undiscovered holes marked with a dashed dot). "See all" opens an Up soon screen with every match and the 1/2/3/6h horizon chips.
    - Region list with progress. Regions hidden by filters are summarised in a "N regions hidden" line.

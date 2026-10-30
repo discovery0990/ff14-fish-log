@@ -124,7 +124,9 @@ export function homeView(ctx) {
 
   const header = `
     <header class="top">
-      <div class="grow"><h1>Fish Log</h1><div class="sub">${prof} · ET <span class="num">${fmtEtClock(now)}</span></div></div>
+      <div class="grow stack-xs"><h1>Fish Log</h1><div class="sub">${prof} · ET <span class="num">${fmtEtClock(now)}</span></div>
+        <div class="row overall"><span class="num hi">${store.caughtCount().toLocaleString()} / ${total.toLocaleString()}</span><span class="sub">caught</span>
+          <span class="grow">${progress({ caught: store.caughtCount(), total }, 'thin')}</span></div></div>
       <a class="iconbtn" href="#/profile" aria-label="Profile and filters">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
       </a>
@@ -140,10 +142,6 @@ export function homeView(ctx) {
   return `
     ${header}
     ${reminder}
-    <div class="stack-s">
-      <div class="row sub"><span class="grow">Overall</span><span class="num hi">${store.caughtCount()} / ${total.toLocaleString()}</span></div>
-      ${progress({ caught: store.caughtCount(), total })}
-    </div>
     <nav class="tabs" role="tablist" aria-label="Fishing type">${tabs}</nav>
     ${searchBox}
     <div id="home-body" class="stack-l">${homeBody(ctx)}</div>`;

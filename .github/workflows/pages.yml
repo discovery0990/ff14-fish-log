@@ -24,6 +24,34 @@ jobs:
           deno-version: v2.x
       - run: deno task test
 
+  # Browser tests. Deliberately not in deploy's needs: a failure (or a flake)
+  # turns the run red and sends the usual email, but doesn't hold back the
+  # deploy. Unit tests still gate it.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      # Browser tests in the runner's Chrome. --no-sandbox: Ubuntu 24.04
+      # runners block the unprivileged user namespaces Chrome's sandbox needs.
+      - name: End-to-end test
+        env:
+          BROWSER: google-chrome --no-sandbox
+        run: |
+          python3 -m http.server 8765 -d app --bind 127.0.0.1 &
+          for i in $(seq 30); do curl -sf http://127.0.0.1:8765/ >/dev/null && break; sleep 0.5; done
+          deno run -A tests/e2e.js
+      - name: PWA test (offline and updates, against the built site)
+        env:
+          BROWSER: google-chrome --no-sandbox
+        run: |
+          python3 tools/build_site.py
+          python3 tests/serve_pages.py 8766 dist &
+          for i in $(seq 30); do curl -sf http://127.0.0.1:8766/ >/dev/null && break; sleep 0.5; done
+          deno run -A tests/e2e_pwa.js
+
   deploy:
     needs: test
     runs-on: ubuntu-latest

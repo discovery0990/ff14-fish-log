@@ -43,7 +43,7 @@ deno run -A tests/e2e_pwa.js
 
 ## Deploy
 
-Pushing to `main` runs the tests and deploys to GitHub Pages (`.github/workflows/pages.yml`). `tools/build_site.py` copies `app/` to `dist/` and stamps the service worker with a hash of the app and data, so every deploy prompts installed apps to reload.
+Pushing to `main` runs the unit tests and deploys to GitHub Pages if they pass (`.github/workflows/pages.yml`). Both end-to-end tests run alongside in the runner's Chrome; a failure there marks the run red but doesn't block the deploy. `tools/build_site.py` copies `app/` to `dist/` and stamps the service worker with a hash of the app and data, so every deploy prompts installed apps to reload.
 
 ## Sources
 

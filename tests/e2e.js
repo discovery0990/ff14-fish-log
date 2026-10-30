@@ -133,22 +133,30 @@ try {
   check(await js(`!!document.querySelector('#home-body .title .undisc-name')`), 'search outlines an undiscovered hole');
   await js(`document.querySelector('[data-act="clear-search"]').click()`);
 
-  // --- Regions expand in place; Back from a zone returns with the region open
-  check(await js(`!document.querySelector('a.item.zone')`), 'regions start collapsed');
+  // --- Regions and zones expand in place; Back from a hole returns with them open
+  // Earlier steps visited Hopeseed Pond (zone 54, region 23): Home shows it open.
+  check(await js(`document.querySelector('[data-zid="54"]')?.getAttribute('aria-expanded') === 'true'`), 'Home opens the zone of the last hole visited');
+  await js(`document.querySelector('[data-act=region][data-rid="23"]').click()`);
+  check(await js(`!document.querySelector('.item.zone')`), 'tapping an open region collapses it');
   await js(`document.querySelector('[data-act=region][data-rid="22"]').click()`);
-  check(await js(`[...document.querySelectorAll('a.item.zone')].some((a) => a.getAttribute('href') === '#/rod/zone/32')`), 'tapping La Noscea lists its zones on Home');
-  await js(`window.scrollTo(0, 400)`);
-  await go('#/rod/zone/32');
-  check(await js(`document.querySelector('.back').getAttribute('href')`) === '#/rod', 'zone Back goes to Home');
+  check(await js(`!!document.querySelector('[data-act=zone][data-zid="32"]')`), 'tapping La Noscea lists its zones on Home');
+  await js(`document.querySelector('[data-act=zone][data-zid="32"]').click()`);
+  check(await js(`[...document.querySelectorAll('a.item.hole')].some((a) => a.getAttribute('href') === '#/hole/r156')`), 'tapping Eastern La Noscea lists its holes on Home');
+  check(await js(`Math.abs(document.querySelector('[data-zid="32"]').getBoundingClientRect().top) < 5`), 'the opened zone scrolls to the top');
+  const y = await js(`window.scrollY`);
+  await go('#/hole/r156');
+  check(await js(`document.querySelector('.back').getAttribute('href')`) === '#/rod', 'hole Back goes to Home');
   await js(`history.back()`);
   await sleep(300);
-  check(await js(`document.querySelector('[data-rid="22"]')?.getAttribute('aria-expanded')`) === 'true', 'Home keeps the region open after Back');
-  check(await js(`Math.abs(window.scrollY - 400) < 5`), 'Home restores its scroll position after Back');
+  check(await js(`document.querySelector('[data-zid="32"]')?.getAttribute('aria-expanded')`) === 'true', 'Home keeps the zone open after Back');
+  check(await js(`Math.abs(window.scrollY - ${y}) < 5`), 'Home restores its scroll position after Back');
+  await go('#/rod/zone/54');
+  check(await js(`location.hash === '#/rod' && document.querySelector('[data-zid="54"]')?.getAttribute('aria-expanded') === 'true' && document.querySelector('[data-rid="23"]')?.getAttribute('aria-expanded') === 'true'`), 'zone links (search, old links) open Home with that zone expanded');
   await go('#/rod/region/23');
   check(await js(`location.hash === '#/rod' && document.querySelector('[data-rid="23"]')?.getAttribute('aria-expanded') === 'true'`), 'old region links open Home with that region expanded');
   await shot('regions');
   await js(`document.querySelector('[data-act=region][data-rid="23"]').click()`);
-  check(await js(`!document.querySelector('a.item.zone')`), 'tapping an open region collapses it');
+  check(await js(`!document.querySelector('.item.zone')`), 'tapping an open region collapses it');
 
   // Red Mantis Falls (r58) is a restricted Lv 45 hole: locked at Lv 40.
   await js(`(() => { const i = document.getElementById('search'); i.value = 'red mantis falls'; i.dispatchEvent(new Event('input', {bubbles: true})); })()`);
@@ -160,12 +168,13 @@ try {
   await go('#/hole/r156');
   check(await js(`!document.querySelector('.banner')`), 'an above-level, unrestricted hole has no lock note');
   check(await js(`document.body.textContent.includes('X 36.0 Y 26.6')`), 'hole shows map coordinates');
-  await go('#/rod/zone/32'); // Eastern La Noscea
-  check(await js(`document.body.textContent.includes('North Isle of Endless Summer')`), 'unmarked hole is listed in its zone');
-  check(await js(`[...document.querySelectorAll('a.card')].find((c) => c.textContent.includes('Privateer Sterncastle'))?.classList.contains('grey')`), 'Lv 40: restricted Sterncastle is greyed');
-  check(await js(`![...document.querySelectorAll('a.card')].find((c) => c.textContent.includes('Privateer Forecastle'))?.classList.contains('grey')`), 'Lv 40: Forecastle is not greyed');
-  check(await js(`document.querySelectorAll('a.card.grey').length === 2 && document.body.textContent.includes('Locked until Lv 45')`), 'locked holes stay listed, greyed (Red Mantis Falls, Privateer Sterncastle)');
-  await go('#/rod');
+  await go('#/rod/zone/32'); // Eastern La Noscea, expanded on Home
+  const holeRow = (n) => `[...document.querySelectorAll('a.item.hole')].find((c) => c.textContent.includes('${n}'))`;
+  check(await js(`!!${holeRow('North Isle of Endless Summer')}`), 'unmarked hole is listed in its zone');
+  check(await js(`${holeRow('Privateer Sterncastle')}?.classList.contains('grey')`), 'Lv 40: restricted Sterncastle is greyed');
+  check(await js(`!${holeRow('Privateer Forecastle')}?.classList.contains('grey')`), 'Lv 40: Forecastle is not greyed');
+  check(await js(`document.querySelectorAll('a.item.hole.grey').length === 2 && document.body.textContent.includes('Locked until Lv 45')`), 'locked holes stay listed, greyed (Red Mantis Falls, Privateer Sterncastle)');
+  await js(`document.querySelector('[data-act=region][data-rid="22"]').click()`); // collapse
   check(await js(`document.body.textContent.includes('next 3h')`), 'Up soon uses the new horizon');
   await shot('home');
 
@@ -237,9 +246,9 @@ try {
   check(await js(`!!document.querySelector('[data-rid="26"]')`), 'tapping Completed regions shows them');
   await js(`document.querySelector('[data-rid="26"]').click()`);
   check(await js(`document.querySelector('[data-act=fold][data-key="zones:rod:26"]')?.textContent.includes('Completed zones (1)')`), 'completed zones fold inside an open region');
-  await go('#/rod/zone/67');
-  check(await js(`!document.querySelector('a.card') && /Completed holes \\(\\d+\\)/.test(document.querySelector('[data-act=fold]')?.textContent ?? '')`), 'completed holes fold on the zone screen');
-  check(await js(`[...document.querySelectorAll('.chip')].map((c) => c.textContent).join(',')`) === 'All,Undiscovered', 'zone chips are All and Undiscovered');
+  await js(`document.querySelector('[data-act=fold][data-key="zones:rod:26"]').click()`);
+  await js(`document.querySelector('[data-act=zone][data-zid="67"]').click()`);
+  check(await js(`!document.querySelector('a.item.hole') && /Completed holes \\(\\d+\\)/.test(document.querySelector('[data-act=fold][data-key="holes:rod:67"]')?.textContent ?? '')`), 'completed holes fold inside an open zone');
   await shot('folds');
 } catch (err) {
   failures++;

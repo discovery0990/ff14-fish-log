@@ -209,10 +209,44 @@ function zoneRows(ctx, rid) {
     const lv = vis.map((h) => m.data.holes[h].lvl);
     const lvText = Math.min(...lv) === Math.max(...lv) ? `Lv ${lv[0]}` : `Lv ${Math.min(...lv)}–${Math.max(...lv)}`;
     const open = openCount(ctx, vis);
+    const expanded = ctx.openZone === z;
     return `
-      <a class="item zone" href="#/${tab}/zone/${z}">
-        <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span><span class="num${done(c) ? ' done' : ''}">${countText(c)}</span></div>
+      <button class="item zone region${expanded ? ' open' : ''}" data-act="zone" data-zid="${z}" aria-expanded="${expanded}">
+        <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span><span class="num${done(c) ? ' done' : ''}">${countText(c)}</span>${chevron}</div>
         <div class="row"><span class="sub grow">${plural(vis.length, 'hole')} · ${lvText}</span>${open ? `<span class="tag open">${open} open now</span>` : ''}</div>
+      </button>${expanded ? holeRows(ctx, z) : ''}`;
+  });
+}
+
+/**
+ * A zone's holes, shown under it on Home when it's expanded. Undiscovered
+ * holes get the dashed name; locked ones are greyed with the reason.
+ */
+function holeRows(ctx, zid) {
+  const { m, store, tab, now } = ctx;
+  const { profile } = store.state;
+  const holes = m.visibleHoles(tab, zid, profile).map((hid) => [hid, m.count([hid], store.isCaught)]);
+  return folded(ctx, `holes:${tab}:${zid}`, 'Completed holes', 'item hole', holes, ([, hc]) => done(hc), ([hid, hc]) => {
+    const h = m.data.holes[hid];
+    const grey = m.holeVisibility(hid, profile) === 'grey';
+    // Only what's actionable: fish open now, or why the hole is locked.
+    const tags = [];
+    if (grey) {
+      tags.push(`<span class="tag">Locked until Lv ${h.lvl}</span>`);
+    } else {
+      const open = m.holeFish(hid)
+        .filter(({ fid }) => !store.isCaught(fid))
+        .map(({ fid }) => [fid, m.status(fid, hid, now)])
+        .filter(([, st]) => st?.state === 'open');
+      for (const [fid, st] of open.slice(0, 2)) {
+        tags.push(`<span class="tag open">${esc(m.data.fish[fid].name)} open · ${fmtDuration(st.end - now)}</span>`);
+      }
+      if (open.length > 2) tags.push(`<span class="tag open">+${open.length - 2} more open</span>`);
+    }
+    return `
+      <a class="item hole${grey ? ' grey' : ''}" href="#/hole/${hid}">
+        <div class="row"><span class="num lv">Lv ${h.lvl}</span><span class="title grow">${holeName(m, store, hid)}</span><span class="num${done(hc) ? ' done' : ''}">${countText(hc)}</span></div>
+        ${tags.length ? `<div class="tags indent">${tags.join('')}</div>` : ''}
       </a>`;
   });
 }
@@ -408,56 +442,6 @@ export function profileView(ctx) {
       or endorsed by Square Enix. Fonts: IBM Plex (SIL OFL 1.1).</p>`;
 }
 
-export function zoneView(ctx, tab, zid, filter = 'all') {
-  const { m, store, now } = ctx;
-  const { profile } = store.state;
-  const zone = m.data.zones[zid];
-  if (!zone) return notFound();
-  const vis = m.visibleHoles(tab, zid, profile);
-  const c = m.count(m.zoneHolesAll(tab, zid), store.isCaught);
-  const undisc = vis.filter((h) => !store.isDiscovered(h)).length;
-  if (filter !== 'undiscovered') filter = 'all'; // 'incomplete' is gone: completed holes fold away
-  const chips = [['all', 'All'], ['undiscovered', 'Undiscovered']].map(([k, l]) =>
-    `<a class="chip${k === filter ? ' on' : ''}" href="#/${tab}/zone/${zid}${k === 'all' ? '' : `?f=${k}`}" aria-pressed="${k === filter}">${l}</a>`).join('');
-
-  const holes = vis.filter((hid) => filter !== 'undiscovered' || !store.isDiscovered(hid))
-    .map((hid) => [hid, m.count([hid], store.isCaught)]);
-  const cards = folded(ctx, `holes:${tab}:${zid}`, 'Completed holes', 'card fold-card', holes, ([, hc]) => done(hc), ([hid, hc]) => {
-    const h = m.data.holes[hid];
-    const disc = store.isDiscovered(hid);
-    const grey = m.holeVisibility(hid, profile) === 'grey';
-    // Only what's actionable: fish open now, or why the hole is locked.
-    // The dashed border marks undiscovered holes; the count turns teal when complete.
-    const tags = [];
-    if (grey) {
-      tags.push(`<span class="tag">Locked until Lv ${h.lvl}</span>`);
-    } else {
-      const open = m.holeFish(hid)
-        .filter(({ fid }) => !store.isCaught(fid))
-        .map(({ fid }) => [fid, m.status(fid, hid, now)])
-        .filter(([, st]) => st?.state === 'open');
-      for (const [fid, st] of open.slice(0, 2)) {
-        tags.push(`<span class="tag open">${esc(m.data.fish[fid].name)} open · ${fmtDuration(st.end - now)}</span>`);
-      }
-      if (open.length > 2) tags.push(`<span class="tag open">+${open.length - 2} more open</span>`);
-    }
-    return `
-      <a class="card${disc ? '' : ' dashed'}${grey ? ' grey' : ''}" href="#/hole/${hid}">
-        <div class="row"><span class="num lv">Lv ${h.lvl}</span><span class="title grow">${esc(h.name)}</span><span class="num${done(hc) ? ' done' : ''}">${countText(hc)}</span></div>
-        ${tags.length ? `<div class="tags indent">${tags.join('')}</div>` : ''}
-      </a>`;
-  });
-
-  return `
-    ${back(`#/${tab}`, 'Home')}
-    <header class="stack-s"><h1>${esc(zone.name)}</h1>
-      <div class="row sub"><span class="grow">${plural(vis.length, 'hole')}${undisc ? ` · <span class="undisc-name">${undisc} not discovered</span>` : ''}</span><span class="num hi">${countText(c)} fish</span></div>
-      ${progress(c)}</header>
-    <div class="chips" role="group" aria-label="Show">${chips}</div>
-    <section><h2 class="sec">Fishing holes</h2><div class="cards">${cards || '<p class="empty">No holes match.</p>'}</div>
-    </section>`;
-}
-
 export function holeView(ctx, hid) {
   const { m, store, now } = ctx;
   const { profile } = store.state;
@@ -504,7 +488,7 @@ export function holeView(ctx, hid) {
   const c = m.count([hid], store.isCaught);
 
   return `
-    ${back(`#/${tab}/zone/${h.zone}`, zone.name)}
+    ${back(`#/${tab}`, 'Home')}
     <header class="stack-s">
       <div class="row top-align">
         <div class="grow"><h1>${esc(h.name)}</h1>

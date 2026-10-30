@@ -4,7 +4,7 @@ import { fishWindows } from './engine.js';
 import { TABS, createModel } from './model.js';
 import { createStore, makeBackup, parseBackup, shouldRemind } from './store.js';
 import {
-  fishView, holeView, homeBody, homeView, notFound, profileView, soonView, zoneView,
+  fishView, holeView, homeBody, homeView, notFound, profileView, soonView,
 } from './views.js';
 
 const LIVE_REFRESH_MS = 15_000;
@@ -16,7 +16,7 @@ const store = createStore();
 let model = null;
 
 // Transient UI state (not persisted).
-const ui = { query: '', openRegion: null, listY: {}, folds: new Set(), showCaught: false, pendingImport: null, flash: '' };
+const ui = { query: '', openRegion: null, openZone: null, scrollToZone: null, listY: {}, folds: new Set(), showCaught: false, pendingImport: null, flash: '' };
 
 function parseRoute() {
   const raw = location.hash.replace(/^#\/?/, '');
@@ -45,15 +45,27 @@ function view() {
     history.replaceState(null, '', `#/${a}`);
     return homeView(makeCtx(parts));
   }
-  if (TABS.includes(a) && b === 'zone') {
-    // Coming back Home shows this zone's region open.
-    if (model.data.zones[c]) ui.openRegion = String(model.data.zones[c].region);
-    return zoneView(ctx, a, c, params.get('f') ?? 'all');
+  if (TABS.includes(a) && b === 'zone') { // search results and old links: Home with the zone open
+    if (model.data.zones[c]) openZone(c, true);
+    ui.query = '';
+    history.replaceState(null, '', `#/${a}`);
+    return homeView(makeCtx(parts));
   }
-  if (a === 'hole' && b) return holeView(ctx, b);
+  if (a === 'hole' && b) {
+    // Back goes Home: show this hole's zone open there.
+    if (model.data.holes[b]) openZone(String(model.data.holes[b].zone), false);
+    return holeView(ctx, b);
+  }
   if (a === 'fish' && b) return fishView(ctx, b, params.get('h'), params.get('from'));
   if (a === 'profile') return profileView(ctx);
   return notFound();
+}
+
+/** Expand a zone (and its region) on Home; scroll it into view on the next render. */
+function openZone(zid, scroll) {
+  ui.openRegion = String(model.data.zones[zid].region);
+  ui.openZone = zid;
+  if (scroll) ui.scrollToZone = zid;
 }
 
 /** Re-render, keeping scroll and the focused input (and its caret). */
@@ -78,6 +90,12 @@ function render({ keepScroll = false } = {}) {
     }
   }
   if (keepScroll) window.scrollTo(0, y);
+  if (ui.scrollToZone) {
+    document.querySelector(`[data-zid="${ui.scrollToZone}"]`)?.scrollIntoView({ block: 'start' });
+    ui.scrollToZone = null;
+    return true;
+  }
+  return false;
 }
 
 // ------------------------------------------------------------ actions
@@ -184,6 +202,12 @@ root.addEventListener('click', (ev) => {
       break;
     case 'region':
       ui.openRegion = ui.openRegion === d.rid ? null : d.rid;
+      ui.openZone = null;
+      render({ keepScroll: true });
+      break;
+    case 'zone':
+      if (ui.openZone === d.zid) ui.openZone = null;
+      else openZone(d.zid, true);
       render({ keepScroll: true });
       break;
     case 'soon-holes': store.setPrefs({ upSoonHoles: d.f }); break;
@@ -247,8 +271,7 @@ async function main() {
     ui.flash = '';
     ui.pendingImport = null;
     ui.showCaught = false;
-    render();
-    window.scrollTo(0, key && !lastList ? ui.listY[key] ?? 0 : 0);
+    if (!render()) window.scrollTo(0, key && !lastList ? ui.listY[key] ?? 0 : 0);
     lastList = key;
   });
   // Keep timers and the ET clock live. Skip while hidden, or while any field

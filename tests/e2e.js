@@ -185,6 +185,22 @@ try {
   await go('#/rod/zone/54');
   check(await js(`location.hash === '#/rod' && document.querySelector('[data-zid="54"]')?.getAttribute('aria-expanded') === 'true' && document.querySelector('[data-rid="23"]')?.getAttribute('aria-expanded') === 'true'`), 'zone links (from search) open Home with that zone expanded');
   check(await js(`(() => { const t = document.querySelector('[data-zid="54"]').getBoundingClientRect().top; return t >= 8 && t < 20; })()`), 'a zone link scrolls to the zone, just below the top edge');
+  // --- A hole names its region › zone; each opens Home there. Home button below Home.
+  await go('#/hole/r156');
+  check(await js(`[...document.querySelectorAll('.place a')].map((a) => a.getAttribute('href')).join(' ')`) === '#/rod/region/22 #/rod/zone/32', 'hole shows region › zone, linked');
+  check(await js(`!document.querySelector('.home')`), 'no Home button when Back already goes Home');
+  await js(`document.querySelector('.fish a.body').click()`);
+  await sleep(250);
+  check(await js(`document.querySelector('.home')?.getAttribute('href')`) === '#/rod', 'a fish opened from a hole has a Home button');
+  await js(`history.back()`);
+  await sleep(250);
+  await js(`document.querySelector('.place a[href$="/region/22"]').click()`);
+  await sleep(300);
+  check(await js(`location.hash === '#/rod' && document.querySelector('[data-rid="22"]').getAttribute('aria-expanded') === 'true' && !document.querySelector('[data-act=zone][aria-expanded=true]')`), 'region link opens Home with that region expanded, zones closed');
+  await go('#/hole/r35'); // Limsa Lominsa Lower Decks: named after its zone, which still shows
+  check(await js(`document.querySelector('.place').textContent.trim()`) === 'La Noscea › Limsa Lominsa Lower Decks', 'a hole named after its zone still shows the zone');
+  await go('#/hole/r5'); // leave Hopeseed Pond's zone open, as before
+  await go('#/rod');
   await shot('regions');
   await js(`document.querySelector('[data-act=region][data-rid="23"]').click()`);
   check(await js(`!document.querySelector('.item.zone')`), 'tapping an open region collapses it');

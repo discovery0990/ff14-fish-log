@@ -83,6 +83,7 @@ section { display: flex; flex-direction: column; gap: 10px; }
 .sec { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .title { font-size: 16px; font-weight: 600; }
 .sub { display: block; font-size: 13px; color: var(--muted); }
+.place { margin-top: 2px; font-size: 15px; }
 .hi { color: var(--text); }
 .dim { color: var(--muted); }
 .num { font-family: var(--mono); font-size: 13px; }
@@ -102,8 +103,12 @@ section { display: flex; flex-direction: column; gap: 10px; }
 .overall { gap: 6px; margin-top: 4px; }
 .overall .grow { margin-left: 6px; }
 
-/* Back link */
-.back { display: flex; align-items: center; gap: 6px; height: 44px; margin-bottom: -8px; color: var(--muted); font-size: 15px; }
+/* Back link, and Home on the right */
+.topnav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: -8px; }
+.back { display: flex; align-items: center; gap: 6px; height: 44px; min-width: 0; color: var(--muted); font-size: 15px; }
+.back span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home { width: 44px; height: 44px; margin-right: -10px; display: flex; align-items: center; justify-content: center; flex: none; }
+.home svg { width: 22px; height: 22px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .back svg, .chev { width: 20px; height: 20px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; flex: none; }
 
 /* Progress */

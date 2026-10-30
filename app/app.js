@@ -15,7 +15,7 @@ const store = createStore();
 let model = null;
 
 // Transient UI state (not persisted).
-const ui = { query: '', openRegion: null, openZone: null, scrollToZone: null, listY: {}, folds: new Set(), showCaught: false, pendingImport: null, flash: '' };
+const ui = { query: '', openRegion: null, openZone: null, scrollTo: null, listY: {}, folds: new Set(), showCaught: false, pendingImport: null, flash: '' };
 
 function parseRoute() {
   const raw = location.hash.replace(/^#\/?/, '');
@@ -35,13 +35,14 @@ function makeCtx(parts) {
 
 /**
  * Side effects of arriving at a route, run once per navigation (never on
- * redraws): zone links redirect to Home with the zone open, and a hole opens
- * its zone on Home so Back returns there.
+ * redraws): zone and region links redirect to Home with that row open, and a
+ * hole opens its zone on Home so Back returns there.
  */
 function enterRoute() {
   const [a, b, c] = parseRoute().parts;
-  if (TABS.includes(a) && b === 'zone') {
-    if (model.data.zones[c]) openZone(c, true);
+  if (TABS.includes(a) && (b === 'zone' || b === 'region')) {
+    if (b === 'zone' && model.data.zones[c]) openZone(c, true, a);
+    if (b === 'region' && model.data.regions[c]) openRegion(c, a);
     ui.query = '';
     history.replaceState(null, '', `#/${a}`);
   } else if (a === 'hole' && model.data.holes[b]) {
@@ -91,12 +92,35 @@ function renderPinned(el, selector) {
   if (now) window.scrollBy(0, now.getBoundingClientRect().top - top);
 }
 
-/** Expand a zone (and its region) on Home; scroll it into view on the next render. */
-function openZone(zid, scroll) {
-  ui.openRegion = String(model.data.zones[zid].region);
+/**
+ * Expand a zone (and its region) on Home. With `scroll`, also bring it into
+ * view on the next render, unfolding "Completed …" rows hiding it on `tab`.
+ */
+function openZone(zid, scroll, tab) {
+  const rid = String(model.data.zones[zid].region);
+  ui.openRegion = rid;
   ui.openZone = zid;
-  if (scroll) ui.scrollToZone = zid;
+  if (!scroll) return;
+  ui.scrollTo = `[data-zid="${zid}"]`;
+  revealRegion(tab, rid);
+  if (isDone(model.zoneHolesAll(tab, zid))) ui.folds.add(`zones:${tab}:${rid}`);
 }
+
+/** Expand a region on Home (zones closed) and scroll to it on the next render. */
+function openRegion(rid, tab) {
+  ui.openRegion = rid;
+  ui.openZone = null;
+  ui.scrollTo = `[data-rid="${rid}"]`;
+  revealRegion(tab, rid);
+}
+
+const isDone = (holes) => {
+  const c = model.count(holes, store.isCaught);
+  return c.total > 0 && c.caught === c.total;
+};
+const revealRegion = (tab, rid) => {
+  if (isDone(model.regionHolesAll(tab, rid))) ui.folds.add(`regions:${tab}`);
+};
 
 /** Re-render, keeping scroll and the focused input (and its caret). */
 function render({ keepScroll = false } = {}) {
@@ -133,9 +157,9 @@ function render({ keepScroll = false } = {}) {
     }
   }
   if (keepScroll) window.scrollTo(0, y);
-  if (ui.scrollToZone) {
-    document.querySelector(`[data-zid="${ui.scrollToZone}"]`)?.scrollIntoView({ block: 'start' });
-    ui.scrollToZone = null;
+  if (ui.scrollTo) {
+    document.querySelector(ui.scrollTo)?.scrollIntoView({ block: 'start' });
+    ui.scrollTo = null;
     return true;
   }
   return false;

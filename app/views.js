@@ -82,14 +82,19 @@ function screenName(m, hash) {
   return null;
 }
 
+const homeSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7M6 9.5V20h4.5v-6h3v6H18V9.5"/></svg>';
+
 /**
  * Back to the previous screen on the path taken, or, with no path (a deep
- * link, a fresh start), up to `href`.
+ * link, a fresh start), up to `href`. Plus a Home button on `tab`, unless
+ * Back already goes Home.
  */
-function back(ctx, href, label) {
+function back(ctx, href, label, tab = 'rod') {
   const prevName = ctx?.prev && screenName(ctx.m, ctx.prev);
   const [to, text, act] = prevName ? [ctx.prev, prevName, ' data-act="back"'] : [href, label, ''];
-  return `<a class="back" href="${esc(to)}"${act}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>${esc(text)}</a>`;
+  const home = text === 'Home' ? ''
+    : `<a class="home" href="#/${tab}" aria-label="Home">${homeSvg}</a>`;
+  return `<nav class="topnav"><a class="back" href="${esc(to)}"${act}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>${esc(text)}</span></a>${home}</nav>`;
 }
 
 const chevron = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
@@ -367,7 +372,7 @@ export function soonView(ctx, tab) {
   const holeChips = Object.entries(SOON_HOLES).map(([k, l]) =>
     `<button class="chip${f === k ? ' on' : ''}" data-act="soon-holes" data-f="${k}" aria-pressed="${f === k}">${l}</button>`).join('');
   return `
-    ${back(ctx, `#/${tab}`, 'Home')}
+    ${back(ctx, `#/${tab}`, 'Home', tab)}
     <header class="stack-s"><h1>Up soon</h1>
       <div class="sub">Uncaught ${tab === 'spear' ? 'spearfishing ' : ''}fish with a window open now or within ${hours}h</div></header>
     <div class="chips" role="group" aria-label="Look ahead">${chips}</div>
@@ -510,11 +515,23 @@ export function holeView(ctx, hid) {
   const extras = rows.filter((r) => r.extra);
   const c = m.count([hid], store.isCaught);
 
+  // Region › Zone, each opening that row on Home (unless filters hide it there).
+  const rid = String(zone.region);
+  const placeLink = (shown, kind, id, name) =>
+    (shown ? `<a class="link" href="#/${tab}/${kind}/${id}">${esc(name)}</a>` : esc(name));
+  const regionShown = m.visibleRegions(tab, profile).includes(rid);
+  const place = [
+    placeLink(regionShown, 'region', rid, m.data.regions[rid].name),
+    placeLink(regionShown && m.visibleZones(tab, rid, profile).includes(String(h.zone)), 'zone', h.zone, zone.name),
+  ];
+
   return `
-    ${back(ctx, `#/${tab}`, 'Home')}
+    ${back(ctx, `#/${tab}`, 'Home', tab)}
     <header class="stack-s">
-      <div class="row top-align">
-        <div class="grow"><h1>${esc(h.name)}</h1>
+      <div><h1>${esc(h.name)}</h1>
+        <div class="place">${place.join('<span class="dim" aria-hidden="true"> › </span>')}</div></div>
+      <div class="row">
+        <div class="grow">
           <div class="sub">Lv ${h.lvl}${h.restricted ? ' · <span class="hi">Locked hole</span>' : ''} · <span class="num hi">${xyText(h)}</span></div>
           <div class="sub">ET <span class="num hi">${fmtEtClock(now)}</span>${w != null ? ` · <span class="hi">${esc(m.data.weathers[w]?.name)}</span>` : ''}</div></div>
         <button class="toggle${disc ? ' on' : ''}" data-act="disc" data-hid="${hid}" aria-pressed="${disc}">${disc ? 'Discovered' : 'Not discovered'}</button>
@@ -597,11 +614,11 @@ export function fishView(ctx, fid, fromHole, from = null) {
   const found = holes.map((x) => {
     const hh = m.data.holes[x];
     const z = m.data.zones[hh.zone].name;
-    return `<a class="item row" href="#/hole/${x}"><span class="grow">${holeName(m, store, x)}${hh.name === z ? '' : ` · ${esc(z)}`}<span class="sub">${xyText(hh)}</span></span><span class="num dim">Lv ${hh.lvl}</span></a>`;
+    return `<a class="item row" href="#/hole/${x}"><span class="grow">${holeName(m, store, x)} · ${esc(z)}<span class="sub">${xyText(hh)}</span></span><span class="num dim">Lv ${hh.lvl}</span></a>`;
   }).join('');
 
   return `
-    ${FROM.test(from ?? '') ? back(ctx, `#/${from}`, from.endsWith('/soon') ? 'Up soon' : 'Home') : back(ctx, `#/hole/${hid}`, h.name)}
+    ${FROM.test(from ?? '') ? back(ctx, `#/${from}`, from.endsWith('/soon') ? 'Up soon' : 'Home', holeTab(h)) : back(ctx, `#/hole/${hid}`, h.name, holeTab(h))}
     <header class="row">${icon(f.icon, 'icon lg')}
       <div class="grow"><h1>${esc(f.name)}</h1><div class="sub">Lv ${f.lvl}${stars}${rec ? ` · ${esc(rec)}` : ''}${availability(h, st)}</div></div>
     </header>

@@ -50,18 +50,17 @@ The mockup is at https://claude.ai/artifact/528uaT9rVpkYAw5xb5dgAz.
    - Header: profile summary, ET, and overall caught count with a thin bar. Rod / Spearfishing / Ocean tabs.
    - Search box (fish, hole or zone).
    - **Up soon**: the first 5 uncaught, eligible, condition fish whose window opens within the horizon (undiscovered holes marked with a dashed dot). "See all" opens an Up soon screen with every match and the 1/2/3/6h horizon chips.
-   - Region list with progress. Regions hidden by filters are summarised in a "N regions hidden" line.
-2. **Region**: zones with caught/total, hole count, level range, and tags (open now, undiscovered, complete).
-3. **Zone**: holes sorted by level, with caught/total, tags, and All / Incomplete / Undiscovered chips.
-4. **Hole** (the main screen)
+   - Region list with progress. Regions hidden by filters are summarised in a "N regions hidden" line. Tapping a region expands its zones in place (one open at a time): name, caught/total, hole count, level range and an open-now tag. Back from a zone returns Home with that region open and the scroll restored.
+2. **Zone**: holes sorted by level, with caught/total, tags, and All / Incomplete / Undiscovered chips.
+3. **Hole** (the main screen)
    - Header: hole name, level, water type, current ET and weather, and a discovered toggle.
    - Each fish shows: a caught toggle (44px target), name, bait or **mooch chain**, tug and hookset, its condition with a live status pill, a Gathering-shortfall warning, and "mooch bait for X".
    - Sort order: open windows, then soonest window, then everything else, with caught fish last.
    - **Also caught here** section: community-reported fish (see Data).
    - Spearfishing holes show speed and shadow size instead of bait, tug and hookset.
    - There's no "mark all caught" action.
-5. **Fish detail**: catch facts, numbered mooch-chain steps (for the hole you came from), the next N windows with local times and durations, and every hole the fish is found at.
-6. **Profile and filters**
+4. **Fish detail**: catch facts, numbered mooch-chain steps (for the hole you came from), the next N windows with local times and durations, and every hole the fish is found at.
+5. **Profile and filters**
    - Fisher level (1–100) and Gathering (0–9,999), each a number field plus ±1 steppers.
    - Expansions unlocked, which sections to show, and "show holes above my level (greyed)".
    - Export/import progress.

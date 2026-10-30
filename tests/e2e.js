@@ -8,7 +8,7 @@ import { launch } from './cdp.js';
 const APP = Deno.env.get('APP_URL') ?? 'http://127.0.0.1:8765/';
 const shotDir = Deno.args[0];
 const b = await launch();
-const { tmp, send, js, go, check, waitFor } = b;
+const { tmp, send, js, go, check, waitFor, sleep } = b;
 const shot = (name) => b.shot(shotDir, name);
 let failures = 0;
 const stored = () => js(`JSON.parse(localStorage.getItem('fishlog:v1') || 'null')`);
@@ -96,6 +96,23 @@ try {
   check(await js(`document.body.textContent.includes('hidden by your level and expansion filters')`), 'home reports hidden regions');
   check(await js(`!document.body.textContent.includes('Yok Tural')`), 'Dawntrail off hides its regions');
   check(await js(`document.body.textContent.includes('Norvrandt')`), 'Lv 40 still shows higher regions (most holes are fishable at any level)');
+  // --- Regions expand in place; Back from a zone returns with the region open
+  check(await js(`!document.querySelector('a.item.zone')`), 'regions start collapsed');
+  await js(`document.querySelector('[data-act=region][data-rid="22"]').click()`);
+  check(await js(`[...document.querySelectorAll('a.item.zone')].some((a) => a.getAttribute('href') === '#/rod/zone/32')`), 'tapping La Noscea lists its zones on Home');
+  await js(`window.scrollTo(0, 400)`);
+  await go('#/rod/zone/32');
+  check(await js(`document.querySelector('.back').getAttribute('href')`) === '#/rod', 'zone Back goes to Home');
+  await js(`history.back()`);
+  await sleep(300);
+  check(await js(`document.querySelector('[data-rid="22"]')?.getAttribute('aria-expanded')`) === 'true', 'Home keeps the region open after Back');
+  check(await js(`Math.abs(window.scrollY - 400) < 5`), 'Home restores its scroll position after Back');
+  await go('#/rod/region/23');
+  check(await js(`location.hash === '#/rod' && document.querySelector('[data-rid="23"]')?.getAttribute('aria-expanded') === 'true'`), 'old region links open Home with that region expanded');
+  await shot('regions');
+  await js(`document.querySelector('[data-act=region][data-rid="23"]').click()`);
+  check(await js(`!document.querySelector('a.item.zone')`), 'tapping an open region collapses it');
+
   // Red Mantis Falls (r58) is a restricted Lv 45 hole: locked at Lv 40.
   await js(`(() => { const i = document.getElementById('search'); i.value = 'red mantis falls'; i.dispatchEvent(new Event('input', {bubbles: true})); })()`);
   check(await js(`document.getElementById('home-body').textContent.includes('Locked until Lv 45')`), 'search labels locked holes');

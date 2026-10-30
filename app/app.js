@@ -4,7 +4,7 @@ import { fishWindows } from './engine.js';
 import { TABS, createModel } from './model.js';
 import { createStore, makeBackup, parseBackup, shouldRemind } from './store.js';
 import {
-  fishView, holeView, homeBody, homeView, notFound, profileView, regionView, soonView, zoneView,
+  fishView, holeView, homeBody, homeView, notFound, profileView, soonView, zoneView,
 } from './views.js';
 
 const LIVE_REFRESH_MS = 15_000;
@@ -16,7 +16,7 @@ const store = createStore();
 let model = null;
 
 // Transient UI state (not persisted).
-const ui = { query: '', pendingImport: null, flash: '' };
+const ui = { query: '', openRegion: null, homeY: 0, pendingImport: null, flash: '' };
 
 function parseRoute() {
   const raw = location.hash.replace(/^#\/?/, '');
@@ -40,8 +40,16 @@ function view() {
   const [a, b, c] = parts;
   if (!a || (TABS.includes(a) && !b)) return homeView(ctx);
   if (TABS.includes(a) && b === 'soon') return soonView(ctx, a);
-  if (TABS.includes(a) && b === 'region') return regionView(ctx, a, c);
-  if (TABS.includes(a) && b === 'zone') return zoneView(ctx, a, c, params.get('f') ?? 'all');
+  if (TABS.includes(a) && b === 'region') { // old links: Home with the region open
+    ui.openRegion = c;
+    history.replaceState(null, '', `#/${a}`);
+    return homeView(makeCtx(parts));
+  }
+  if (TABS.includes(a) && b === 'zone') {
+    // Coming back Home shows this zone's region open.
+    if (model.data.zones[c]) ui.openRegion = String(model.data.zones[c].region);
+    return zoneView(ctx, a, c, params.get('f') ?? 'all');
+  }
   if (a === 'hole' && b) return holeView(ctx, b);
   if (a === 'fish' && b) return fishView(ctx, b, params.get('h'));
   if (a === 'profile') return profileView(ctx);
@@ -166,6 +174,10 @@ root.addEventListener('click', (ev) => {
       store.setProfile({ exp: next.length === all.length ? null : next });
       break;
     }
+    case 'region':
+      ui.openRegion = ui.openRegion === d.rid ? null : d.rid;
+      render({ keepScroll: true });
+      break;
     case 'horizon': store.setPrefs({ upSoonHours: Number(d.h) }); break;
     case 'clear-search': {
       const input = document.getElementById('search');
@@ -211,11 +223,17 @@ async function main() {
     return;
   }
   store.subscribe(() => render({ keepScroll: true }));
+  // Returning Home (from a zone, say) restores where you were on it.
+  const isHome = () => { const p = parseRoute().parts; return !p.length || (TABS.includes(p[0]) && !p[1]); };
+  let wasHome = isHome();
   window.addEventListener('hashchange', () => {
+    if (wasHome) ui.homeY = window.scrollY;
+    const home = isHome();
     ui.flash = '';
     ui.pendingImport = null;
     render();
-    window.scrollTo(0, 0);
+    window.scrollTo(0, home && !wasHome ? ui.homeY : 0);
+    wasHome = home;
   });
   // Keep timers and the ET clock live. Skip while hidden, or while any field
   // has focus: replacing a focused input closes the iOS keyboard and would

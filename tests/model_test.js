@@ -1,7 +1,7 @@
 import { assert, assertEquals, assertStringIncludes } from 'jsr:@std/assert@1.0.13';
 import { createModel } from '../app/model.js';
 import { createStore, makeBackup, parseBackup, shouldRemind } from '../app/store.js';
-import { esc, fishView, fmtDuration, holeView, homeView, profileView, regionView, zoneView } from '../app/views.js';
+import { esc, fishView, fmtDuration, holeView, homeView, profileView, soonView, zoneView } from '../app/views.js';
 import { fishWindows } from '../app/engine.js';
 
 const DATA = JSON.parse(await Deno.readTextFile(new URL('../app/data/fish.json', import.meta.url)));
@@ -136,13 +136,14 @@ Deno.test('every view renders for every region, zone, hole and fish', () => {
   const ctx = ctxFor(store);
   for (const tab of ['rod', 'spear', 'ocean']) {
     homeView({ ...ctx, tab });
-    for (const r of Object.keys(DATA.regions)) if (m.regionHolesAll(tab, r).length) regionView(ctx, tab, r);
+    for (const r of Object.keys(DATA.regions)) if (m.regionHolesAll(tab, r).length) homeView({ ...ctx, tab, openRegion: r });
+    soonView({ ...ctx, tab }, tab);
     for (const z of Object.keys(DATA.zones)) if (m.zoneHolesAll(tab, z).length) zoneView(ctx, tab, z);
   }
   for (const hid of Object.keys(DATA.holes)) holeView(ctx, hid);
   profileView(ctx);
   homeView({ ...ctx, query: 'goby' });
-  homeView({ ...ctx, remind: true, showAllSoon: true });
+  homeView({ ...ctx, remind: true });
   for (const fid of Object.keys(DATA.fish)) fishView(ctx, fid, null);
 });
 
@@ -169,6 +170,7 @@ Deno.test('escaping and duration formatting', () => {
   assertEquals(fmtDuration(14 * 60000), '14m');
   assertEquals(fmtDuration(112 * 60000), '1h 52m');
   assertEquals(fmtDuration(51 * 3600000), '2d 3h');
+  assertEquals(fmtDuration(20000), '<1m');
 });
 
 // ------------------------------------------------------------ search

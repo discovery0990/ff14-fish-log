@@ -18,6 +18,7 @@ const SHADOW = ['Small', 'Normal', 'Large'];
 /** "14m", "1h 52m", "2d 3h". */
 export function fmtDuration(ms) {
   const m = Math.max(0, Math.round(ms / 60000));
+  if (m < 1) return ms > 0 ? '<1m' : '0m';
   if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
   if (h < 48) return `${h}h ${String(m % 60).padStart(2, '0')}m`;
@@ -158,13 +159,15 @@ export function homeBody(ctx) {
   const regions = m.visibleRegions(tab, profile);
   const allRegions = Object.keys(m.data.regions).filter((r) => m.regionHolesAll(tab, r).length);
   const hidden = allRegions.length - regions.length;
-  const regionRows = regions
-    .map((r) => [r, m.count(m.regionHolesAll(tab, r), store.isCaught)])
-    .map(([r, c]) => `
-      <a class="item" href="#/${tab}/region/${r}">
-        <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span><span class="num">${countText(c)}</span></div>
+  const regionRows = regions.map((r) => {
+    const c = m.count(m.regionHolesAll(tab, r), store.isCaught);
+    const open = ctx.openRegion === r;
+    return `
+      <button class="item region${open ? ' open' : ''}" data-act="region" data-rid="${r}" aria-expanded="${open}">
+        <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span><span class="num${done(c) ? ' done' : ''}">${countText(c)}</span>${chevron}</div>
         ${progress(c, 'thin')}
-      </a>`).join('');
+      </button>${open ? zoneRows(ctx, r) : ''}`;
+  }).join('');
 
   return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden)}`;
 }
@@ -178,6 +181,37 @@ function regionsBlock(regionRows, hidden) {
 }
 
 const countText = ({ caught, total }) => `${caught} / ${total}`;
+const done = ({ caught, total }) => total > 0 && caught === total;
+
+/** A region's zones, shown under it on Home when it's expanded. */
+function zoneRows(ctx, rid) {
+  const { m, store, tab } = ctx;
+  const { profile } = store.state;
+  return m.visibleZones(tab, rid, profile).map((z) => {
+    const vis = m.visibleHoles(tab, z, profile);
+    const c = m.count(m.zoneHolesAll(tab, z), store.isCaught);
+    const lv = vis.map((h) => m.data.holes[h].lvl);
+    const lvText = Math.min(...lv) === Math.max(...lv) ? `Lv ${lv[0]}` : `Lv ${Math.min(...lv)}–${Math.max(...lv)}`;
+    const open = openCount(ctx, vis);
+    return `
+      <a class="item zone" href="#/${tab}/zone/${z}">
+        <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span><span class="num${done(c) ? ' done' : ''}">${countText(c)}</span></div>
+        <div class="row"><span class="sub grow">${plural(vis.length, 'hole')} · ${lvText}</span>${open ? `<span class="tag open">${open} open now</span>` : ''}</div>
+      </a>`;
+  }).join('');
+}
+
+/** Uncaught fish whose window is open now across these holes. */
+function openCount(ctx, hids) {
+  const { m, store, now } = ctx;
+  let n = 0;
+  for (const hid of hids) {
+    for (const { fid } of m.holeFish(hid)) {
+      if (!store.isCaught(fid) && m.status(fid, hid, now)?.state === 'open') n++;
+    }
+  }
+  return n;
+}
 
 /** Why browsing hides a hole under the current profile, or null. */
 function hiddenWhy(m, hid, profile) {
@@ -348,49 +382,6 @@ export function profileView(ctx) {
       or endorsed by Square Enix. Fonts: IBM Plex (SIL OFL 1.1).</p>`;
 }
 
-export function regionView(ctx, tab, rid) {
-  const { m, store, now } = ctx;
-  const { profile } = store.state;
-  const region = m.data.regions[rid];
-  if (!region) return notFound();
-  const zones = m.visibleZones(tab, rid, profile);
-  const all = m.count(m.regionHolesAll(tab, rid), store.isCaught);
-  const holeCount = zones.reduce((n, z) => n + m.visibleHoles(tab, z, profile).length, 0);
-  const cards = zones.map((z) => {
-    const hids = m.zoneHolesAll(tab, z);
-    const vis = m.visibleHoles(tab, z, profile);
-    const c = m.count(hids, store.isCaught);
-    const lv = vis.map((h) => m.data.holes[h].lvl);
-    const lvText = Math.min(...lv) === Math.max(...lv) ? `Lv ${lv[0]}` : `Lv ${Math.min(...lv)}–${Math.max(...lv)}`;
-    return `
-      <a class="card" href="#/${tab}/zone/${z}">
-        <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span><span class="num">${countText(c)}</span></div>
-        ${progress(c, 'thin')}
-        <div class="tags"><span class="sub">${plural(vis.length, 'hole')} · ${lvText}</span>${areaTags(ctx, vis, c)}</div>
-      </a>`;
-  }).join('');
-  return `
-    ${back(`#/${tab}`, 'Home')}
-    <header class="stack-s"><h1>${esc(region.name)}</h1>
-      <div class="row sub"><span class="grow">${plural(zones.length, 'zone')} · ${plural(holeCount, 'hole')}</span><span class="num hi">${countText(all)} fish</span></div>
-      ${progress(all)}</header>
-    <section><h2 class="sec">Zones</h2><div class="cards">${cards}</div></section>`;
-}
-
-function areaTags(ctx, hids, c) {
-  const { m, store, now } = ctx;
-  if (c.total && c.caught === c.total) return '<span class="tag done">Complete</span>';
-  let open = 0;
-  for (const hid of hids) {
-    for (const { fid } of m.holeFish(hid)) {
-      if (!store.isCaught(fid) && m.status(fid, hid, now)?.state === 'open') open++;
-    }
-  }
-  const undisc = hids.filter((h) => !store.isDiscovered(h)).length;
-  return (open ? `<span class="tag open">${open} open now</span>` : '') +
-    (undisc ? `<span class="tag undisc">${undisc} undiscovered</span>` : '');
-}
-
 export function zoneView(ctx, tab, zid, filter = 'all') {
   const { m, store, now } = ctx;
   const { profile } = store.state;
@@ -433,7 +424,7 @@ export function zoneView(ctx, tab, zid, filter = 'all') {
   }).join('');
 
   return `
-    ${back(`#/${tab}/region/${zone.region}`, m.data.regions[zone.region].name)}
+    ${back(`#/${tab}`, 'Home')}
     <header class="stack-s"><h1>${esc(zone.name)}</h1>
       <div class="row sub"><span class="grow">${plural(vis.length, 'hole')}${undisc ? ` · ${undisc} undiscovered` : ''}</span><span class="num hi">${countText(c)} fish</span></div>
       ${progress(c)}</header>

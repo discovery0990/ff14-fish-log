@@ -105,6 +105,11 @@ section { display: flex; flex-direction: column; gap: 10px; }
 .item { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); min-height: 48px; justify-content: center; }
 .item.row { flex-direction: row; }
 .item:last-child { border-bottom: 0; }
+button.item { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; cursor: pointer; }
+.item.region .chev { transition: transform .15s; }
+.item.region.open .chev { transform: rotate(90deg); }
+.item.region.open .bar { display: none; }
+.item.zone { padding-left: 28px; gap: 4px; background: rgba(0, 0, 0, .14); }
 .cards { display: flex; flex-direction: column; gap: 10px; }
 .card { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--surface); }
 .card.row { flex-direction: row; }

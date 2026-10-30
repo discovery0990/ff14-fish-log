@@ -131,7 +131,7 @@ section { display: flex; flex-direction: column; gap: 10px; }
 .item:last-child { border-bottom: 0; }
 button.item { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; cursor: pointer; }
 .item.region .chev { transition: transform .15s; }
-.item.region.open .chev { transform: rotate(90deg); }
+.item.region.open .chev { transform: rotate(90deg); stroke: var(--accent); }
 .item.region.open .bar { display: none; }
 button.fold { color: var(--muted); }
 button.fold .title { font-weight: 500; }
@@ -143,7 +143,6 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .item.zone { padding-left: 32px; gap: 4px;
   background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat, rgba(0, 0, 0, .14); }
 .item.zone > .row .title { font-size: 15px; font-weight: 600; }
-.item.zone.open .chev { stroke: var(--accent); }
 .item.hole { padding-left: 50px; gap: 4px;
   background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat,
     linear-gradient(var(--accent), var(--accent)) 32px 0 / 2px 100% no-repeat, rgba(0, 0, 0, .28); }

@@ -94,6 +94,12 @@ try {
   await js(`document.querySelector('[data-act=horizon][data-h="3"]').click()`);
   check((await stored()).upSoonHours === 3, 'Up soon horizon saves');
   check(await js(`document.querySelector('[data-act=horizon][data-h="3"]').classList.contains('on')`), 'horizon chip shows as selected');
+  await js(`document.querySelector('[data-act=soon-holes][data-f=disc]').click()`);
+  check((await stored()).upSoonHoles === 'disc', 'Up soon hole filter saves');
+  check(await js(`!document.querySelector('.list .undisc-name')`), 'Discovered filter shows no undiscovered holes');
+  await js(`document.querySelector('[data-act=soon-holes][data-f=undisc]').click()`);
+  check(await js(`[...document.querySelectorAll('.list .item')].every((i) => i.querySelector('.undisc-name'))`), 'Undiscovered filter shows only undiscovered holes');
+  await js(`document.querySelector('[data-act=soon-holes][data-f=all]').click()`);
   await shot('soon');
 
   await go('#/rod');

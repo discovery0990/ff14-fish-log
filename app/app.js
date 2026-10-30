@@ -186,6 +186,7 @@ root.addEventListener('click', (ev) => {
       ui.openRegion = ui.openRegion === d.rid ? null : d.rid;
       render({ keepScroll: true });
       break;
+    case 'soon-holes': store.setPrefs({ upSoonHoles: d.f }); break;
     case 'horizon': store.setPrefs({ upSoonHours: Number(d.h) }); break;
     case 'clear-search': {
       const input = document.getElementById('search');

@@ -207,6 +207,9 @@ Deno.test('up soon: within horizon, open first, uncaught, eligible, one per fish
   const caught = new Set([list[0].fid]);
   assert(!m.upSoon('rod', { ...opts, isCaught: (f) => caught.has(f) }).some((x) => x.fid === list[0].fid));
   // gathering shortfall drops out
+  const onlyR5 = m.upSoon('rod', { ...opts, holeOk: (h) => h === 'r5' });
+  assert(onlyR5.every((x) => x.hid === 'r5'));
+  assert(m.upSoon('rod', { ...opts, holeOk: (h) => h !== list[0].hid }).every((x) => x.hid !== list[0].hid), 'holeOk excludes a hole');
   const lowG = m.upSoon('rod', { ...opts, profile: profile({ gath: 0 }) });
   assert(lowG.every((x) => !(DATA.fish[x.fid].at[x.hid].minG > 0)));
   // level filter applies

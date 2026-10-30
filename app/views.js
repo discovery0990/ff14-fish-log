@@ -263,9 +263,14 @@ export function daysAgo(ms, now) {
 
 const UP_SOON_SHOWN = 5;
 
+const SOON_HOLES = { all: 'All holes', disc: 'Discovered', undisc: 'Undiscovered' };
+const soonHoles = (store) => (SOON_HOLES[store.state.upSoonHoles] ? store.state.upSoonHoles : 'all');
+
 function upSoonList(ctx) {
   const { m, store, tab, now } = ctx;
-  return m.upSoon(tab, { now, horizonMs: store.state.upSoonHours * 36e5, isCaught: store.isCaught, profile: store.state.profile });
+  const f = soonHoles(store);
+  const holeOk = f === 'all' ? undefined : (hid) => store.isDiscovered(hid) === (f === 'disc');
+  return m.upSoon(tab, { now, horizonMs: store.state.upSoonHours * 36e5, isCaught: store.isCaught, profile: store.state.profile, holeOk });
 }
 
 /** Two lines: fish and status, then hole and condition. */
@@ -293,7 +298,7 @@ function upSoonSection(ctx) {
     ? `<a class="more" href="#/${tab}/soon">See all ${all.length}</a>` : '';
   return `
     <section>
-      <div class="row"><h2 class="sec grow">Up soon · uncaught</h2><a class="note" href="#/${tab}/soon">next ${store.state.upSoonHours}h</a></div>
+      <div class="row"><h2 class="sec grow">Up soon · uncaught</h2><a class="note" href="#/${tab}/soon">${soonHoles(store) === 'all' ? '' : `${SOON_HOLES[soonHoles(store)].toLowerCase()} · `}next ${store.state.upSoonHours}h</a></div>
       ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: tab }, shown)}</div>${legend}${more}` : `<p class="note">Nothing opens in that time. <a href="#/${tab}/soon">Look further ahead</a>.</p>`}
     </section>`;
 }
@@ -308,13 +313,17 @@ export function soonView(ctx, tab) {
   const hours = store.state.upSoonHours;
   const chips = HORIZONS.map((h) =>
     `<button class="chip${hours === h ? ' on' : ''}" data-act="horizon" data-h="${h}" aria-pressed="${hours === h}">${h}h</button>`).join('');
+  const f = soonHoles(store);
+  const holeChips = Object.entries(SOON_HOLES).map(([k, l]) =>
+    `<button class="chip${f === k ? ' on' : ''}" data-act="soon-holes" data-f="${k}" aria-pressed="${f === k}">${l}</button>`).join('');
   return `
     ${back(`#/${tab}`, 'Home')}
     <header class="stack-s"><h1>Up soon</h1>
       <div class="sub">Uncaught ${tab === 'spear' ? 'spearfishing ' : ''}fish with a window open now or within ${hours}h</div></header>
     <div class="chips" role="group" aria-label="Look ahead">${chips}</div>
+    <div class="chips" role="group" aria-label="Holes">${holeChips}</div>
     ${all.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : ''}
-    ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: `${tab}/soon` }, all)}</div>` : '<p class="empty">Nothing opens in that time. Try looking further ahead.</p>'}`;
+    ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: `${tab}/soon` }, all)}</div>` : `<p class="empty">Nothing opens in that time${f === 'all' ? '' : ' at these holes'}. Try looking further ahead.</p>`}`;
 }
 
 function searchResults(ctx) {

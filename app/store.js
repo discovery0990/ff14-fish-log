@@ -12,6 +12,7 @@ export const defaultState = () => ({
     exp: null,         // unlocked expansion ids; null = all
   },
   upSoonHours: 2,      // "Up soon" horizon
+  upSoonHoles: 'all',  // "Up soon" holes: all | disc | undisc
   createdAt: null,     // ms, first save
   lastExport: null,    // ms
   caughtAtLastExport: 0,

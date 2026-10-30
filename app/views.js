@@ -84,7 +84,8 @@ function baitLine(m, fid, hid, e) {
   if (m.isMooch(e)) {
     const chain = m.moochChain(fid, hid).steps.map((s) => (s.unknown ? '?' : esc(m.fishName(s.id))));
     chain.pop(); // the fish itself
-    return `<span class="sub"><span class="tag mooch">MOOCH</span> ${chain.join(' → ')} · ${tug} · ${hook}</span>`;
+    // Purple arrows mark a mooch chain (purple is the app's mooch colour).
+    return `<span class="sub">${chain.join(' <span class="arrow" aria-label="then mooch">→</span> ')} · ${tug} · ${hook}</span>`;
   }
   const bait = e.bait ? esc(m.fishName(e.bait)) : 'Bait unknown';
   const alts = e.alts?.length ? ` <span class="dim">(or ${e.alts.map((b) => esc(m.fishName(b))).join(', ')})</span>` : '';

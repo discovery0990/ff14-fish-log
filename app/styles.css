@@ -127,7 +127,7 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .tag.done { background: var(--accent-bg); color: var(--accent-text); }
 .tag.open { background: var(--open); color: var(--open-text); }
 .tag.undisc { background: none; outline: 1px dashed var(--muted); outline-offset: -1px; }
-.tag.mooch { font-size: 11px; font-weight: 700; letter-spacing: .06em; padding: 2px 6px; border-radius: 4px; background: var(--mooch-bg); color: var(--mooch); }
+.arrow { color: var(--mooch); font-weight: 700; }
 .pill { font-family: var(--mono); font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--track); white-space: nowrap; }
 .pill.open { background: var(--open); color: var(--open-text); }
 

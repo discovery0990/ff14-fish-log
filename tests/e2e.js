@@ -31,7 +31,7 @@ try {
   check(await js(`document.querySelectorAll('.fish.caught').length`) === 1, 'tapping Caught shows the caught fish, styled as caught');
   check(await js(`[...document.querySelectorAll('.fish')].at(-1).classList.contains('caught')`), 'caught fish sit below the rest');
   check(await js(`document.body.textContent.includes('Honey Worm · ! · Precision')`), 'tug shows as ! marks with dot separators');
-  check(await js(`[...document.querySelectorAll('.fish')].some((f) => f.textContent.includes('Ala Mhigan Fighting Fish · !! · Powerful') && f.textContent.includes('MOOCH'))`), 'mooch chain, tug and hookset share one line');
+  check(await js(`[...document.querySelectorAll('.fish')].some((f) => f.textContent.includes('Midge Basket → Ala Mhigan Fighting Fish · !! · Powerful') && !f.textContent.includes('MOOCH'))`), 'mooch chain (no tag), tug and hookset share one line');
 
   // --- Home: search keeps focus while typing
   await go('#/rod');

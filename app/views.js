@@ -236,11 +236,12 @@ function zoneRows(ctx, rid) {
     const lv = vis.map((h) => m.data.holes[h].lvl);
     const lvText = Math.min(...lv) === Math.max(...lv) ? `Lv ${lv[0]}` : `Lv ${Math.min(...lv)}–${Math.max(...lv)}`;
     const open = openCount(ctx, vis);
+    const undisc = vis.filter((h) => !store.isDiscovered(h)).length;
     const expanded = ctx.openZone === z;
     return `
       <button class="item zone region${expanded ? ' open' : ''}" data-act="zone" data-zid="${z}" aria-expanded="${expanded}">
         <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span><span class="num${done(c) ? ' done' : ''}">${countText(c)}</span>${chevron}</div>
-        <div class="row"><span class="sub grow">${plural(vis.length, 'hole')} · ${lvText}</span>${open ? `<span class="tag open">${open} open now</span>` : ''}</div>
+        <div class="row"><span class="sub grow">${plural(vis.length, 'hole')}${undisc ? ` · <span class="undisc-name">${undisc} undiscovered</span>` : ''} · ${lvText}</span>${open ? `<span class="tag open">${open} open now</span>` : ''}</div>
       </button>${expanded ? holeRows(ctx, z) : ''}`;
   });
 }

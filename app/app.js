@@ -212,7 +212,7 @@ root.addEventListener('click', (ev) => {
       const all = Object.keys(model.data.expansions).map(Number);
       const id = Number(d.exp);
       const cur = store.state.profile.exp ?? all;
-      const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id].sort();
+      const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id].sort((x, y) => x - y);
       store.setProfile({ exp: next.length === all.length ? null : next });
       break;
     }
@@ -342,8 +342,16 @@ async function registerServiceWorker() {
       if (w.state === 'installed' && navigator.serviceWorker.controller) offer(w);
     });
   });
+  // A new worker taking over means an update: reload onto it. But on a first
+  // visit the first worker claims the page too (clients.claim), and that page
+  // is already current, so don't reload for it.
+  let controlled = !!navigator.serviceWorker.controller;
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!controlled) {
+      controlled = true;
+      return;
+    }
     if (!reloading) {
       reloading = true;
       location.reload();

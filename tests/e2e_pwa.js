@@ -16,12 +16,19 @@ const originalViews = await Deno.readTextFile(DIST_VIEWS);
 
 try {
   await send('Network.enable');
+  // Count page loads, to catch an unwanted reload when the worker first
+  // takes control.
+  await send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `sessionStorage.setItem('loads', String(+(sessionStorage.getItem('loads') ?? 0) + 1))`,
+  });
   await send('Page.navigate', { url: APP });
   await waitFor(() => js(`!!document.querySelector('.tabs')`), 'app load');
   await js(`localStorage.setItem('fishlog:sw', '1')`); // SW is off on localhost by default
   await send('Page.reload');
   await waitFor(() => js(`!!navigator.serviceWorker.controller`), 'service worker control', 30000);
   check(true, 'service worker installs and controls the page');
+  await sleep(1500);
+  check(await js(`sessionStorage.getItem('loads')`) === '2', 'first install does not reload the page (2 loads: visit and the test\'s reload)');
 
   const keys = await js(`caches.keys()`);
   check(keys.some((k) => k.startsWith('shell-')), `shell cache created (${keys.join(', ')})`);

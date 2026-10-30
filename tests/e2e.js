@@ -29,9 +29,9 @@ try {
   check(await js(`document.querySelectorAll('.fish.caught').length`) === 1, 'caught fish is styled as caught');
   check(await js(`[...document.querySelectorAll('.fish')].at(-1).classList.contains('caught')`), 'caught fish sorts last');
 
-  // --- Home: Continue card and search keeps focus while typing
+  // --- Home: search keeps focus while typing
   await go('#/rod');
-  check(await js(`document.querySelector('a.card[href="#/hole/r5"]') !== null`), 'Continue card points at the last hole');
+  check(await js(`!document.body.textContent.includes('Continue')`), 'no Continue section on Home');
   check(await js(`document.querySelector('.list .item .pill') !== null`), 'Up soon list renders with status pills');
   await js(`(() => { const i = document.getElementById('search'); i.__mark = 1; i.focus(); })()`);
   for (const ch of 'hopes') await send('Input.insertText', { text: ch });

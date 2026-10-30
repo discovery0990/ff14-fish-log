@@ -11,7 +11,6 @@ export const defaultState = () => ({
     gath: null,        // Gathering; null = not set (no warnings)
     exp: null,         // unlocked expansion ids; null = all
   },
-  last: null,          // last viewed hole id
   upSoonHours: 2,      // "Up soon" horizon
   createdAt: null,     // ms, first save
   lastExport: null,    // ms
@@ -149,13 +148,6 @@ export function createStore(storage = globalThis.localStorage) {
         for (const h of b.discovered) discovered.add(h);
       }
       commit();
-    },
-    setLast(hid) {
-      if (state.last === hid) return;
-      state = { ...state, last: hid };
-      try {
-        storage?.setItem(STORAGE_KEY, JSON.stringify(state));
-      } catch { /* ignore */ }
     },
     subscribe(fn) {
       listeners.add(fn);

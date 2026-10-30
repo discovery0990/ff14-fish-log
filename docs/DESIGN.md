@@ -15,7 +15,7 @@ Status: design, 2026-10-28. Nothing is implemented yet.
 
 The in-game fishing guide is slow to navigate and gives no overview of completion. The player walks the world discovering fishing holes and tries to catch everything at each. The app supports that loop:
 
-1. Arrive at a hole → open it in the app (search, Continue, or Region → Zone → Hole).
+1. Arrive at a hole → open it in the app (search, or Region → Zone → Hole).
 2. See every fish catchable there: bait (or mooch chain), tug, hookset, and live time/weather status.
 3. Tap to mark fish caught as they land.
 4. See what's coming up soon elsewhere, and where progress is incomplete.
@@ -49,7 +49,6 @@ The mockup is at https://claude.ai/artifact/528uaT9rVpkYAw5xb5dgAz.
 1. **Home**
    - Profile summary, overall progress, Rod / Spearfishing / Ocean tabs.
    - Search box (fish, hole or zone).
-   - Continue card (last-viewed hole).
    - **Up soon**: uncaught, eligible, condition fish whose window opens within the horizon. Includes fish at undiscovered holes.
    - Region list with progress. Regions hidden by filters are summarised in a "N regions hidden" line.
 2. **Region**: zones with caught/total, hole count, level range, and tags (open now, undiscovered, complete).

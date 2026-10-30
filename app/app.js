@@ -41,10 +41,7 @@ function view() {
   if (!a || (TABS.includes(a) && !b)) return homeView(ctx);
   if (TABS.includes(a) && b === 'region') return regionView(ctx, a, c);
   if (TABS.includes(a) && b === 'zone') return zoneView(ctx, a, c, params.get('f') ?? 'all');
-  if (a === 'hole' && b) {
-    if (model.data.holes[b]) store.setLast(b);
-    return holeView(ctx, b);
-  }
+  if (a === 'hole' && b) return holeView(ctx, b);
   if (a === 'fish' && b) return fishView(ctx, b, params.get('h'));
   if (a === 'profile') return profileView(ctx);
   return notFound();

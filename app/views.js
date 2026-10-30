@@ -157,15 +157,6 @@ export function homeBody(ctx) {
   const { m, store, tab } = ctx;
   const { profile } = store.state;
   if (ctx.query.trim()) return searchResults(ctx);
-  const last = store.state.last && m.data.holes[store.state.last];
-  const cont = last ? `
-    <section><h2 class="sec">Continue</h2>
-      <a class="card row" href="#/hole/${store.state.last}">
-        <div class="grow"><div class="title">${esc(last.name)}</div>
-          <div class="sub">${esc(m.data.zones[last.zone].name)} · Lv ${last.lvl} ·
-            ${countText(m.count([store.state.last], store.isCaught))} caught</div></div>${chevron}
-      </a></section>` : '';
-
   const regions = m.visibleRegions(tab, profile);
   const allRegions = Object.keys(m.data.regions).filter((r) => m.regionHolesAll(tab, r).length);
   const hidden = allRegions.length - regions.length;

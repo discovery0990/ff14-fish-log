@@ -62,7 +62,7 @@ The mockup is at https://claude.ai/artifact/528uaT9rVpkYAw5xb5dgAz.
 4. **Fish detail**: catch facts, numbered mooch-chain steps (for the hole you came from), the next N windows with local times and durations, and every hole the fish is found at.
 5. **Profile and filters**
    - Fisher level (1–100) and Gathering (0–9,999), each a number field plus ±1 steppers.
-   - Expansions unlocked, which sections to show, and "show holes above my level (greyed)".
+   - Expansions unlocked. (Restricted holes above your level are always listed, greyed; the Up soon horizon lives on the Up soon screen.)
    - Export/import progress.
 
 ### Filtering rules

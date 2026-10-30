@@ -164,10 +164,8 @@ try {
   check(await js(`document.querySelector('[data-zid="32"]')?.getAttribute('aria-expanded')`) === 'true', 'Home keeps the zone open after Back');
   check(await js(`Math.abs(window.scrollY - ${y}) < 5`), 'Home restores its scroll position after Back');
   await go('#/rod/zone/54');
-  check(await js(`location.hash === '#/rod' && document.querySelector('[data-zid="54"]')?.getAttribute('aria-expanded') === 'true' && document.querySelector('[data-rid="23"]')?.getAttribute('aria-expanded') === 'true'`), 'zone links (search, old links) open Home with that zone expanded');
+  check(await js(`location.hash === '#/rod' && document.querySelector('[data-zid="54"]')?.getAttribute('aria-expanded') === 'true' && document.querySelector('[data-rid="23"]')?.getAttribute('aria-expanded') === 'true'`), 'zone links (from search) open Home with that zone expanded');
   check(await js(`Math.abs(document.querySelector('[data-zid="54"]').getBoundingClientRect().top) < 5`), 'a zone link scrolls to the zone');
-  await go('#/rod/region/23');
-  check(await js(`location.hash === '#/rod' && document.querySelector('[data-rid="23"]')?.getAttribute('aria-expanded') === 'true'`), 'old region links open Home with that region expanded');
   await shot('regions');
   await js(`document.querySelector('[data-act=region][data-rid="23"]').click()`);
   check(await js(`!document.querySelector('.item.zone')`), 'tapping an open region collapses it');

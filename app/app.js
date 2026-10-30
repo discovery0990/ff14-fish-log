@@ -34,28 +34,30 @@ function makeCtx(parts) {
   };
 }
 
-function view() {
-  const { parts, params } = parseRoute();
-  const ctx = makeCtx(parts);
-  const [a, b, c] = parts;
-  if (!a || (TABS.includes(a) && !b)) return homeView(ctx);
-  if (TABS.includes(a) && b === 'soon') return soonView(ctx, a);
-  if (TABS.includes(a) && b === 'region') { // old links: Home with the region open
-    ui.openRegion = c;
-    history.replaceState(null, '', `#/${a}`);
-    return homeView(makeCtx(parts));
-  }
-  if (TABS.includes(a) && b === 'zone') { // search results and old links: Home with the zone open
+/**
+ * Side effects of arriving at a route, run once per navigation (never on
+ * redraws): zone links redirect to Home with the zone open, and a hole opens
+ * its zone on Home so Back returns there.
+ */
+function enterRoute() {
+  const [a, b, c] = parseRoute().parts;
+  if (TABS.includes(a) && b === 'zone') {
     if (model.data.zones[c]) openZone(c, true);
     ui.query = '';
     history.replaceState(null, '', `#/${a}`);
-    return homeView(makeCtx(parts));
+  } else if (a === 'hole' && model.data.holes[b]) {
+    openZone(String(model.data.holes[b].zone), false);
   }
-  if (a === 'hole' && b) {
-    // Back goes Home: show this hole's zone open there.
-    if (model.data.holes[b]) openZone(String(model.data.holes[b].zone), false);
-    return holeView(ctx, b);
-  }
+}
+
+/** The current screen's HTML. Reads state; changes nothing. */
+function view() {
+  const { parts, params } = parseRoute();
+  const ctx = makeCtx(parts);
+  const [a, b] = parts;
+  if (!a || (TABS.includes(a) && !b)) return homeView(ctx);
+  if (TABS.includes(a) && b === 'soon') return soonView(ctx, a);
+  if (a === 'hole' && b) return holeView(ctx, b);
   if (a === 'fish' && b) return fishView(ctx, b, params.get('h'), params.get('from'));
   if (a === 'profile') return profileView(ctx);
   return notFound();
@@ -288,9 +290,11 @@ async function main() {
     if (!TABS.includes(p[0])) return null;
     return !p[1] ? p[0] : p[1] === 'soon' ? `${p[0]}/soon` : null;
   };
+  enterRoute(); // before listKey: a zone link redirects to Home
   let lastList = listKey();
   window.addEventListener('hashchange', () => {
     if (lastList) ui.listY[lastList] = window.scrollY;
+    enterRoute();
     const key = listKey();
     ui.flash = '';
     ui.pendingImport = null;

@@ -229,7 +229,7 @@ return s2 % 100
 ### Structure
 
 - Static files under `app/`: `index.html`, `app.js`, `engine.js`, `store.js`, `views/*.js`, `styles.css`, `manifest.webmanifest`, `sw.js`, `data/`, `icons/`.
-- **Routing** is hash-based (`#/rod/region/23`, `#/hole/r5`, `#/fish/4964`), so it works on Pages with no server rewrites.
+- **Routing** is hash-based (`#/rod`, `#/rod/soon`, `#/hole/r5`, `#/fish/4964`), so it works on Pages with no server rewrites.
 - **Rendering**: views are template functions that build DOM. Data is small enough (~1–2 MB JSON) to load whole at startup.
 - **Look**: dark theme, IBM Plex Sans/Mono, 44px touch targets, as in the mockup.
 

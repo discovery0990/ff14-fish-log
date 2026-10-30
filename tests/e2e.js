@@ -78,9 +78,19 @@ try {
   await js(`(() => { const i = document.getElementById('p-lvl'); i.value = '40'; i.dispatchEvent(new Event('change', {bubbles: true})); })()`);
   await js(`document.querySelector('[data-act=exp][data-exp="5"]').click()`);
   check(JSON.stringify((await stored()).profile.exp) === '[0,1,2,3,4]', 'toggling Dawntrail off saves the expansion list');
+  await shot('profile');
+
+  // --- Up soon: Home shows 5; its own screen shows all and sets the horizon
+  await go('#/rod');
+  check(await js(`document.querySelector('.list').querySelectorAll('.item').length`) === 5, 'Home shows 5 Up soon fish');
+  check(await js(`document.querySelector('a.more')?.getAttribute('href')`) === '#/rod/soon', 'See all opens the Up soon screen');
+  await go('#/rod/soon');
+  check(await js(`document.querySelectorAll('.list .item').length > 5`), 'Up soon screen lists more than 5');
+  check(await js(`document.querySelector('.back')?.getAttribute('href')`) === '#/rod', 'Up soon screen goes back Home in one tap');
   await js(`document.querySelector('[data-act=horizon][data-h="3"]').click()`);
   check((await stored()).upSoonHours === 3, 'Up soon horizon saves');
-  await shot('profile');
+  check(await js(`document.querySelector('[data-act=horizon][data-h="3"]').classList.contains('on')`), 'horizon chip shows as selected');
+  await shot('soon');
 
   await go('#/rod');
   check(await js(`document.body.textContent.includes('hidden by your level and expansion filters')`), 'home reports hidden regions');
@@ -127,7 +137,7 @@ try {
 
   await go('#/profile');
   await js(`document.getElementById('import-file').__mark = 1`);
-  await js(`document.querySelector('[data-act=horizon][data-h="2"]').click()`); // forces a re-render
+  for (let i = 0; i < 2; i++) await js(`document.querySelector('[data-act=exp][data-exp="5"]').click()`); // forces re-renders
   check(await js(`document.getElementById('import-file').__mark === 1`), 'file input survives re-renders (iOS Files picker)');
   check(await js(`!document.getElementById('app').contains(document.getElementById('import-file'))`), 'file input lives outside #app');
   const doc = await send('DOM.getDocument');

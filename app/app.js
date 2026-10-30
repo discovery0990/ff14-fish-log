@@ -4,7 +4,7 @@ import { fishWindows } from './engine.js';
 import { TABS, createModel } from './model.js';
 import { createStore, makeBackup, parseBackup, shouldRemind } from './store.js';
 import {
-  fishView, holeView, homeBody, homeView, notFound, profileView, regionView, zoneView,
+  fishView, holeView, homeBody, homeView, notFound, profileView, regionView, soonView, zoneView,
 } from './views.js';
 
 const LIVE_REFRESH_MS = 15_000;
@@ -16,7 +16,7 @@ const store = createStore();
 let model = null;
 
 // Transient UI state (not persisted).
-const ui = { query: '', showAllSoon: false, pendingImport: null, flash: '' };
+const ui = { query: '', pendingImport: null, flash: '' };
 
 function parseRoute() {
   const raw = location.hash.replace(/^#\/?/, '');
@@ -39,6 +39,7 @@ function view() {
   const ctx = makeCtx(parts);
   const [a, b, c] = parts;
   if (!a || (TABS.includes(a) && !b)) return homeView(ctx);
+  if (TABS.includes(a) && b === 'soon') return soonView(ctx, a);
   if (TABS.includes(a) && b === 'region') return regionView(ctx, a, c);
   if (TABS.includes(a) && b === 'zone') return zoneView(ctx, a, c, params.get('f') ?? 'all');
   if (a === 'hole' && b) return holeView(ctx, b);
@@ -150,7 +151,6 @@ root.addEventListener('click', (ev) => {
   switch (d.act) {
     case 'caught': store.toggleCaught(d.fid, d.hid); break;
     case 'disc': store.toggleDiscovered(d.hid); break;
-    case 'soon-all': ui.showAllSoon = !ui.showAllSoon; render({ keepScroll: true }); break;
     case 'dismiss-reminder': store.setPrefs({ reminderDismissedAt: Date.now() }); break;
     case 'step': {
       const cur = store.state.profile[d.key];

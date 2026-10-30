@@ -207,34 +207,58 @@ export function daysAgo(ms, now) {
   return d <= 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
 }
 
-const UP_SOON_SHOWN = 8;
+const UP_SOON_SHOWN = 5;
 
-function upSoonSection(ctx) {
+function upSoonList(ctx) {
   const { m, store, tab, now } = ctx;
-  if (tab === 'ocean') return '';
-  const hours = store.state.upSoonHours;
-  const all = m.upSoon(tab, { now, horizonMs: hours * 36e5, isCaught: store.isCaught, profile: store.state.profile });
-  const shown = ctx.showAllSoon ? all : all.slice(0, UP_SOON_SHOWN);
-  const rows = shown.map(({ fid, hid, st }) => {
+  return m.upSoon(tab, { now, horizonMs: store.state.upSoonHours * 36e5, isCaught: store.isCaught, profile: store.state.profile });
+}
+
+/** Two lines: fish and status, then hole and condition. A dashed dot marks an undiscovered hole. */
+function upSoonRows(ctx, list) {
+  const { m, store, now } = ctx;
+  return list.map(({ fid, hid, st }) => {
     const f = m.data.fish[fid];
-    const h = m.data.holes[hid];
-    const cond = condText(m, f.at[hid]);
+    const disc = store.isDiscovered(hid);
     return `
-      <a class="item row top-align" href="#/hole/${hid}">
+      <a class="item row" href="#/hole/${hid}">
         ${icon(f.icon)}
         <span class="grow stack-xs">
           <span class="row"><span class="title grow">${esc(f.name)}</span>${statusPill(st, now)}</span>
-          <span class="sub">${esc(holePlace(m, hid))}${store.isDiscovered(hid) ? '' : ' · <span class="undisc-txt">undiscovered</span>'}</span>
-          <span class="sub">${esc(cond)}</span></span>
+          <span class="sub">${disc ? '' : '<span class="undisc-dot" title="Undiscovered hole" aria-label="Undiscovered hole"></span>'}${esc(m.data.holes[hid].name)} · ${esc(condText(m, f.at[hid]))}</span></span>
       </a>`;
   }).join('');
+}
+
+function upSoonSection(ctx) {
+  const { store, tab } = ctx;
+  if (tab === 'ocean') return '';
+  const all = upSoonList(ctx);
   const more = all.length > UP_SOON_SHOWN
-    ? `<button class="more" data-act="soon-all">${ctx.showAllSoon ? 'Show fewer' : `Show all ${all.length}`}</button>` : '';
+    ? `<a class="more" href="#/${tab}/soon">See all ${all.length}</a>` : '';
   return `
     <section>
-      <div class="row"><h2 class="sec grow">Up soon · uncaught</h2><span class="note">next ${hours}h</span></div>
-      ${rows ? `<div class="list">${rows}</div>${more}` : '<p class="note">Nothing opens in that time. Try a longer horizon in Profile.</p>'}
+      <div class="row"><h2 class="sec grow">Up soon · uncaught</h2><a class="note" href="#/${tab}/soon">next ${store.state.upSoonHours}h</a></div>
+      ${all.length ? `<div class="list">${upSoonRows(ctx, all.slice(0, UP_SOON_SHOWN))}</div>${more}` : `<p class="note">Nothing opens in that time. <a href="#/${tab}/soon">Look further ahead</a>.</p>`}
     </section>`;
+}
+
+const HORIZONS = [1, 2, 3, 6];
+
+/** Every Up soon fish, with the look-ahead setting. */
+export function soonView(ctx, tab) {
+  const { store } = ctx;
+  if (tab === 'ocean') return notFound();
+  const all = upSoonList(ctx);
+  const hours = store.state.upSoonHours;
+  const chips = HORIZONS.map((h) =>
+    `<button class="chip${hours === h ? ' on' : ''}" data-act="horizon" data-h="${h}" aria-pressed="${hours === h}">${h}h</button>`).join('');
+  return `
+    ${back(`#/${tab}`, 'Home')}
+    <header class="stack-s"><h1>Up soon</h1>
+      <div class="sub">Uncaught ${tab === 'spear' ? 'spearfishing ' : ''}fish with a window open now or within ${hours}h</div></header>
+    <div class="chips" role="group" aria-label="Look ahead">${chips}</div>
+    ${all.length ? `<div class="list">${upSoonRows(ctx, all)}</div>` : '<p class="empty">Nothing opens in that time. Try looking further ahead.</p>'}`;
 }
 
 function searchResults(ctx) {
@@ -289,9 +313,6 @@ export function profileView(ctx) {
       <span class="grow">${label}</span><span class="switch${on ? ' on' : ''}" aria-hidden="true"><span></span></span>
     </button>`;
 
-  const horizons = [1, 2, 3, 6].map((h) =>
-    `<button class="chip${s.upSoonHours === h ? ' on' : ''}" data-act="horizon" data-h="${h}" aria-pressed="${s.upSoonHours === h}">${h}h</button>`).join('');
-
   const pending = ctx.pendingImport;
   const importPanel = pending ? `
     <div class="banner stack-s">
@@ -313,7 +334,6 @@ export function profileView(ctx) {
       <p class="note">Most holes can be fished at any level. A few (restricted holes) are locked until you reach their level: they're not on your map and you can't cast there, so the app greys them out until then. Fish needing more Gathering than you have are flagged at the hole and left out of Up soon. Leave blank to turn off.</p>
     </section>
     <section><h2 class="sec">Expansions unlocked</h2><div class="chips">${exps}</div></section>
-    <section><h2 class="sec">Up soon looks ahead</h2><div class="chips">${horizons}</div></section>
     <section><h2 class="sec">Backup</h2>
       ${ctx.flash ? `<p class="note hi">${esc(ctx.flash)}</p>` : ''}
       ${importPanel}

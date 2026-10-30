@@ -29,6 +29,7 @@ function makeCtx(parts) {
     m: model, store, now, ...ui, appVersion: APP_VERSION.startsWith('__') ? 'dev' : APP_VERSION,
     tab: TABS.includes(parts[0]) ? parts[0] : 'rod',
     remind: shouldRemind(store.state, store.caughtCount(), now),
+    prev: trail.at(-1) ?? null,
   };
 }
 
@@ -46,6 +47,24 @@ function enterRoute() {
   } else if (a === 'hole' && model.data.holes[b]) {
     openZone(String(model.data.holes[b].zone), false);
   }
+}
+
+// Back retraces the path taken: each history entry keeps the hashes of the
+// screens before it, so it holds after Back, Forward and reloads.
+let trail = [];
+let lastHash = null;
+const hereHash = () => location.hash || '#/rod';
+
+/** Record the screen just arrived at. Run after enterRoute (it may redirect). */
+function syncTrail() {
+  const s = history.state;
+  if (Array.isArray(s?.trail)) {
+    trail = s.trail; // returned to a screen already on the path
+  } else {
+    trail = lastHash == null ? [] : [...trail, lastHash];
+    history.replaceState({ trail }, '');
+  }
+  lastHash = hereHash();
 }
 
 /** The current screen's HTML. Reads state; changes nothing. */
@@ -199,6 +218,7 @@ root.addEventListener('click', (ev) => {
   ev.preventDefault();
   const d = el.dataset;
   switch (d.act) {
+    case 'back': history.back(); break;
     case 'caught': store.toggleCaught(d.fid, d.hid); break;
     case 'disc': store.toggleDiscovered(d.hid); break;
     case 'dismiss-reminder': store.setPrefs({ reminderDismissedAt: Date.now() }); break;
@@ -289,10 +309,12 @@ async function main() {
     return !p[1] ? p[0] : p[1] === 'soon' ? `${p[0]}/soon` : null;
   };
   enterRoute(); // before listKey: a zone link redirects to Home
+  syncTrail();
   let lastList = listKey();
   window.addEventListener('hashchange', () => {
     if (lastList) ui.listY[lastList] = window.scrollY;
     enterRoute();
+    syncTrail();
     const key = listKey();
     ui.flash = '';
     ui.pendingImport = null;

@@ -71,8 +71,26 @@ const icon = (id, cls = 'icon') => (id ? `<img class="${cls}" src="icons/${id}.p
 const progress = ({ caught, total }, cls = '') =>
   `<div class="bar ${cls}"><div style="width:${total ? Math.round((caught / total) * 100) : 0}%"></div></div>`;
 
-const back = (href, label) =>
-  `<a class="back" href="${href}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>${esc(label)}</a>`;
+/** What Back calls the screen at a hash, or null if it isn't one. */
+function screenName(m, hash) {
+  const [a, b] = hash.replace(/^#\/?/, '').split('?')[0].split('/');
+  if (!a || (TABS.includes(a) && !b)) return 'Home';
+  if (TABS.includes(a) && b === 'soon') return 'Up soon';
+  if (a === 'hole') return m.data.holes[b]?.name ?? null;
+  if (a === 'fish') return m.data.fish[b]?.name ?? null;
+  if (a === 'profile') return 'Profile';
+  return null;
+}
+
+/**
+ * Back to the previous screen on the path taken, or, with no path (a deep
+ * link, a fresh start), up to `href`.
+ */
+function back(ctx, href, label) {
+  const prevName = ctx?.prev && screenName(ctx.m, ctx.prev);
+  const [to, text, act] = prevName ? [ctx.prev, prevName, ' data-act="back"'] : [href, label, ''];
+  return `<a class="back" href="${esc(to)}"${act}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>${esc(text)}</a>`;
+}
 
 const chevron = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 
@@ -349,7 +367,7 @@ export function soonView(ctx, tab) {
   const holeChips = Object.entries(SOON_HOLES).map(([k, l]) =>
     `<button class="chip${f === k ? ' on' : ''}" data-act="soon-holes" data-f="${k}" aria-pressed="${f === k}">${l}</button>`).join('');
   return `
-    ${back(`#/${tab}`, 'Home')}
+    ${back(ctx, `#/${tab}`, 'Home')}
     <header class="stack-s"><h1>Up soon</h1>
       <div class="sub">Uncaught ${tab === 'spear' ? 'spearfishing ' : ''}fish with a window open now or within ${hours}h</div></header>
     <div class="chips" role="group" aria-label="Look ahead">${chips}</div>
@@ -424,7 +442,7 @@ export function profileView(ctx) {
     </div>` : '';
 
   return `
-    ${back('#/rod', 'Home')}
+    ${back(ctx, '#/rod', 'Home')}
     <h1>Profile &amp; filters</h1>
     <section><h2 class="sec">My fisher</h2>
       <div class="list">${stepper('lvl', 'Fisher level', 1, 100)}${stepper('gath', 'Gathering', 0, 9999)}</div>
@@ -493,7 +511,7 @@ export function holeView(ctx, hid) {
   const c = m.count([hid], store.isCaught);
 
   return `
-    ${back(`#/${tab}`, 'Home')}
+    ${back(ctx, `#/${tab}`, 'Home')}
     <header class="stack-s">
       <div class="row top-align">
         <div class="grow"><h1>${esc(h.name)}</h1>
@@ -583,7 +601,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
   }).join('');
 
   return `
-    ${FROM.test(from ?? '') ? back(`#/${from}`, from.endsWith('/soon') ? 'Up soon' : 'Home') : back(`#/hole/${hid}`, h.name)}
+    ${FROM.test(from ?? '') ? back(ctx, `#/${from}`, from.endsWith('/soon') ? 'Up soon' : 'Home') : back(ctx, `#/hole/${hid}`, h.name)}
     <header class="row">${icon(f.icon, 'icon lg')}
       <div class="grow"><h1>${esc(f.name)}</h1><div class="sub">Lv ${f.lvl}${stars}${rec ? ` · ${esc(rec)}` : ''}${availability(h, st)}</div></div>
     </header>
@@ -597,6 +615,6 @@ export function fishView(ctx, fid, fromHole, from = null) {
 }
 
 export function notFound() {
-  return `${back('#/rod', 'Home')}<h1>Not found</h1><p class="note">That page doesn't exist.</p>`;
+  return `${back(null, '#/rod', 'Home')}<h1>Not found</h1><p class="note">That page doesn't exist.</p>`;
 }
 

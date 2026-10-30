@@ -123,8 +123,27 @@ try {
   check(await js(`document.querySelectorAll('.list .item .undisc-name').length === 4 && !!document.querySelector('.legend')`), 'Found at outlines undiscovered holes, with the legend');
   await go('#/fish/4950'); // Mudcrab, caught at Hopeseed Pond (discovered)
   check(await js(`![...document.querySelectorAll('.list .item')].find((i) => i.getAttribute('href') === '#/hole/r5').querySelector('.undisc-name')`), 'Found at leaves discovered holes plain');
-  await go('#/fish/4950?h=r5&from=javascript:alert(1)');
+  // With no path behind it (a deep link), Back goes up from the screen itself.
+  await js(`history.replaceState(null, '', '#/fish/4950?h=r5&from=javascript:alert(1)')`);
+  await send('Page.reload');
+  await waitFor(() => js(`!!document.querySelector('.back')`), 'reload onto a deep link');
   check(await js(`document.querySelector('.back').getAttribute('href')`) === '#/hole/r5', 'unknown from falls back to the hole');
+  // --- Back retraces the path: hole → fish → another hole it's found at
+  await go('#/rod');
+  await go('#/hole/r5');
+  await js(`document.querySelector('[data-act=show-caught]').click()`); // Mudcrab was caught above
+  await js(`document.querySelector('.fish a.body[href^="#/fish/4950?"]').click()`);
+  await sleep(250);
+  await js(`document.querySelector('.list a[href="#/hole/r13"]').click()`);
+  await sleep(250);
+  check(await js(`document.querySelector('.back').getAttribute('href') === '#/fish/4950?h=r5' && document.querySelector('.back').textContent.includes('Mudcrab')`), 'hole opened from Found at: Back goes to the fish');
+  await js(`document.querySelector('.back').click()`);
+  await sleep(250);
+  check(await js(`location.hash`) === '#/fish/4950?h=r5', 'Back returns to the fish as it was');
+  check(await js(`document.querySelector('.back').getAttribute('href') === '#/hole/r5' && document.querySelector('.back').textContent.includes('Hopeseed Pond')`), 'then Back goes to the first hole');
+  await js(`document.querySelector('.back').click()`);
+  await sleep(250);
+  check(await js(`location.hash === '#/hole/r5' && document.querySelector('.back').getAttribute('href') === '#/rod'`), 'and from there Home: the path unwinds, no ping-pong');
   await go('#/rod');
 
   // --- Returning to the app redraws at once (no stale times until the next tick)

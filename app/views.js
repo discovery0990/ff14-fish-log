@@ -15,6 +15,11 @@ const HOOK = { powerful: 'Powerful', precision: 'Precision' };
 const SPEED = ['Very slow', 'Slow', 'Average', 'Fast', 'Faster', 'Very fast'];
 const SHADOW = ['Small', 'Normal', 'Large'];
 
+// Plain text, shared by the hole rows, the fish facts and the mooch steps.
+const tugText = (tug, unknown) => (tug ? TUG[tug] : unknown);
+const hookText = (hook, unknown) => (hook ? HOOK[hook] : unknown);
+const altNames = (m, e) => (e.alts ?? []).map((b) => m.fishName(b));
+
 /** "14m", "1h 52m", "2d 3h". */
 export function fmtDuration(ms) {
   const m = Math.max(0, Math.round(ms / 60000));
@@ -79,8 +84,8 @@ function baitLine(m, fid, hid, e) {
     const speed = SPEED[e.speed] ?? 'Speed ?';
     return `<span class="sub"><span class="hi">${shadow}</span> · ${speed}</span>`;
   }
-  const tug = `<span class="hi">${e.tug ? TUG[e.tug] : 'Tug ?'}</span>`;
-  const hook = e.hook ? HOOK[e.hook] : 'Hookset ?';
+  const tug = `<span class="hi">${tugText(e.tug, 'Tug ?')}</span>`;
+  const hook = hookText(e.hook, 'Hookset ?');
   if (m.isMooch(e)) {
     const chain = m.moochChain(fid, hid).steps.map((s) => (s.unknown ? '?' : esc(m.fishName(s.id))));
     chain.pop(); // the fish itself
@@ -88,7 +93,7 @@ function baitLine(m, fid, hid, e) {
     return `<span class="sub">${chain.join(' <span class="arrow" aria-label="then mooch">→</span> ')} · ${tug} · ${hook}</span>`;
   }
   const bait = e.bait ? esc(m.fishName(e.bait)) : 'Bait unknown';
-  const alts = e.alts?.length ? ` <span class="dim">(or ${e.alts.map((b) => esc(m.fishName(b))).join(', ')})</span>` : '';
+  const alts = e.alts?.length ? ` <span class="dim">(or ${altNames(m, e).map(esc).join(', ')})</span>` : '';
   return `<span class="sub">${bait}${alts} · ${tug} · ${hook}</span>`;
 }
 
@@ -533,8 +538,8 @@ export function fishView(ctx, fid, fromHole, from = null) {
   if (f.log === 'spear') {
     facts.push(['Shadow', SHADOW[e.size] ?? 'Unknown'], ['Speed', SPEED[e.speed] ?? 'Unknown']);
   } else if (!m.isMooch(e)) {
-    facts.push(['Bait', e.bait ? m.fishName(e.bait) + (e.alts?.length ? ` (or ${e.alts.map(m.fishName).join(', ')})` : '') : 'Unknown'],
-      ['Tug', e.tug ? TUG[e.tug] : 'Unknown'], ['Hookset', e.hook ? HOOK[e.hook] : 'Unknown']);
+    facts.push(['Bait', e.bait ? m.fishName(e.bait) + (e.alts?.length ? ` (or ${altNames(m, e).join(', ')})` : '') : 'Unknown'],
+      ['Tug', tugText(e.tug, 'Unknown')], ['Hookset', hookText(e.hook, 'Unknown')]);
   }
   if (e.minG) facts.push(['Min. Gathering', e.minG]);
   if (e.w?.length) facts.push(['Weather', e.w.map((w) => m.data.weathers[w]?.name).join(' / ')]);
@@ -551,7 +556,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
         <ol class="steps">${steps.map((s, i) => {
           const verb = s.unknown ? 'Start with' : !s.fish ? 'Cast with' : i === steps.length - 1 ? 'Catch' : 'Hook, then mooch it';
           const what = s.unknown ? 'Unknown — no data yet' : esc(m.fishName(s.id));
-          const how = s.fish ? `<span class="sub"><span class="hi">${s.tug ? TUG[s.tug] : 'Tug ?'}</span> · ${s.hook ? HOOK[s.hook] : 'Hookset ?'}</span>` : '';
+          const how = s.fish ? `<span class="sub"><span class="hi">${tugText(s.tug, 'Tug ?')}</span> · ${hookText(s.hook, 'Hookset ?')}</span>` : '';
           return `<li><span class="dot${i === steps.length - 1 ? ' last' : ''}">${i + 1}</span>
             <span class="grow"><span class="sub">${verb}</span><span class="title">${what}</span>${how}</span></li>`;
         }).join('')}</ol>

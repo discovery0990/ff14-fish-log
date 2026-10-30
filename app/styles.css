@@ -29,6 +29,7 @@
   --open: #F5B342;
   --open-text: #1A1204;
   --open-bg: #2A2410;
+  --warn: #E8968A;
   --mooch: #C9BFFF;
   --mooch-bg: #2B2350;
   --sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
@@ -149,7 +150,7 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .check[aria-pressed="true"] { background: var(--accent); border: 0; }
 .check svg { width: 18px; height: 18px; fill: none; stroke: var(--bg); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .cond { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; margin-top: 2px; }
-.warn { font-size: 12px; color: var(--open); }
+.warn { font-size: 12px; color: var(--warn); }
 .feeds { font-size: 12px; color: var(--mooch); }
 
 /* Icons */

@@ -122,6 +122,16 @@ const revealRegion = (tab, rid) => {
   if (isDone(model.regionHolesAll(tab, rid))) ui.folds.add(`regions:${tab}`);
 };
 
+/**
+ * The open zone header sticks just under the open region header, so it needs
+ * that header's height (which grows if a long name wraps).
+ */
+function measureStuck() {
+  const head = root.querySelector('.branch > .item:first-child');
+  if (head) document.documentElement.style.setProperty('--region-h', `${head.offsetHeight}px`);
+}
+addEventListener('resize', measureStuck);
+
 /** Re-render, keeping scroll and the focused input (and its caret). */
 function render({ keepScroll = false } = {}) {
   const y = window.scrollY;
@@ -156,6 +166,7 @@ function render({ keepScroll = false } = {}) {
       } catch { /* ignore */ }
     }
   }
+  measureStuck();
   if (keepScroll) window.scrollTo(0, y);
   if (ui.scrollTo) {
     document.querySelector(ui.scrollTo)?.scrollIntoView({ block: 'start' });

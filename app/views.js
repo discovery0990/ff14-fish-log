@@ -188,11 +188,12 @@ export function homeBody(ctx) {
   const hidden = allRegions.length - regions.length;
   const row = ([r, c]) => {
     const open = ctx.openRegion === r;
-    return `
+    const head = `
       <button class="item region${open ? ' open' : ''}" data-act="region" data-rid="${r}" aria-expanded="${open}">
         <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span><span class="num${done(c) ? ' done' : ''}">${countText(c)}</span>${chevron}</div>
         ${progress(c, 'thin')}
-      </button>${open ? zoneRows(ctx, r) : ''}`;
+      </button>`;
+    return open ? branch(head + zoneRows(ctx, r)) : head;
   };
   const regionRows = folded(ctx, `regions:${tab}`, 'Completed regions', 'item region',
     regions.map((r) => [r, m.count(m.regionHolesAll(tab, r), store.isCaught)]), ([, c]) => done(c), row);
@@ -226,6 +227,12 @@ function folded(ctx, key, label, cls, items, isDone, render) {
     ${open ? finished.map(render).join('') : ''}`;
 }
 
+/**
+ * An open row and what it expanded, grouped so the row's sticky header lets
+ * go when its children scroll past.
+ */
+const branch = (html) => `<div class="branch">${html}</div>`;
+
 /** A region's zones, shown under it on Home when it's expanded. */
 function zoneRows(ctx, rid) {
   const { m, store, tab } = ctx;
@@ -240,11 +247,12 @@ function zoneRows(ctx, rid) {
     const locked = vis.filter((h) => m.isLocked(h, profile)).length;
     const undisc = vis.filter((h) => !store.isDiscovered(h) && !m.isLocked(h, profile)).length;
     const expanded = ctx.openZone === z;
-    return `
+    const head = `
       <button class="item zone region${expanded ? ' open' : ''}" data-act="zone" data-zid="${z}" aria-expanded="${expanded}">
         <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span><span class="num${done(c) ? ' done' : ''}">${countText(c)}</span>${chevron}</div>
         <div class="row"><span class="sub grow">${plural(vis.length, 'hole')}${undisc ? ` · <span class="undisc-name">${undisc} new</span>` : ''}${locked ? ` · ${locked} locked` : ''} · ${lvText}</span>${open ? `<span class="tag open">${open} open now</span>` : ''}</div>
-      </button>${expanded ? holeRows(ctx, z) : ''}`;
+      </button>`;
+    return expanded ? branch(head + holeRows(ctx, z)) : head;
   });
 }
 

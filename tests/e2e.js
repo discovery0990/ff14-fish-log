@@ -170,7 +170,7 @@ try {
   check(await js(`Math.abs(window.scrollY - 300) < 5`), 'opening a zone keeps the scroll position (no jump)');
   check(await js(`[...document.querySelectorAll('a.item.hole')].some((a) => a.getAttribute('href') === '#/hole/r156')`), 'tapping Eastern La Noscea lists its holes on Home');
   // Open a zone below the open one: the tapped row stays put as the other collapses.
-  const z2 = await js(`(() => { const z = document.querySelector('[data-act=zone][data-zid="32"]'); let n = z.nextElementSibling; while (n && !n.matches('[data-act=zone]')) n = n.nextElementSibling; return n.dataset.zid; })()`);
+  const z2 = await js(`(() => { const z = document.querySelector('[data-act=zone][data-zid="32"]'); let n = z.closest(".branch").nextElementSibling; while (n && !n.matches('[data-act=zone]')) n = n.nextElementSibling; return n.dataset.zid; })()`);
   await js(`document.querySelector('[data-zid="32"]').scrollIntoView({ block: 'start' })`);
   const before = await js(`document.querySelector('[data-zid="${z2}"]').getBoundingClientRect().top`);
   await js(`document.querySelector('[data-zid="${z2}"]').click()`);
@@ -185,7 +185,7 @@ try {
   check(await js(`Math.abs(window.scrollY - ${y}) < 5`), 'Home restores its scroll position after Back');
   await go('#/rod/zone/54');
   check(await js(`location.hash === '#/rod' && document.querySelector('[data-zid="54"]')?.getAttribute('aria-expanded') === 'true' && document.querySelector('[data-rid="23"]')?.getAttribute('aria-expanded') === 'true'`), 'zone links (from search) open Home with that zone expanded');
-  check(await js(`(() => { const t = document.querySelector('[data-zid="54"]').getBoundingClientRect().top; return t >= 8 && t < 20; })()`), 'a zone link scrolls to the zone, just below the top edge');
+  check(await js(`(() => { const r = document.querySelector('[data-rid="23"]').getBoundingClientRect(); const t = document.querySelector('[data-zid="54"]').getBoundingClientRect().top; return r.top < 2 && t >= r.bottom - 1 && t < r.bottom + 20; })()`), 'a zone link scrolls to the zone, just below its region header stuck at the top');
   // --- A hole names its region › zone; each opens Home there. Home button below Home.
   await go('#/hole/r156');
   check(await js(`[...document.querySelectorAll('.place a')].map((a) => a.getAttribute('href')).join(' ')`) === '#/rod/region/22 #/rod/zone/32', 'hole shows region › zone, linked');

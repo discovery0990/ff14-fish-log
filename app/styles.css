@@ -21,6 +21,7 @@
   --line: #1F334A;
   --track: #23384F;
   --edge: #2B4663;
+  --raised: #1D3249;
   --text: #E8EEF2;
   --muted: #9FB3C3;
   --accent: #4FC3B5;
@@ -125,27 +126,39 @@ section { display: flex; flex-direction: column; gap: 10px; }
 .chip.on { border-color: var(--accent); background: var(--accent-bg); color: var(--text); }
 
 /* Lists and cards */
-.list { display: flex; flex-direction: column; background: var(--surface); border-radius: 14px; overflow: hidden; }
+.list { display: flex; flex-direction: column; background: var(--surface); border-radius: 14px; overflow: clip; }
 .item { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); min-height: 48px; justify-content: center; }
 .item.row { flex-direction: row; }
 .item:last-child { border-bottom: 0; }
+/* Open Home rows are grouped in a .branch, so the last row of a branch only
+   loses its line if every branch around it is last too. */
+.branch:not(:last-child) .item:last-child { border-bottom: 1px solid var(--line); }
 button.item { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; cursor: pointer; }
 .item.region .chev { transition: transform .15s; }
-.item.region.open .chev { transform: rotate(90deg); stroke: var(--accent); }
-.item.region.open .bar { display: none; }
+.item.region.open .chev { transform: rotate(90deg); stroke: var(--text); }
 button.fold { color: var(--muted); }
 button.fold .title { font-weight: 500; }
 button.fold-card { border: 0; text-align: left; color: var(--muted); }
 button.caught-group { border: 0; border-radius: 14px; background: var(--surface); }
 /* Home tree: each level steps down in type size, and rails at the parents'
-   text edge tie zones to their region and holes to their zone. */
+   text edge tie zones to their region and holes to their zone. Accent stays
+   for progress; where you are is shown with neutral tones: open rows are
+   raised, the innermost rail is brighter, and the open region and zone
+   headers stick to the top while their children scroll under them.
+   --region-h is the open region header's height, measured in app.js. */
+.branch { display: flex; flex-direction: column; }
+.branch > .item:first-child { position: sticky; top: env(safe-area-inset-top); z-index: 2; }
+.branch .branch > .item:first-child { top: calc(env(safe-area-inset-top) + var(--region-h, 0px)); z-index: 1; }
+.item.zone { scroll-margin-top: var(--region-h, 0px); }
+.item.region.open { background: var(--raised); }
 .item.region > .row .title { font-size: 17px; font-weight: 700; }
 .item.zone { padding-left: 32px; gap: 4px;
   background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat, rgba(0, 0, 0, .14); }
 .item.zone > .row .title { font-size: 15px; font-weight: 600; }
+.item.zone.open { background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat, var(--raised); }
 .item.hole { padding-left: 50px; gap: 4px;
   background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat,
-    linear-gradient(var(--accent), var(--accent)) 32px 0 / 2px 100% no-repeat, rgba(0, 0, 0, .28); }
+    linear-gradient(var(--muted), var(--muted)) 32px 0 / 2px 100% no-repeat, rgba(0, 0, 0, .28); }
 .item.hole .title { font-size: 14px; font-weight: 500; }
 .item.hole.grey { opacity: .55; }
 .item.hole .lv { margin-left: 6px; font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; }

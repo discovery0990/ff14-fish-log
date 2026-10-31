@@ -450,9 +450,15 @@ Deno.test('fish view: log entry and date only once caught', () => {
   assert(!html.includes(esc(DATA.fish[fid].text)));
   assertStringIncludes(html, 'href="#/guide/rod"'); // Back goes to the guide on a deep link
   store.toggleCaught(fid, 'r5', T);
+  const date = `Caught ${new Date(T).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  html = fishView(ctxFor(store), fid, 'r5');
+  assertStringIncludes(html, esc(DATA.fish[fid].text));
+  assertStringIncludes(html, date);
+  assertStringIncludes(html, 'data-act="caught"');
+  // From the guide it's a log page: the entry, no catch toggle or date.
   html = fishView(ctxFor(store), fid, 'r5', 'guide/rod');
   assertStringIncludes(html, esc(DATA.fish[fid].text));
-  assertStringIncludes(html, `Caught ${new Date(T).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`);
+  assert(!html.includes(date) && !html.includes('data-act="caught"'));
 });
 
 Deno.test('store: caughtAt is set on catch, cleared on undo, and survives reload', () => {

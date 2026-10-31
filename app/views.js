@@ -647,6 +647,9 @@ export function fishView(ctx, fid, fromHole, from = null) {
   const hid = holes.includes(fromHole) ? fromHole : holes[0];
   // Only a hole the user came from gets discovered when marking caught here.
   const discoverHid = holes.includes(fromHole) ? fromHole : '';
+  // Opened from the guide (only caught fish open there): a log page to read,
+  // so no catch toggle or catch date.
+  const fromGuide = /^guide\//.test(from ?? '');
   const e = f.at[hid] ?? {};
   const h = m.data.holes[hid];
   const caught = store.isCaught(fid);
@@ -708,8 +711,8 @@ export function fishView(ctx, fid, fromHole, from = null) {
     <header class="row">${icon(f.icon, 'icon lg')}
       <div class="grow"><h1>${esc(f.name)}</h1><div class="sub">No. ${f.no} · Lv ${f.lvl}${stars}${rec ? ` · ${esc(rec)}` : ''}${f.big ? ' · Big fish' : ''}${availability(h, st)}</div></div>
     </header>
-    <button class="big${caught ? ' done' : ''}" data-act="caught" data-fid="${fid}" data-hid="${discoverHid}" aria-pressed="${caught}">${caught ? 'Caught — tap to undo' : 'Mark caught'}</button>
-    ${caught ? logEntry(store, fid, f) : ''}
+    ${fromGuide ? '' : `<button class="big${caught ? ' done' : ''}" data-act="caught" data-fid="${fid}" data-hid="${discoverHid}" aria-pressed="${caught}">${caught ? 'Caught — tap to undo' : 'Mark caught'}</button>`}
+    ${caught ? logEntry(store, fid, f, !fromGuide) : ''}
     ${banner}
     ${facts.length ? `<section><h2 class="sec">How to catch${holes.length > 1 ? ` · ${esc(h.name)}` : ''}</h2>
       <dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>` : ''}
@@ -719,13 +722,13 @@ export function fishView(ctx, fid, fromHole, from = null) {
     ${caught ? '' : '<section><h2 class="sec">Log entry</h2><p class="note">Catch it to read its log entry.</p></section>'}`;
 }
 
-/** The game's log text for a caught fish, and when you marked it. */
-function logEntry(store, fid, f) {
+/** The game's log text for a caught fish, and (withDate) when you marked it. */
+function logEntry(store, fid, f, withDate) {
   const at = store.caughtAt(fid);
-  const when = at ? `Caught ${fmtDate(at)}` : 'Caught before dates were kept';
+  const when = !withDate ? '' : `<span class="sub">${at ? `Caught ${fmtDate(at)}` : 'Caught before dates were kept'}</span>`;
   return `
     <section><h2 class="sec">Log entry</h2>
-      <div class="card logtext"><p>${esc(f.text)}</p><span class="sub">${when}</span></div></section>`;
+      <div class="card logtext"><p>${esc(f.text)}</p>${when}</div></section>`;
 }
 
 /** "31 Oct 2026". */

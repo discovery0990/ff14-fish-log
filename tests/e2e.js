@@ -329,6 +329,7 @@ try {
   await js(`document.querySelector('.guide-body a.tile').click()`);
   await waitFor(() => js(`location.hash.startsWith('#/fish/')`), 'tile opens fish');
   check(await js(`!!document.querySelector('.logtext p')?.textContent.trim()`), 'a caught fish shows its log entry');
+  check(await js(`!document.querySelector('button.big') && !document.querySelector('.logtext .sub')`), 'from the guide: no catch button or catch date');
   check(await js(`document.querySelector('.back span').textContent`) === 'Fish guide', 'Back from a guide fish names the guide');
   await shot('guide-fish');
   await js(`document.querySelector('.back').click()`);

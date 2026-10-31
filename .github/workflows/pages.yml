@@ -16,9 +16,9 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
@@ -28,14 +28,14 @@ jobs:
   # turns the run red and sends the usual email, but doesn't hold back the
   # deploy. Unit tests still gate it.
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      # Browser tests in the runner's Chrome. --no-sandbox: Ubuntu 24.04
-      # runners block the unprivileged user namespaces Chrome's sandbox needs.
+      # Browser tests in the runner's Chrome. --no-sandbox: Ubuntu runners
+      # (24.04 and later) block the unprivileged user namespaces Chrome's sandbox needs.
       - name: End-to-end test
         env:
           BROWSER: google-chrome --no-sandbox
@@ -54,19 +54,19 @@ jobs:
 
   deploy:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - run: python3 tools/build_site.py
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

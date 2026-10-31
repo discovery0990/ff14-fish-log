@@ -124,6 +124,9 @@ function baitLine(m, fid, hid, e) {
   return `<span class="sub">${bait}${alts} · ${tug} · ${hook}</span>`;
 }
 
+/** "Coerthas" from "Tome of Ichthyological Folklore - Coerthas". */
+const tomeShort = (m, f) => m.data.tomes[f.folk].replace(/^Tome of Ichthyological Folklore - /, '');
+
 function extrasLine(m, e) {
   const bits = [];
   if (e.pred?.length) bits.push('Needs ' + e.pred.map(([id, n]) => `${n}× ${esc(m.fishName(id))}`).join(', ') + ' first');
@@ -529,13 +532,14 @@ export function holeView(ctx, hid) {
     const warn = !r.caught && m.gatheringShort(e, profile)
       ? `<span class="warn">Needs Gathering ${e.minG} — you have ${profile.gath}</span>` : '';
     const feeds = targets[r.fid] ? `<span class="feeds">Mooch bait for ${targets[r.fid].map(esc).join(', ')}</span>` : '';
+    const folk = f.folk && !r.caught ? `<span class="folk">Needs the ${esc(tomeShort(m, f))} folklore tome</span>` : '';
     return `
       <div class="fish${r.caught ? ' caught' : ''}${open ? ' open' : ''}">
         <button class="check" data-act="caught" data-fid="${r.fid}" data-hid="${hid}" aria-pressed="${r.caught}"
           aria-label="${r.caught ? 'Unmark' : 'Mark caught:'} ${esc(f.name)}">${r.caught ? checkSvg : ''}</button>
         <a class="body" href="#/fish/${r.fid}?h=${hid}">
           <span class="row">${icon(f.icon, 'icon sm')}<span class="title">${esc(f.name)}</span></span>
-          ${baitLine(m, r.fid, hid, e)}${extrasLine(m, e)}${cond}${warn}${feeds}
+          ${baitLine(m, r.fid, hid, e)}${extrasLine(m, e)}${cond}${warn}${folk}${feeds}
         </a>
       </div>`;
   };
@@ -618,6 +622,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
   if (e.spawn != null) facts.push(['Time', `ET ${etHM(e.spawn)}–${etHM(e.spawn + e.dur)}`]);
   if (e.pred?.length) facts.push(['Catch first', e.pred.map(([id, n]) => `${n}× ${m.fishName(id)}`).join(', ')]);
   if (e.snag) facts.push(['Snagging', 'Required']);
+  if (f.folk) facts.push(['Folklore', m.data.tomes[f.folk]]);
 
   let chain = '';
   if (f.log === 'rod' && m.isMooch(e)) {
@@ -656,7 +661,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
   return `
     ${FROM.test(from ?? '') ? back(ctx, `#/${from}`, fromLabel(from), holeTab(h)) : back(ctx, `#/hole/${hid}`, h.name, holeTab(h))}
     <header class="row">${icon(f.icon, 'icon lg')}
-      <div class="grow"><h1>${esc(f.name)}</h1><div class="sub">Lv ${f.lvl}${stars}${rec ? ` · ${esc(rec)}` : ''}${availability(h, st)}</div></div>
+      <div class="grow"><h1>${esc(f.name)}</h1><div class="sub">No. ${f.no} · Lv ${f.lvl}${stars}${rec ? ` · ${esc(rec)}` : ''}${f.big ? ' · Big fish' : ''}${availability(h, st)}</div></div>
     </header>
     <button class="big${caught ? ' done' : ''}" data-act="caught" data-fid="${fid}" data-hid="${discoverHid}" aria-pressed="${caught}">${caught ? 'Caught — tap to undo' : 'Mark caught'}</button>
     ${caught ? logEntry(store, fid, f) : ''}
@@ -697,12 +702,13 @@ function spriteIcon(m, id) {
 
 /**
  * One fish in the guide grid. Caught: its icon, opening the fish. Not caught:
- * an anonymous "?" fish, like the game's (pink for big fish), and not a link.
+ * an anonymous glowing tile, teal, or pink for folklore fish (the game's
+ * guide colours them the same way), and not a link.
  */
 function tile(m, store, fid, log) {
   const f = m.data.fish[fid];
   if (!store.isCaught(fid)) {
-    return `<span class="tile mystery${f.big ? ' big' : ''}" role="img" aria-label="${f.big ? 'Big fish' : 'Fish'} not caught yet"></span>`;
+    return `<span class="tile mystery${f.folk ? ' folk' : ''}" role="img" aria-label="${f.folk ? 'Folklore fish' : 'Fish'} not caught yet"></span>`;
   }
   return `<a class="tile" href="#/fish/${fid}?from=guide/${log}" aria-label="${esc(f.name)}" title="${esc(f.name)}">${spriteIcon(m, f.icon)}</a>`;
 }
@@ -754,7 +760,7 @@ export function guideView(ctx, log) {
     ${recentSec}
     <section><h2 class="sec">By expansion</h2><div class="list">${rows}</div>
       ${all.reach < all.total ? '<p class="note legend"><span class="num">(N)</span> is the full total, when some fish need more Gathering or a hole above your level.</p>' : ''}
-      <p class="note legend"><span class="tile mystery inline" aria-hidden="true"></span> not caught yet · <span class="tile mystery big inline" aria-hidden="true"></span> big fish not caught yet. Tap a caught fish to read its log entry.</p></section>`;
+      <p class="note legend"><span class="tile mystery inline" aria-hidden="true"></span> not caught yet · <span class="tile mystery folk inline" aria-hidden="true"></span> folklore fish (needs a tome) not caught yet. Tap a caught fish to read its log entry.</p></section>`;
 }
 
 export function notFound() {

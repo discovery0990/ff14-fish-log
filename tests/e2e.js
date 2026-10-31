@@ -315,12 +315,13 @@ try {
   await js(`document.querySelector('[data-act=guide-exp][data-exp="0"]').click()`);
   check(await js(`document.querySelectorAll('.guide-body .tile').length`) === 299, 'opening A Realm Reborn shows its 299 fish');
   check(await js(`document.querySelectorAll('.guide-body a.tile').length > 0 && [...document.querySelectorAll('.guide-body .tile.mystery')].every((t) => t.tagName === 'SPAN' && !t.closest('a'))`), 'caught tiles link; uncaught ? tiles are not links');
-  check(await js(`document.querySelectorAll('.guide-body .tile.mystery.big').length > 0`), 'uncaught big fish get the pink ? tile');
+
   await sleep(500);
   const fetched = await js(`performance.getEntriesByType('resource').map((r) => new URL(r.name).pathname)`);
   check(fetched.some((p) => p.includes('/icons/guide/rod-0.')), 'caught tiles come from the icon sheet');
   await shot('guide');
   await js(`document.querySelector('[data-act=guide-exp][data-exp="1"]').click()`);
+  check(await js(`document.querySelectorAll('.guide-body .tile.mystery.folk').length > 0`), 'uncaught folklore fish get the pink tile');
   check(await js(`document.querySelectorAll('.guide-body').length === 1 && document.querySelector('[data-exp="1"]').getAttribute('aria-expanded') === 'true'`), 'one expansion open at a time');
   await js(`document.querySelector('[data-act=guide-exp][data-exp="0"]').click()`);
   await js(`window.scrollTo(0, 600)`);

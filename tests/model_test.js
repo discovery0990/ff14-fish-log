@@ -381,6 +381,31 @@ Deno.test('guide: every log fish once, in game order, grouped by the game\'s exp
   assertEquals(m.guideGroups('rod').find(([e]) => e === 0)[1].length, 299);
 });
 
+Deno.test('folklore: tome per fish; the first in log order is #409 Spring Urchin (as in game)', () => {
+  const folk = m.logFish('rod').filter((fid) => DATA.fish[fid].folk);
+  assertEquals(DATA.fish[folk[0]].name, 'Spring Urchin');
+  assertEquals(DATA.fish[folk[0]].no, 409);
+  assertEquals(DATA.tomes[DATA.fish[folk[0]].folk], 'Tome of Ichthyological Folklore - Coerthas');
+  assertEquals(folk.length, 296);
+  assert(m.logFish('spear').every((fid) => !DATA.fish[fid].folk));
+});
+
+Deno.test('folklore and log number show on the fish page and the hole row', () => {
+  const store = createStore(memStorage());
+  const fid = byName('Spring Urchin');
+  const hid = Object.keys(DATA.fish[fid].at)[0];
+  const page = fishView(ctxFor(store), fid, hid);
+  assertStringIncludes(page, 'No. 409 · Lv');
+  assertStringIncludes(page, '<dt>Folklore</dt><dd>Tome of Ichthyological Folklore - Coerthas</dd>');
+  const notes = (html) => html.split('Needs the Coerthas folklore tome').length - 1;
+  const before = notes(holeView(ctxFor(store), hid));
+  assert(before >= 1);
+  store.toggleCaught(fid, hid, T);
+  assertEquals(notes(holeView(ctxFor(store, { showCaught: true }), hid)), before - 1, 'not once caught');
+  assertStringIncludes(fishView(ctxFor(store), byName('Thousand Fin'), null), ' · Big fish');
+  assert(!fishView(ctxFor(store), byName('Mudcrab'), null).includes('Big fish'));
+});
+
 Deno.test('big fish: green rarity off the ocean', () => {
   for (const n of ['Thousand Fin', 'The Vegetarian', 'Kuno the Killer', 'The Sinsteeped']) assert(DATA.fish[byName(n)].big, n);
   for (const n of ['Titanic Sawfish', 'Sothis', 'Mudcrab', 'Liopleurodon']) assert(!DATA.fish[byName(n)].big, n);
@@ -391,7 +416,7 @@ Deno.test('every log fish has its log entry text', () => {
   for (const f of Object.values(DATA.fish)) assert(f.text?.trim(), f.name);
 });
 
-Deno.test('guide: expansions collapse; uncaught fish are anonymous ? tiles, caught ones link', () => {
+Deno.test('guide: expansions collapse; uncaught fish are anonymous glowing tiles, caught ones link', () => {
   const store = createStore(memStorage());
   const black = byName('Black Ghost'), malm = byName('Malm Kelp'), kuno = byName('Kuno the Killer');
   let html = guideView(ctxFor(store), 'rod');
@@ -401,7 +426,9 @@ Deno.test('guide: expansions collapse; uncaught fish are anonymous ? tiles, caug
   html = guideView(ctxFor(store, { guideOpen: { rod: '0' } }), 'rod');
   assertStringIncludes(html, 'aria-expanded="true"');
   assert(!html.includes(`#/fish/${black}`) && !html.includes('Black Ghost'), 'uncaught fish are not links and not named');
-  assertStringIncludes(html, '<span class="tile mystery big" role="img" aria-label="Big fish not caught yet">');
+  assert(!html.includes('class="tile mystery folk" role="img"'), 'ARR has no folklore fish');
+  assertStringIncludes(guideView(ctxFor(store, { guideOpen: { rod: '1' } }), 'rod'),
+    '<span class="tile mystery folk" role="img" aria-label="Folklore fish not caught yet">');
   assert(!html.includes('Ocean fishing'), 'ARR has no ocean fish');
   assertStringIncludes(guideView(ctxFor(store, { guideOpen: { rod: '3' } }), 'rod'), 'Ocean fishing');
 

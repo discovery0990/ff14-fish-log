@@ -136,13 +136,18 @@ def build(fetch, skip_icons):
     # place in the log in key order (then row). `text` is the log entry the
     # game shows once caught; its newlines are deliberate (verses, quotes).
     # `rarity` 2 (green) marks big fish on non-ocean holes (resolved below).
+    # `folk` is the folklore tome needed to catch the fish at all
+    # (GatheringSubCategory → its Item); the game's guide shows these
+    # uncaught fish in pink. Ids go in the `tomes` table.
     fp = fetch.sheet_all('FishParameter', 'Item@as(raw),IsInLog,FishingRecordType@as(raw),'
                          'GatheringItemLevel.GatheringItemLevel,GatheringItemLevel.Stars,Text,'
-                         'Unknown1,Item.Rarity')
+                         'Unknown1,Item.Rarity,GatheringSubCategory.Item@as(raw),'
+                         'GatheringSubCategory.Item.Name')
     sfi = fetch.sheet_all('SpearfishingItem', 'Item@as(raw),IsInLog,FishingRecordType@as(raw),'
                           'GatheringItemLevel.GatheringItemLevel,GatheringItemLevel.Stars,Description,'
                           'Unknown2')
     spear_row_item = {rid: f['Item@as(raw)'] for rid, f in sfi.items() if f.get('Item@as(raw)')}
+    tomes = {}
 
     def log_of(rows, key_col, text_col):
         entries = []
@@ -154,10 +159,15 @@ def build(fetch, skip_icons):
                       f'{key_col} (guide key) {key!r} for item {f["Item@as(raw)"]} is not 2000-7999; '
                       'the column may have moved')
                 rarity = ((f.get('Item') or {}).get('fields') or {}).get('Rarity', 1)
-                entries.append(((key or 0, rid), f['Item@as(raw)'], {
-                    'lvl': lvl['GatheringItemLevel'], 'stars': lvl['Stars'],
-                    'rec': f['FishingRecordType@as(raw)'], 'exp': (key or 2000) // 1000 - 2,
-                    'text': f[text_col].strip(), 'rarity': rarity}))
+                sub = ((f.get('GatheringSubCategory') or {}).get('fields') or {})
+                tome = sub.get('Item@as(raw)')
+                meta = {'lvl': lvl['GatheringItemLevel'], 'stars': lvl['Stars'],
+                        'rec': f['FishingRecordType@as(raw)'], 'exp': (key or 2000) // 1000 - 2,
+                        'text': f[text_col].strip(), 'rarity': rarity}
+                if tome:
+                    tomes[tome] = sub['Item']['fields']['Name']
+                    meta['folk'] = tome
+                entries.append(((key or 0, rid), f['Item@as(raw)'], meta))
         entries.sort(key=lambda e: e[0])
         return {item: {**meta, 'no': i + 1} for i, (_, item, meta) in enumerate(entries)}
 
@@ -397,6 +407,12 @@ def build(fetch, skip_icons):
         check(any(f['name'] == ex and f.get('big') for f in fish.values()), f'{ex} should be a big fish')
     for ex in ('Titanic Sawfish', 'Sothis', 'Mudcrab'):
         check(any(f['name'] == ex and not f.get('big') for f in fish.values()), f'{ex} should not be a big fish')
+    folk_order = sorted((f['no'], f['name']) for f in fish.values() if f['log'] == 'rod' and f.get('folk'))
+    # Checked in game (7.57): the guide's first pink "?" is #409.
+    check(folk_order and folk_order[0] == (409, 'Spring Urchin'),
+          f'first folklore fish should be #409 Spring Urchin, got {folk_order[:1]}')
+    check(all(name.startswith('Tome of Ichthyological Folklore') for name in tomes.values()),
+          f'unexpected folklore tome names: {sorted(tomes.values())}')
     for ex, exp in (('Galadion Goby', 3), ('Castaway Chocobo Chick', 2), ('Mudcrab', 0)):
         check(any(f['name'] == ex and f['exp'] == exp for f in fish.values()), f'{ex} should be in expansion {exp}')
 
@@ -456,6 +472,7 @@ def build(fetch, skip_icons):
         'tc_multi_entries': multi_entries,
         'broken_chains': len(broken), 'icons': len(icon_ids),
         'big_fish': sum(1 for f in fish.values() if f.get('big')),
+        'folklore_fish': sum(1 for f in fish.values() if f.get('folk')), 'tomes': len(tomes),
     }
     data = {
         'meta': {'game': GAME_VERSION_NAME, 'xivapi': GAME_VERSION, 'teamcraft': TEAMCRAFT_SHA[:7],
@@ -464,7 +481,7 @@ def build(fetch, skip_icons):
         'expansions': exps, 'recordTypes': rec_types,
         'regions': regions, 'zones': zones, 'holes': holes,
         'weatherRates': weather_rates, 'weathers': weathers,
-        'fish': fish, 'baits': baits, 'names': extra_names,
+        'fish': fish, 'baits': baits, 'names': extra_names, 'tomes': tomes,
     }
     return data
 

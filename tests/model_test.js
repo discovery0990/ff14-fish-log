@@ -84,6 +84,14 @@ Deno.test('expansion filter hides zones; empty regions disappear', () => {
   // Spearfishing exists in one ARR zone (Bronze Lake, added later), nowhere else.
   const spearArr = m.visibleRegions('spear', profile({ exp: [0] })).map((r) => DATA.regions[r].name);
   assertEquals(spearArr, ['La Noscea']);
+  // Shirogane is a Stormblood housing district, though the game tags it ARR.
+  assert(!arrOnly.includes('Hingashi'));
+  // Ocean holes are tagged ARR (The Endeavor) but ignore the filter.
+  const noArr = profile({ exp: [1, 2, 3, 4, 5] });
+  const ocean = Object.keys(DATA.holes).filter((h) => DATA.holes[h].ocean);
+  assertEquals(ocean.length, 26);
+  assert(ocean.every((h) => !m.expOff(h, noArr)));
+  assert(m.expOff('r2', noArr));
 });
 
 Deno.test('gathering shortfall is a warning, not a filter', () => {

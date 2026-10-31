@@ -1,5 +1,5 @@
 {
-"meta":{"game":"7.57x1","xivapi":"0874aee069e1e7c4","teamcraft":"c022ca5","built":"2026-10-30T01:43:16Z","stats":{"rod":1517,"spear":289,"total":1806,"holes_rod":333,"holes_spear":64,"holes_restricted":47,"extra_pairs":10,"zones":65,"regions":19,"no_catch_info":38,"tc_multi_entries":122,"broken_chains":2,"icons":1348}},
+"meta":{"game":"7.57x1","xivapi":"0874aee069e1e7c4","teamcraft":"c022ca5","built":"2026-10-31T14:43:07Z","stats":{"rod":1517,"spear":289,"total":1806,"holes_rod":333,"holes_spear":64,"holes_restricted":47,"extra_pairs":10,"zones":65,"regions":19,"no_catch_info":38,"tc_multi_entries":122,"broken_chains":2,"icons":1348}},
 "expansions":{
 "0":"A Realm Reborn",
 "1":"Heavensward",
@@ -103,7 +103,7 @@
 "2406":{"name":"The Fringes","region":2400,"exp":2,"holes":["r185","r186","r187","r188","r189"]},
 "2407":{"name":"The Peaks","region":2400,"exp":2,"holes":["r190","r191","r192","r193","r194","r195"]},
 "2408":{"name":"The Lochs","region":2400,"exp":2,"holes":["r196","s13","s14","s15","s32","s45","s48"]},
-"2412":{"name":"Shirogane","region":2402,"exp":0,"holes":["r197","r198"]},
+"2412":{"name":"Shirogane","region":2402,"exp":2,"holes":["r197","r198"]},
 "2951":{"name":"The Crystarium","region":2950,"exp":3,"holes":["r199","r200","r201"]},
 "54":{"name":"Central Shroud","region":23,"exp":0,"holes":["r2","r3","r4","r5","r92"]},
 "2953":{"name":"Lakeland","region":2950,"exp":3,"holes":["r202","r203","r204","r205","r206","s16","s17","s18","s33","s50"]},

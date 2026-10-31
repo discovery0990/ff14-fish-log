@@ -1,5 +1,8 @@
 {
   "_comment": "Hand-kept fixes for gaps in Teamcraft data. Each entry notes its source.",
+  "zoneExp": {
+    "2412": {"name": "Shirogane", "exp": 2, "source": "Housing district added in patch 4.1 (Stormblood); TerritoryType.ExVersion says ARR"}
+  },
   "windows": {
     "23055": {"name": "White Goldfish", "spawn": 4, "duration": 4, "source": "icykoneko/ff14-fish-tracker-app fishData.yaml (ET 04-08)"},
     "23056": {"name": "Firelight Goldfish", "spawn": 4, "duration": 4, "source": "icykoneko/ff14-fish-tracker-app fishData.yaml (ET 04-08)"},

@@ -75,13 +75,18 @@ export function createModel(data) {
    * not the restricted Sterncastle).
    */
   function holeVisibility(hid, profile) {
-    const h = data.holes[hid];
-    const z = data.zones[h.zone];
-    if (profile.exp && !profile.exp.includes(z.exp)) return 'hide';
+    if (expOff(hid, profile)) return 'hide';
     // Locked holes stay listed (greyed), like "undiscovered" in the game's log.
     if (isLocked(hid, profile)) return 'grey';
     return 'show';
   }
+
+  /**
+   * The hole's expansion is filtered out. Ocean holes never are: they all sit
+   * in The Endeavor, which the game tags ARR whatever route they're on.
+   */
+  const expOff = (hid, profile) =>
+    !!profile.exp && !data.holes[hid].ocean && !profile.exp.includes(data.zones[data.holes[hid].zone].exp);
 
   /** Restricted hole above your level: casting there fails. */
   const isLocked = (hid, profile) =>
@@ -218,7 +223,7 @@ export function createModel(data) {
   }
 
   return {
-    upSoon, search, isLocked,
+    upSoon, search, isLocked, expOff,
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
     isMooch, moochChain, moochTargets, status, windows, weatherNow, gatheringShort,

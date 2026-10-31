@@ -321,6 +321,13 @@ def build(fetch, skip_icons):
             r['zones'].append(zid)
         del h['place']
 
+    # Housing districts are all tagged ARR in the game data, whatever patch added them.
+    for zid_s, o in json.loads(OVERRIDES.read_text()).get('zoneExp', {}).items():
+        zid = int(zid_s)
+        check(zid in zones and zones[zid]['name'] == o['name'], f'zoneExp override for unknown zone {zid}')
+        if zid in zones:
+            zones[zid]['exp'] = o['exp']
+
     coord_off = []
     for hid, h in holes.items():
         tcs = tc_spots.get(int(hid[1:])) if h['kind'] == 'rod' else None

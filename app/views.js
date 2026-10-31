@@ -303,7 +303,7 @@ function openCount(ctx, hids) {
 function hiddenWhy(m, hid, profile) {
   const h = m.data.holes[hid];
   const z = m.data.zones[h.zone];
-  if (profile.exp && !profile.exp.includes(z.exp)) return `${m.data.expansions[z.exp]} is off`;
+  if (m.expOff(hid, profile)) return `${m.data.expansions[z.exp]} is off`;
   if (m.isLocked(hid, profile)) return `Locked until Lv ${h.lvl}`;
   return null;
 }

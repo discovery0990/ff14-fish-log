@@ -75,7 +75,8 @@ Regions, zones, holes and fish all follow the in-game Fishing Log order: Fishing
 - **All other holes** are on your map and fishable at any level. This was confirmed in game at Lv 44: the Lv 50 Privateer Forecastle is on the map and fishable, while the restricted Sterncastle is unmarked and locked. So Gulleye's "holes at or below your level" (patch 6.0) only concerns restricted holes. Above-level unrestricted holes are shown normally and included in Up soon.
 - **Coordinates:** every hole shows map coordinates, computed from `FishingSpot.X/Z` (or `SpearfishingNotebook.X/Y`) and the zone map's `SizeFactor`. The build checks them against Teamcraft's coordinates for the 328 rod holes it covers.
 - Spearfishing holes have no known restricted flag, so they're never locked.
-- Zone expansion not unlocked → the zone is hidden.
+- Zone expansion not unlocked → the zone is hidden. Ocean holes ignore this filter: they all sit in The Endeavor, which the game tags ARR even for the Stormblood and Endwalker routes, so the Ocean tab always lists every route.
+- Zone expansions come from `TerritoryType.ExVersion`, which tags every housing district ARR. `data/overrides.json` `zoneExp` corrects Shirogane to Stormblood.
 - Fish needs more Gathering than the profile → the fish is shown at the hole with a warning, and left out of Up soon.
 - Progress totals always count all fish, whatever the filters.
 

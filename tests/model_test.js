@@ -197,7 +197,7 @@ Deno.test('hole view: Hopeseed Pond shows mooch, warning and feeds lines', () =>
   assertStringIncludes(html, 'Midge Basket <span class="arrow" aria-label="then mooch">→</span> Ala Mhigan Fighting Fish');
   assertStringIncludes(html, 'Needs Gathering 345 — you have 340');
   assertStringIncludes(html, 'Mooch bait for Black Ghost');
-  assertStringIncludes(html, '0 / 7<span class="out">+1</span>'); // Gathering 340: one fish out of reach
+  assertStringIncludes(html, '0 / 7<span class="out">(8)</span>'); // Gathering 340: one fish out of reach
 });
 
 Deno.test('hole view: also-caught-here section only where there are extras', () => {

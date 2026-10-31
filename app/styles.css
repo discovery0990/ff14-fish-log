@@ -26,7 +26,6 @@
   --muted: #9FB3C3;
   --accent: #4FC3B5;
   --accent-bg: #1D3B44;
-  --accent-text: #8FE3D8;
   --open: #F5B342;
   --open-text: #1A1204;
   --open-bg: #2A2410;
@@ -91,7 +90,8 @@ section { display: flex; flex-direction: column; gap: 10px; }
 .note { margin: 0; font-size: 13px; color: var(--muted); }
 .note.center { text-align: center; }
 .empty { margin: 0; padding: 14px; color: var(--muted); }
-.link { color: var(--accent-text); }
+/* Teal is never text color (it reads soft on navy): links are underlined. */
+.link { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
 
 /* Layout */
 .row { display: flex; align-items: center; gap: 10px; }
@@ -169,13 +169,12 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .card { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--surface); }
 .card.row { flex-direction: row; }
 .card.dashed { outline: 1px dashed var(--undisc); outline-offset: -1px; }
-.num.done { color: var(--accent-text); }
 .card.grey { opacity: .55; }
 
 /* Tags and pills */
 .tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .tag { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--track); color: var(--text); }
-.tag.done { background: var(--accent-bg); color: var(--accent-text); }
+.tag.done { background: var(--accent-bg); color: var(--text); }
 .tag.open { background: var(--open); color: var(--open-text); }
 .arrow { color: var(--mooch); font-weight: 700; }
 .pill { font-family: var(--mono); font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--track); white-space: nowrap; }
@@ -185,9 +184,9 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .iconbtn { width: 44px; height: 44px; border-radius: 12px; background: var(--surface); display: flex; align-items: center; justify-content: center; flex: none; }
 .iconbtn svg { width: 22px; height: 22px; fill: none; stroke: var(--text); stroke-width: 1.8; stroke-linecap: round; }
 .toggle { flex: none; height: 36px; padding: 0 12px; border-radius: 18px; font-size: 13px; background: none; border: 1px dashed var(--muted); }
-.toggle.on { background: var(--accent-bg); color: var(--accent-text); border: 1px solid var(--accent); }
+.toggle.on { background: var(--accent-bg); color: var(--text); border: 1px solid var(--accent); }
 .big { height: 52px; border-radius: 12px; border: 0; background: var(--accent); color: var(--bg); font-size: 16px; font-weight: 600; }
-.big.done { background: var(--accent-bg); color: var(--accent-text); border: 1px solid var(--accent); }
+.big.done { background: var(--accent-bg); color: var(--text); border: 1px solid var(--accent); }
 
 /* Fish rows (hole screen) */
 .fishes { display: flex; flex-direction: column; gap: 8px; }

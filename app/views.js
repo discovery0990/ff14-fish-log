@@ -211,22 +211,20 @@ function regionsBlock(regionRows, hidden, gated) {
   return `
     <section><h2 class="sec">Regions</h2>
       <div class="list">${regionRows || '<p class="empty">Nothing matches your filters.</p>'}</div>
-      ${gated ? `<p class="note legend"><span class="num">+N</span> fish need more Gathering, or a hole above your level.</p>` : ''}
+      ${gated ? `<p class="note legend"><span class="num">(N)</span> is the full total, when some fish need more Gathering or a hole above your level.</p>` : ''}
       ${hidden ? `<p class="note">${hidden} region${hidden > 1 ? 's' : ''} hidden by your level and expansion filters.</p>` : ''}
     </section>`;
 }
 
 /**
- * Caught out of the fish in reach, then a muted +N for the ones beyond your
- * Gathering or level, so the full total is still there.
+ * Caught out of the fish in reach, then the full total, muted, when some
+ * are beyond your Gathering or level.
  */
 const countText = ({ caught, total, reach = total }) =>
-  `${caught.toLocaleString()} / ${reach.toLocaleString()}${reach < total ? `<span class="out">+${(total - reach).toLocaleString()}</span>` : ''}`;
+  `${caught.toLocaleString()} / ${reach.toLocaleString()}${reach < total ? `<span class="out">(${total.toLocaleString()})</span>` : ''}`;
 /** Every fish caught: the row folds away. */
 const done = ({ caught, total }) => total > 0 && caught === total;
-/** Everything in reach caught (maybe all): the count turns teal. */
-const doneInReach = ({ caught, total, reach = total }) => reach > 0 && caught === reach;
-const countNum = (c) => `<span class="num${doneInReach(c) ? ' done' : ''}">${countText(c)}</span>`;
+const countNum = (c) => `<span class="num">${countText(c)}</span>`;
 
 /**
  * Rows with the completed ones folded under a "Completed (N)" row, which
@@ -423,7 +421,7 @@ function searchResults(ctx) {
     if (r.type === 'fish') {
       const f = m.data.fish[r.id];
       const zones = [...new Set(m.fishHoles(r.id).map((h) => m.data.zones[m.data.holes[h].zone].name))];
-      const caught = store.isCaught(r.id) ? ' · <span class="link">caught</span>' : '';
+      const caught = store.isCaught(r.id) ? ' · <span class="hi">caught</span>' : '';
       const whys = m.fishHoles(r.id).map((h) => hiddenWhy(m, h, profile));
       const hidden = whys.every(Boolean) ? hiddenTag(whys[0]) : '';
       return `<a class="item row" href="#/fish/${r.id}?from=${ctx.tab}">${icon(f.icon)}<span class="grow"><span class="title">${esc(f.name)}</span>

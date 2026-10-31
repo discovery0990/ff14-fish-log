@@ -35,16 +35,11 @@ COLS = 16
 QUALITY = 75  # indistinguishable from the PNGs at tile size, ~1/7 the bytes
 
 
-def expansion(lvl):
-    """ARR to Lv 50, then 10 levels each (as the guide groups them)."""
-    return max(0, math.ceil((lvl - 50) / 10))
-
-
 def main():
     data = json.loads((APP / 'data' / 'fish.json').read_text())
     groups = {}
     for f in sorted(data['fish'].values(), key=lambda f: (f['log'], f['no'])):
-        icons = groups.setdefault(f"{f['log']}-{expansion(f['lvl'])}", [])
+        icons = groups.setdefault(f"{f['log']}-{f['exp']}", [])
         if f['icon'] not in icons:
             icons.append(f['icon'])
 

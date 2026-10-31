@@ -695,16 +695,24 @@ function spriteIcon(m, id) {
   return `<span class="icon" style="background:url(${s.file}) ${pos(s.col, s.cols)}% ${pos(s.row, s.rows)}% / ${s.cols * 100}% ${s.rows * 100}% var(--track)"></span>`;
 }
 
-/** One fish in the guide grid: the icon, greyed until caught. */
+/**
+ * One fish in the guide grid. Caught: its icon, opening the fish. Not caught:
+ * an anonymous "?" fish, like the game's (pink for big fish), and not a link.
+ */
 function tile(m, store, fid, log) {
   const f = m.data.fish[fid];
-  const caught = store.isCaught(fid);
-  return `<a class="tile${caught ? '' : ' missing'}" href="#/fish/${fid}?from=guide/${log}" aria-label="${esc(f.name)}${caught ? '' : ' (not caught)'}" title="${esc(f.name)}">${spriteIcon(m, f.icon)}</a>`;
+  if (!store.isCaught(fid)) {
+    return `<span class="tile mystery${f.big ? ' big' : ''}" role="img" aria-label="${f.big ? 'Big fish' : 'Fish'} not caught yet"></span>`;
+  }
+  return `<a class="tile" href="#/fish/${fid}?from=guide/${log}" aria-label="${esc(f.name)}" title="${esc(f.name)}">${spriteIcon(m, f.icon)}</a>`;
 }
 
+const grid = (m, store, fids, log) => `<div class="grid">${fids.map((fid) => tile(m, store, fid, log)).join('')}</div>`;
+
 /**
- * The fish guide: every fish in a log as a grid of icons that fills in as
- * you catch them, by expansion, with the latest catches first.
+ * The fish guide: every fish in a log as a grid that fills in as you catch
+ * them, by expansion (one open at a time, like regions on Home), with the
+ * latest catches first.
  */
 export function guideView(ctx, log) {
   const { m, store } = ctx;
@@ -718,15 +726,24 @@ export function guideView(ctx, log) {
   const recent = m.logFish(log).filter((fid) => store.caughtAt(fid))
     .sort((a, b) => store.caughtAt(b) - store.caughtAt(a)).slice(0, RECENT_SHOWN);
   const recentSec = recent.length ? `
-    <section><h2 class="sec">Latest catches</h2>
-      <div class="grid">${recent.map((fid) => tile(m, store, fid, log)).join('')}</div></section>` : '';
+    <section><h2 class="sec">Latest catches</h2>${grid(m, store, recent, log)}</section>` : '';
 
-  const groups = m.guideGroups(log).map(([exp, fids]) => {
+  const openExp = ctx.guideOpen?.[log] ?? null;
+  const rows = m.guideGroups(log).map(([exp, fids]) => {
     const c = m.countFish(fids, store.isCaught, profile);
-    return `
-      <section><div class="row"><h2 class="sec grow">${esc(m.data.expansions[exp])}</h2>${countNum(c)}</div>
+    const open = openExp === String(exp);
+    const head = `
+      <button class="item region${open ? ' open' : ''}" data-act="guide-exp" data-log="${log}" data-exp="${exp}" aria-expanded="${open}">
+        <div class="row"><span class="title grow">${esc(m.data.expansions[exp])}</span>${countNum(c)}${chevron}</div>
         ${progress(c, 'thin')}
-        <div class="grid">${fids.map((fid) => tile(m, store, fid, log)).join('')}</div></section>`;
+      </button>`;
+    if (!open) return head;
+    // Ocean fish come after the rest in the game's order; set them apart.
+    const ocean = fids.filter(m.isOceanFish);
+    const rest = fids.filter((fid) => !m.isOceanFish(fid));
+    return branch(`${head}
+      <div class="guide-body">${grid(m, store, rest, log)}
+        ${ocean.length ? `<h3 class="sec">Ocean fishing</h3>${grid(m, store, ocean, log)}` : ''}</div>`);
   }).join('');
 
   return `
@@ -735,9 +752,9 @@ export function guideView(ctx, log) {
       <div class="row"><span class="grow">${progress(all)}</span><span class="num hi">${countText(all)}</span></div></header>
     <nav class="tabs two" role="tablist" aria-label="Log">${tabs}</nav>
     ${recentSec}
-    ${groups}
-    ${all.reach < all.total ? '<p class="note legend"><span class="num">(N)</span> is the full total, when some fish need more Gathering or a hole above your level.</p>' : ''}
-    <p class="note">In log order. Greyed fish aren't caught yet; tap any fish for how to catch it, or a caught one to read its log entry.</p>`;
+    <section><h2 class="sec">By expansion</h2><div class="list">${rows}</div>
+      ${all.reach < all.total ? '<p class="note legend"><span class="num">(N)</span> is the full total, when some fish need more Gathering or a hole above your level.</p>' : ''}
+      <p class="note legend"><span class="tile mystery inline" aria-hidden="true"></span> not caught yet · <span class="tile mystery big inline" aria-hidden="true"></span> big fish not caught yet. Tap a caught fish to read its log entry.</p></section>`;
 }
 
 export function notFound() {

@@ -15,7 +15,7 @@ const store = createStore();
 let model = null;
 
 // Transient UI state (not persisted).
-const ui = { query: '', openRegion: null, openZone: null, scrollTo: null, listY: {}, folds: new Set(), showCaught: false, pendingImport: null, flash: '' };
+const ui = { query: '', openRegion: null, openZone: null, guideOpen: {}, scrollTo: null, listY: {}, folds: new Set(), showCaught: false, pendingImport: null, flash: '' };
 
 function parseRoute() {
   const raw = location.hash.replace(/^#\/?/, '');
@@ -275,6 +275,10 @@ root.addEventListener('click', (ev) => {
     case 'fold':
       if (!ui.folds.delete(d.key)) ui.folds.add(d.key);
       renderPinned(el, `[data-act=fold][data-key="${d.key}"]`);
+      break;
+    case 'guide-exp':
+      ui.guideOpen[d.log] = ui.guideOpen[d.log] === d.exp ? null : d.exp;
+      renderPinned(el, `[data-act=guide-exp][data-exp="${d.exp}"]`);
       break;
     case 'show-caught':
       ui.showCaught = !ui.showCaught;

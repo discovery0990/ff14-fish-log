@@ -213,7 +213,13 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); gap: 6px; }
 .tile { display: block; aspect-ratio: 1; border-radius: 10px; }
 .tile .icon { display: block; width: 100%; height: 100%; border-radius: 10px; }
-.tile.missing .icon { filter: grayscale(1) brightness(.5); opacity: .4; }
+/* Uncaught fish: an anonymous "?" fish (pink for big fish), one shared
+   image for every tile, not a link. */
+.tile.mystery { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='6' fill='%23101c24'/%3E%3Cpath d='M4 20Q13 9 26 15L35 9L31.5 20L35 31L26 25Q13 31 4 20Z' fill='%231d4440' stroke='%233a9c86' stroke-width='1.2' stroke-linejoin='round'/%3E%3Ctext x='17' y='25' font-family='system-ui,sans-serif' font-weight='700' font-size='14' text-anchor='middle' fill='%23bdeee0'%3E%3F%3C/text%3E%3C/svg%3E") center / 100% no-repeat; }
+.tile.mystery.big { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='6' fill='%23101c24'/%3E%3Cpath d='M4 20Q13 9 26 15L35 9L31.5 20L35 31L26 25Q13 31 4 20Z' fill='%234a1f30' stroke='%23b8506f' stroke-width='1.2' stroke-linejoin='round'/%3E%3Ctext x='17' y='25' font-family='system-ui,sans-serif' font-weight='700' font-size='14' text-anchor='middle' fill='%23ffcfdd'%3E%3F%3C/text%3E%3C/svg%3E"); }
+.tile.mystery.inline { display: inline-block; width: 20px; height: 20px; aspect-ratio: auto; border-radius: 4px; vertical-align: -5px; }
+.guide-body { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px; background: rgba(0, 0, 0, .14); }
+.guide-body .sec { margin-top: 6px; }
 .logtext p { margin: 0; font-size: 15px; line-height: 1.5; white-space: pre-line; }
 
 /* Fish detail */

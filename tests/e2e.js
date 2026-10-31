@@ -306,20 +306,26 @@ try {
   check(await js(`!document.querySelector('a.item.hole') && /Completed holes \\(\\d+\\)/.test(document.querySelector('[data-act=fold][data-key="holes:rod:67"]')?.textContent ?? '')`), 'completed holes fold inside an open zone');
   await shot('folds');
 
-  // --- Fish guide: grid fills in; a caught fish shows its log entry; Back keeps the scroll
+  // --- Fish guide: expansions collapse; caught fish open with their log entry; uncaught are anonymous
   await go('#/rod');
   await js(`document.querySelector('a[aria-label="Fish guide"]').click()`);
-  await waitFor(() => js(`location.hash === '#/guide/rod' && !!document.querySelector('.grid .tile')`), 'guide opens from Home');
-  check(await js(`document.querySelectorAll('.tile').length`) >= 1517, 'guide shows every rod log fish as a tile');
+  await waitFor(() => js(`location.hash === '#/guide/rod' && !!document.querySelector('[data-act=guide-exp]')`), 'guide opens from Home');
+  check(await js(`document.querySelectorAll('[data-act=guide-exp]').length`) === 6, 'rod guide lists 6 expansions');
+  check(await js(`!document.querySelector('.guide-body')`), 'expansions start closed');
+  await js(`document.querySelector('[data-act=guide-exp][data-exp="0"]').click()`);
+  check(await js(`document.querySelectorAll('.guide-body .tile').length`) === 299, 'opening A Realm Reborn shows its 299 fish');
+  check(await js(`document.querySelectorAll('.guide-body a.tile').length > 0 && [...document.querySelectorAll('.guide-body .tile.mystery')].every((t) => t.tagName === 'SPAN' && !t.closest('a'))`), 'caught tiles link; uncaught ? tiles are not links');
+  check(await js(`document.querySelectorAll('.guide-body .tile.mystery.big').length > 0`), 'uncaught big fish get the pink ? tile');
   await sleep(500);
   const fetched = await js(`performance.getEntriesByType('resource').map((r) => new URL(r.name).pathname)`);
-  check(fetched.some((p) => p.includes('/icons/guide/rod-')), 'guide loads its icon sheets');
-  check(await js(`[...document.querySelectorAll('.tile')].every((t) => !t.querySelector('img'))`), 'guide tiles are cut from sheets, not one image per fish');
-  check(await js(`document.querySelectorAll('.tile:not(.missing)').length > 0 && document.querySelectorAll('.tile.missing').length > 0`), 'caught tiles are lit, uncaught greyed');
+  check(fetched.some((p) => p.includes('/icons/guide/rod-0.')), 'caught tiles come from the icon sheet');
   await shot('guide');
-  await js(`window.scrollTo(0, 1500)`);
+  await js(`document.querySelector('[data-act=guide-exp][data-exp="1"]').click()`);
+  check(await js(`document.querySelectorAll('.guide-body').length === 1 && document.querySelector('[data-exp="1"]').getAttribute('aria-expanded') === 'true'`), 'one expansion open at a time');
+  await js(`document.querySelector('[data-act=guide-exp][data-exp="0"]').click()`);
+  await js(`window.scrollTo(0, 600)`);
   const guideY = await js(`window.scrollY`);
-  await js(`document.querySelector('.tile:not(.missing)').click()`);
+  await js(`document.querySelector('.guide-body a.tile').click()`);
   await waitFor(() => js(`location.hash.startsWith('#/fish/')`), 'tile opens fish');
   check(await js(`!!document.querySelector('.logtext p')?.textContent.trim()`), 'a caught fish shows its log entry');
   check(await js(`document.querySelector('.back span').textContent`) === 'Fish guide', 'Back from a guide fish names the guide');
@@ -327,10 +333,11 @@ try {
   await js(`document.querySelector('.back').click()`);
   await waitFor(() => js(`location.hash === '#/guide/rod'`), 'back to guide');
   await sleep(100);
+  check(await js(`document.querySelector('[data-exp="0"]').getAttribute('aria-expanded')`) === 'true', 'Back to the guide keeps the expansion open');
   check(Math.abs(await js(`window.scrollY`) - guideY) < 5, 'Back to the guide restores its scroll');
   await js(`document.querySelector('a[href="#/guide/spear"]').click()`);
   await waitFor(() => js(`location.hash === '#/guide/spear'`), 'spear guide');
-  check(await js(`document.querySelectorAll('.tile').length`) === 289, 'spearfishing guide shows its 289 fish');
+  check(await js(`document.querySelectorAll('[data-act=guide-exp]').length`) === 4, 'spearfishing guide lists its 4 expansions');
 } catch (err) {
   failures++;
   console.log(`FAIL ${err.message}`);

@@ -102,18 +102,20 @@ export function createModel(data, sprites = null) {
     return { caught, total: fids.length, reach };
   }
 
-  // Each log's fish in log order, grouped by expansion from the fish's level
-  // (ARR to Lv 50, then 10 levels each). Zone tags can't be used: every ocean
-  // fish sits in The Endeavor, which the game tags ARR.
+  // Each log's fish in the game's guide order, grouped by the expansion the
+  // game files them under (exp, from its guide key; see build_data.py).
   const logFish = { rod: [], spear: [] };
   for (const [fid, f] of Object.entries(data.fish)) logFish[f.log].push(fid);
   for (const fids of Object.values(logFish)) fids.sort((a, b) => data.fish[a].no - data.fish[b].no);
-  const fishExp = (fid) => Math.max(0, Math.ceil((data.fish[fid].lvl - 50) / 10));
+
+  /** Only ever caught on ocean fishing voyages. */
+  const isOceanFish = (fid) => Object.keys(data.fish[fid].at).every((hid) => data.holes[hid].ocean);
+
   /** [[expansion id, [fid]]] for a log, in expansion order. */
   function guideGroups(log) {
     const by = new Map();
     for (const fid of logFish[log] ?? []) {
-      const exp = fishExp(fid);
+      const exp = data.fish[fid].exp;
       if (!by.has(exp)) by.set(exp, []);
       by.get(exp).push(fid);
     }
@@ -285,7 +287,7 @@ export function createModel(data, sprites = null) {
   }
 
   return {
-    upSoon, search, isLocked, expOff, countFish, sprite: (icon) => spriteAt.get(icon) ?? null, guideGroups, logFish: (log) => logFish[log] ?? [],
+    upSoon, search, isLocked, expOff, countFish, isOceanFish, sprite: (icon) => spriteAt.get(icon) ?? null, guideGroups, logFish: (log) => logFish[log] ?? [],
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
     isMooch, moochChain, moochTargets, status, windows, weatherNow, gatheringShort,

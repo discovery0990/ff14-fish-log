@@ -128,29 +128,41 @@ def build(fetch, skip_icons):
             failures.append(msg)
 
     # --- Fish logs ---------------------------------------------------------
-    # `no` is the fish's place in its log: sheet row order (rows come back
-    # sorted by row id). `text` is the log entry the game shows once caught;
-    # its newlines are deliberate (verses, quotes).
+    # The unnamed FishParameter.Unknown1 / SpearfishingItem.Unknown2 column is
+    # the fish's guide key: thousands = expansion + 2 (2000 ARR … 7000 DT),
+    # with ocean fish numbered one by one after their expansion's (5001…,
+    # 6001…, 7001…). It disagrees with level for every ocean fish (mostly
+    # Lv 1-50) and a few others, so it, not level, gives `exp`. `no` is the
+    # place in the log in key order (then row). `text` is the log entry the
+    # game shows once caught; its newlines are deliberate (verses, quotes).
+    # `rarity` 2 (green) marks big fish on non-ocean holes (resolved below).
     fp = fetch.sheet_all('FishParameter', 'Item@as(raw),IsInLog,FishingRecordType@as(raw),'
-                         'GatheringItemLevel.GatheringItemLevel,GatheringItemLevel.Stars,Text')
-    rod_log = {}
-    for f in fp.values():
-        if f['IsInLog'] and f['Item@as(raw)']:
-            lvl = f['GatheringItemLevel']['fields']
-            rod_log[f['Item@as(raw)']] = {'lvl': lvl['GatheringItemLevel'], 'stars': lvl['Stars'],
-                                          'rec': f['FishingRecordType@as(raw)'],
-                                          'no': len(rod_log) + 1, 'text': f['Text'].strip()}
-
+                         'GatheringItemLevel.GatheringItemLevel,GatheringItemLevel.Stars,Text,'
+                         'Unknown1,Item.Rarity')
     sfi = fetch.sheet_all('SpearfishingItem', 'Item@as(raw),IsInLog,FishingRecordType@as(raw),'
-                          'GatheringItemLevel.GatheringItemLevel,GatheringItemLevel.Stars,Description')
+                          'GatheringItemLevel.GatheringItemLevel,GatheringItemLevel.Stars,Description,'
+                          'Unknown2')
     spear_row_item = {rid: f['Item@as(raw)'] for rid, f in sfi.items() if f.get('Item@as(raw)')}
-    spear_log = {}
-    for f in sfi.values():
-        if f.get('IsInLog') and f.get('Item@as(raw)'):
-            lvl = f['GatheringItemLevel']['fields']
-            spear_log[f['Item@as(raw)']] = {'lvl': lvl['GatheringItemLevel'], 'stars': lvl['Stars'],
-                                            'rec': f['FishingRecordType@as(raw)'],
-                                            'no': len(spear_log) + 1, 'text': f['Description'].strip()}
+
+    def log_of(rows, key_col, text_col):
+        entries = []
+        for rid, f in rows.items():
+            if f.get('IsInLog') and f.get('Item@as(raw)'):
+                lvl = f['GatheringItemLevel']['fields']
+                key = f[key_col]
+                check(isinstance(key, int) and 2 <= key // 1000 <= 7,
+                      f'{key_col} (guide key) {key!r} for item {f["Item@as(raw)"]} is not 2000-7999; '
+                      'the column may have moved')
+                rarity = ((f.get('Item') or {}).get('fields') or {}).get('Rarity', 1)
+                entries.append(((key or 0, rid), f['Item@as(raw)'], {
+                    'lvl': lvl['GatheringItemLevel'], 'stars': lvl['Stars'],
+                    'rec': f['FishingRecordType@as(raw)'], 'exp': (key or 2000) // 1000 - 2,
+                    'text': f[text_col].strip(), 'rarity': rarity}))
+        entries.sort(key=lambda e: e[0])
+        return {item: {**meta, 'no': i + 1} for i, (_, item, meta) in enumerate(entries)}
+
+    rod_log = log_of(fp, 'Unknown1', 'Text')
+    spear_log = log_of(sfi, 'Unknown2', 'Description')
 
     check(len(rod_log) == EXPECTED_ROD, f'rod log has {len(rod_log)} fish, expected {EXPECTED_ROD}')
     check(len(spear_log) == EXPECTED_SPEAR, f'spear log has {len(spear_log)} fish, expected {EXPECTED_SPEAR}')
@@ -375,6 +387,19 @@ def build(fetch, skip_icons):
     baits = {bid: {'name': items[bid]['Name'], 'icon': items[bid]['Icon']['id']} for bid in sorted(bait_ids)}
     extra_names = {pid: items[pid]['Name'] for pid in pred_ids - set(fish)}
 
+    # Big fish: green rarity on overworld holes. Green ocean fish are ocean
+    # fishing's own specials, not big fish (consolegameswiki "Big Fishing").
+    for f in fish.values():
+        rarity = f.pop('rarity')
+        if f['log'] == 'rod' and rarity == 2 and not all(holes[h].get('ocean') for h in f['at']):
+            f['big'] = True
+    for ex in ('Thousand Fin', 'The Vegetarian', 'Kuno the Killer'):
+        check(any(f['name'] == ex and f.get('big') for f in fish.values()), f'{ex} should be a big fish')
+    for ex in ('Titanic Sawfish', 'Sothis', 'Mudcrab'):
+        check(any(f['name'] == ex and not f.get('big') for f in fish.values()), f'{ex} should not be a big fish')
+    for ex, exp in (('Galadion Goby', 3), ('Castaway Chocobo Chick', 2), ('Mudcrab', 0)):
+        check(any(f['name'] == ex and f['exp'] == exp for f in fish.values()), f'{ex} should be in expansion {exp}')
+
     # --- Checks on the assembled data ----------------------------------------
     for fid, f in fish.items():
         check(f['at'], f'fish {fid} {f["name"]} is not at any hole')
@@ -430,6 +455,7 @@ def build(fetch, skip_icons):
                              and not any(e.get('tug') or e.get('bait') for e in f['at'].values())),
         'tc_multi_entries': multi_entries,
         'broken_chains': len(broken), 'icons': len(icon_ids),
+        'big_fish': sum(1 for f in fish.values() if f.get('big')),
     }
     data = {
         'meta': {'game': GAME_VERSION_NAME, 'xivapi': GAME_VERSION, 'teamcraft': TEAMCRAFT_SHA[:7],

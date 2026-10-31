@@ -189,8 +189,10 @@ Deno.test('every view renders for every region, zone, hole and fish', () => {
   homeView({ ...ctx, query: 'goby' });
   homeView({ ...ctx, remind: true });
   for (const fid of Object.keys(DATA.fish)) fishView(ctx, fid, null);
-  guideView(ctx, 'rod');
-  guideView(ctx, 'spear');
+  for (const log of ['rod', 'spear']) {
+    guideView(ctx, log);
+    for (const [exp] of m.guideGroups(log)) guideView({ ...ctx, guideOpen: { [log]: String(exp) } }, log);
+  }
 });
 
 Deno.test('hole view: Hopeseed Pond shows mooch, warning and feeds lines', () => {
@@ -357,43 +359,60 @@ Deno.test('regions, zones, holes and fish follow the in-game Fishing Log order',
 
 // ------------------------------------------------------------ fish guide
 
-Deno.test('guide: every log fish once, in log order, grouped by expansion from level', () => {
+Deno.test('guide: every log fish once, in game order, grouped by the game\'s expansion', () => {
   for (const log of ['rod', 'spear']) {
     const groups = m.guideGroups(log);
     const flat = groups.flatMap(([, fids]) => fids);
     assertEquals(flat.length, DATA.meta.stats[log]);
     assertEquals(new Set(flat).size, flat.length);
-    for (const [exp, fids] of groups) {
-      for (const fid of fids) {
-        const lvl = DATA.fish[fid].lvl;
-        assert(exp === 0 ? lvl <= 50 : lvl > 40 + exp * 10 && lvl <= 50 + exp * 10, `${DATA.fish[fid].name} Lv ${lvl} in exp ${exp}`);
-      }
+    assertEquals(groups.map(([e]) => e), [...groups.map(([e]) => e)].sort());
+    for (const [, fids] of groups) {
       const nos = fids.map((f) => DATA.fish[f].no);
       assertEquals(nos, [...nos].sort((a, b) => a - b));
     }
   }
-  // Ocean fish go by level, not by The Endeavor's ARR tag.
-  const ocean = Object.keys(DATA.fish).find((f) => DATA.fish[f].lvl > 60 && Object.keys(DATA.fish[f].at).every((h) => DATA.holes[h].ocean));
-  assert(ocean && m.guideGroups('rod').find(([, fids]) => fids.includes(ocean))[0] > 0);
+  const expOf = (name) => m.guideGroups('rod').find(([, fids]) => fids.includes(byName(name)))[0];
+  // Ocean fish go under their route's expansion, not by level (Lv 1-50).
+  assertEquals(expOf('Galadion Goby'), 3);
+  assertEquals(expOf('Deepshade Sardine'), 4);
+  assertEquals(expOf("First Mate's Finger"), 5);
+  assertEquals(expOf('Castaway Chocobo Chick'), 2); // low level, but Stormblood
+  assertEquals(expOf('Malm Kelp'), 0);
+  assertEquals(m.guideGroups('rod').find(([e]) => e === 0)[1].length, 299);
+});
+
+Deno.test('big fish: green rarity off the ocean', () => {
+  for (const n of ['Thousand Fin', 'The Vegetarian', 'Kuno the Killer', 'The Sinsteeped']) assert(DATA.fish[byName(n)].big, n);
+  for (const n of ['Titanic Sawfish', 'Sothis', 'Mudcrab', 'Liopleurodon']) assert(!DATA.fish[byName(n)].big, n);
+  assertEquals(DATA.meta.stats.big_fish, 335);
 });
 
 Deno.test('every log fish has its log entry text', () => {
   for (const f of Object.values(DATA.fish)) assert(f.text?.trim(), f.name);
 });
 
-Deno.test('guide: tiles fill in as fish are caught; latest catches come first', () => {
+Deno.test('guide: expansions collapse; uncaught fish are anonymous ? tiles, caught ones link', () => {
   const store = createStore(memStorage());
-  const black = byName('Black Ghost'), malm = byName('Malm Kelp');
+  const black = byName('Black Ghost'), malm = byName('Malm Kelp'), kuno = byName('Kuno the Killer');
   let html = guideView(ctxFor(store), 'rod');
   assert(!html.includes('Latest catches'));
-  assertStringIncludes(html, `class="tile missing" href="#/fish/${black}?from=guide/rod"`);
+  assert(!html.includes('class="tile'.concat(' mystery"')), 'all expansions start closed');
+  assertStringIncludes(html, 'data-act="guide-exp" data-log="rod" data-exp="0" aria-expanded="false"');
+  html = guideView(ctxFor(store, { guideOpen: { rod: '0' } }), 'rod');
+  assertStringIncludes(html, 'aria-expanded="true"');
+  assert(!html.includes(`#/fish/${black}`) && !html.includes('Black Ghost'), 'uncaught fish are not links and not named');
+  assertStringIncludes(html, '<span class="tile mystery big" role="img" aria-label="Big fish not caught yet">');
+  assert(!html.includes('Ocean fishing'), 'ARR has no ocean fish');
+  assertStringIncludes(guideView(ctxFor(store, { guideOpen: { rod: '3' } }), 'rod'), 'Ocean fishing');
+
   store.toggleCaught(black, null, T);
   store.toggleCaught(malm, null, T + 1000);
-  html = guideView(ctxFor(store), 'rod');
+  store.toggleCaught(kuno, null, T + 2000);
+  html = guideView(ctxFor(store, { guideOpen: { rod: '0' } }), 'rod');
   assertStringIncludes(html, `class="tile" href="#/fish/${black}?from=guide/rod"`);
   const latest = html.slice(html.indexOf('Latest catches'), html.indexOf('</section>', html.indexOf('Latest catches')));
   assert(latest.indexOf(malm) < latest.indexOf(black), 'newest first');
-  assertStringIncludes(html, '2 / 1,517');
+  assertStringIncludes(html, '3 / 1,517');
 });
 
 Deno.test('fish view: log entry and date only once caught', () => {
@@ -450,9 +469,12 @@ Deno.test('guide sheets match fish.json (rerun tools/build_sprites.py if not)', 
     assertEquals(new TextDecoder().decode(bytes.slice(8, 12)), 'WEBP', sheet.file);
   }
   for (const f of Object.values(DATA.fish)) assert(m.sprite(f.icon), `${f.name}'s icon ${f.icon} is in no sheet`);
-  const html = guideView(ctxFor(createStore(memStorage())), 'rod');
+  const store = createStore(memStorage());
+  store.toggleCaught(byName('Malm Kelp'), null, T);
+  const ctx = ctxFor(store, { guideOpen: { rod: '0' } });
+  const html = guideView(ctx, 'rod');
   assert(!html.includes('<img'), 'guide tiles use the sheets, not separate icons');
   assertStringIncludes(html, 'icons/guide/rod-0.');
   // Without sheets, the guide falls back to separate icons.
-  assertStringIncludes(guideView({ ...ctxFor(createStore(memStorage())), m: createModel(DATA) }, 'rod'), '<img');
+  assertStringIncludes(guideView({ ...ctx, m: createModel(DATA) }, 'rod'), '<img');
 });

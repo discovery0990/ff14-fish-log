@@ -66,11 +66,12 @@ Regions, zones, holes and fish all follow the in-game Fishing Log order: Fishing
    - There's no "mark all caught" action.
 3. **Fish detail**: catch facts, numbered mooch-chain steps (for the hole you came from), the next N windows with local times and durations, and every hole the fish is found at. Once caught, the fish's in-game log entry and the date you marked it ("Caught before dates were kept" for older catches) show under the Mark caught button; until then a line at the bottom says to catch it to read it.
 4. **Fish guide** (`#/guide/rod`, `#/guide/spear`; a grid button beside Profile in the Home header, always shown, opening the Spearfishing log from the Spearfishing tab and the Rod log otherwise)
-   - Every fish in the log as a grid of icons that fills in as you catch them. Caught icons are lit; uncaught ones are greyed and dimmed (the icons are opaque item frames, so a silhouette would be a black square). Tapping any icon opens the fish; Back returns to the guide at the same scroll position. Tiles never toggle caught.
-   - Header count and bar for the whole log, Rod / Spearfishing tabs, then "Latest catches" (the last 8 dated catches, newest first), then one section per expansion with its own count and bar.
-   - Order is the log's sheet row order (`FishParameter` / `SpearfishingItem` rows), not verified against the in-game guide, so no "No. N" is shown. Expansion comes from the fish's level (ARR to Lv 50, then 10 levels each), not its zone: every ocean fish sits in The Endeavor, tagged ARR.
-   - Counts use the same caught / in reach (total) format; a fish is in reach if it's caught or catchable at any of its holes.
-   - The live 15-second redraw skips this screen: nothing on it is live, and rebuilding 1,500 tiles under a scrolling finger would drop taps.
+   - Every fish in the log as a grid that fills in as you catch them, grouped by expansion. Each expansion is a row with its count and bar that expands in place, one open at a time (like regions on Home), all closed at first; the open one stays open for the session, so Back from a fish returns to it at the same scroll position, and its header sticks while its grid scrolls.
+   - Caught fish show their icon and open the fish. Uncaught fish are anonymous "?" fish, as in the game's guide: teal, or pink for big fish. They aren't links and don't name the fish (open it from search or a hole instead). All "?" tiles share one small inline SVG.
+   - Expansion and order come from the game's guide key (`FishParameter.Unknown1`, `SpearfishingItem.Unknown2`: thousands = expansion + 2, ocean fish numbered one by one after their expansion's main fish), not level: ocean fish (mostly Lv 1-50) go under their route's expansion, and a few low-level fish under later ones (Castaway Chocobo Chick is Stormblood). Within an open expansion, ocean fish are set apart under "Ocean fishing". The game's own guide is a flat 5×5 paged grid; matching its layout isn't a goal.
+   - Big fish: green item rarity on non-ocean holes (consolegameswiki "Big Fishing": "all green-rarity overworld fish are considered big fish"; green ocean fish are ocean fishing's own specials). 335 at 7.57; legendaries are among them.
+   - Header count and bar for the whole log, Rod / Spearfishing tabs, then "Latest catches" (the last 8 dated catches, newest first), then the expansions. Counts use the same caught / in reach (total) format; a fish is in reach if it's caught or catchable at any of its holes.
+   - The live 15-second redraw skips this screen: nothing on it is live.
 5. **Profile and filters**
    - Fisher level (1–100) and Gathering (0–9,999), each a number field plus ±1 steppers.
    - Expansions unlocked. (Restricted holes above your level are always listed, greyed; the Up soon horizon lives on the Up soon screen.)
@@ -108,10 +109,10 @@ Nothing comes from the upstream icykoneko repo, except as a test oracle.
 
 | Field | Source |
 |---|---|
-| Rod log membership, record type, log entry, log order | `FishParameter`: `IsInLog`, `Item`, `FishingRecordType`, `Text` (→ `text`), row order (→ `no`) |
+| Rod log membership, record type, log entry, log order | `FishParameter`: `IsInLog`, `Item`, `FishingRecordType`, `Text` (→ `text`), `Unknown1` guide key (→ `exp`, and `no` in key order), `Item.Rarity` (green off the ocean → `big`) |
 | Fish level and stars | `FishParameter.GatheringItemLevel` → `GatheringItemLevelConvertTable` |
 | Fish name and icon | `Item.Name`, `Item.Icon` |
-| Spearfishing log membership, log entry, log order | `SpearfishingItem`: `IsInLog`, `Item`, `Description` (→ `text`), row order (→ `no`) |
+| Spearfishing log membership, log entry, log order | `SpearfishingItem`: `IsInLog`, `Item`, `Description` (→ `text`), `Unknown2` guide key (→ `exp`, `no`) |
 | Rod hole | `FishingSpot`: `PlaceName`, `GatheringLevel`, `TerritoryType`, `Item[]`, `X`, `Z`, `Radius`, `FishingSpotCategory` |
 | Spearfishing hole | `SpearfishingNotebook`: `PlaceName`, `GatheringLevel`, `TerritoryType`, `IsShadowNode`, `GatheringPointBase.Item[]` (→ `SpearfishingItem` rows) |
 | Zone, region, expansion | `TerritoryType`: `PlaceName`, `PlaceNameRegion`, `ExVersion` |
@@ -159,7 +160,7 @@ The file is 858 KB (258 KB gzipped); the log entries (`text`, newlines kept for 
                    "fish": [4950, 4958, 4964, 4942, 4939, 4979, 4976, 7934], "extra": []}},
   "weatherRates": {"3": [[3, 5], [7, 15], …]},
   "weathers": {"7": {"name": "Rain", "icon": 60207}},
-  "fish": {"4964": {"name": "Black Ghost", "icon": 29213, "log": "rod", "lvl": 28, "stars": 0, "rec": 3, "no": 66, "text": "Native to the rivers…",
+  "fish": {"4964": {"name": "Black Ghost", "icon": 29213, "log": "rod", "lvl": 28, "stars": 0, "rec": 3, "no": 66, "exp": 0, "text": "Native to the rivers…",
                     "at": {"r5": {"bait": 4942, "tug": "medium", "hook": "powerful"},
                            "r15": {"bait": 4942, "tug": "medium", "hook": "powerful"}}}},
   "baits": {"2592": {"name": "Midge Basket", "icon": 27002}},
@@ -190,7 +191,7 @@ The file is 858 KB (258 KB gzipped); the log entries (`text`, newlines kept for 
 - Downloaded once at build time as the 2× `_hr1` versions (`/api/asset?path=ui/icon/…_hr1.tex&format=png`) to `app/icons/<id>.png`. Fish and baits are 80px, weathers 64px. The build fails on any icon narrower than 64px.
 - That's 1,348 unique icons, 17 MB. Lossless PNG compression is a possible later saving.
 - They're served from Pages and cached by the service worker on first view. No runtime calls to XIVAPI.
-- **Fish guide sheets:** the guide shows a whole log at once, which as separate PNGs is about 12 MB for Rod. `tools/build_sprites.py` (needs Pillow; run after the data build) packs the fish icons into one lossy WebP sheet per log and expansion, at 80px and quality 75 (indistinguishable at tile size): 10 sheets, 1.8 MB for both logs. They're written as `app/icons/guide/<log>-<exp>.<hash>.webp`, so the worker's keep-forever icon cache never serves a stale sheet. `app/data/sprites.json` lists each sheet's icon ids in slot order, and the guide looks icons up by id, falling back to the separate PNGs if the file doesn't load. A unit test fails if any fish's icon isn't in a sheet.
+- **Fish guide sheets:** the guide shows a whole log at once, which as separate PNGs is about 12 MB for Rod. `tools/build_sprites.py` (needs Pillow; run after the data build) packs the fish icons into one lossy WebP sheet per log and expansion (the fish's `exp`), at 80px and quality 75 (indistinguishable at tile size): 10 sheets, 1.8 MB for both logs. They're written as `app/icons/guide/<log>-<exp>.<hash>.webp`, so the worker's keep-forever icon cache never serves a stale sheet. `app/data/sprites.json` lists each sheet's icon ids in slot order, and the guide looks icons up by id, falling back to the separate PNGs if the file doesn't load. A unit test fails if any fish's icon isn't in a sheet.
 
 ### Build-time assertions (the build fails if any fail)
 

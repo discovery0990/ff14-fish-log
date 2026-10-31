@@ -9,7 +9,7 @@ export const TAB_LABELS = { rod: 'Rod', spear: 'Spearfishing', ocean: 'Ocean' };
 /** Which home tab a hole belongs to. */
 export const holeTab = (h) => (h.kind === 'spear' ? 'spear' : h.ocean ? 'ocean' : 'rod');
 
-export function createModel(data) {
+export function createModel(data, sprites = null) {
   const weatherFns = new Map();
   const weatherOf = (hid) => {
     const wr = data.holes[hid].wr;
@@ -118,6 +118,15 @@ export function createModel(data) {
       by.get(exp).push(fid);
     }
     return [...by.entries()].sort((a, b) => a[0] - b[0]);
+  }
+
+  // The guide's icon sheets (tools/build_sprites.py): icon id → where it is.
+  const spriteAt = new Map();
+  for (const sheet of sprites?.sheets ?? []) {
+    const rows = Math.ceil(sheet.icons.length / sprites.cols);
+    sheet.icons.forEach((icon, i) => {
+      if (!spriteAt.has(icon)) spriteAt.set(icon, { file: sheet.file, col: i % sprites.cols, row: Math.floor(i / sprites.cols), cols: sprites.cols, rows });
+    });
   }
 
   /**
@@ -276,7 +285,7 @@ export function createModel(data) {
   }
 
   return {
-    upSoon, search, isLocked, expOff, countFish, guideGroups, logFish: (log) => logFish[log] ?? [],
+    upSoon, search, isLocked, expOff, countFish, sprite: (icon) => spriteAt.get(icon) ?? null, guideGroups, logFish: (log) => logFish[log] ?? [],
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
     isMooch, moochChain, moochTargets, status, windows, weatherNow, gatheringShort,

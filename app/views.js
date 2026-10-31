@@ -684,11 +684,22 @@ const fmtDate = (ms) => new Date(ms).toLocaleDateString(undefined, { day: 'numer
 const GUIDE_LOGS = { rod: 'Rod', spear: 'Spearfishing' };
 const RECENT_SHOWN = 8;
 
+/**
+ * A guide icon, cut from its sheet (one image per log and expansion instead
+ * of one per fish), or the separate icon if the sheets didn't load.
+ */
+function spriteIcon(m, id) {
+  const s = m.sprite(id);
+  if (!s) return icon(id);
+  const pos = (i, n) => (n > 1 ? (i / (n - 1)) * 100 : 0);
+  return `<span class="icon" style="background:url(${s.file}) ${pos(s.col, s.cols)}% ${pos(s.row, s.rows)}% / ${s.cols * 100}% ${s.rows * 100}% var(--track)"></span>`;
+}
+
 /** One fish in the guide grid: the icon, greyed until caught. */
 function tile(m, store, fid, log) {
   const f = m.data.fish[fid];
   const caught = store.isCaught(fid);
-  return `<a class="tile${caught ? '' : ' missing'}" href="#/fish/${fid}?from=guide/${log}" aria-label="${esc(f.name)}${caught ? '' : ' (not caught)'}" title="${esc(f.name)}">${icon(f.icon)}</a>`;
+  return `<a class="tile${caught ? '' : ' missing'}" href="#/fish/${fid}?from=guide/${log}" aria-label="${esc(f.name)}${caught ? '' : ' (not caught)'}" title="${esc(f.name)}">${spriteIcon(m, f.icon)}</a>`;
 }
 
 /**

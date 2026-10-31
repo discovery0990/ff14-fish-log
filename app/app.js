@@ -328,9 +328,11 @@ root.addEventListener('keydown', (ev) => {
 
 async function main() {
   try {
+    // The guide's icon sheets are optional: without them it uses the icons.
+    const sprites = fetch('data/sprites.json').then((r) => (r.ok ? r.json() : null)).catch(() => null);
     const res = await fetch('data/fish.json');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    model = createModel(await res.json());
+    model = createModel(await res.json(), await sprites);
   } catch (err) {
     root.innerHTML = `<h1>Couldn't load fish data</h1><p class="note">${String(err)}</p>`;
     return;

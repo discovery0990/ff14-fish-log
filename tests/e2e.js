@@ -311,6 +311,10 @@ try {
   await js(`document.querySelector('a[aria-label="Fish guide"]').click()`);
   await waitFor(() => js(`location.hash === '#/guide/rod' && !!document.querySelector('.grid .tile')`), 'guide opens from Home');
   check(await js(`document.querySelectorAll('.tile').length`) >= 1517, 'guide shows every rod log fish as a tile');
+  await sleep(500);
+  const fetched = await js(`performance.getEntriesByType('resource').map((r) => new URL(r.name).pathname)`);
+  check(fetched.some((p) => p.includes('/icons/guide/rod-')), 'guide loads its icon sheets');
+  check(await js(`[...document.querySelectorAll('.tile')].every((t) => !t.querySelector('img'))`), 'guide tiles are cut from sheets, not one image per fish');
   check(await js(`document.querySelectorAll('.tile:not(.missing)').length > 0 && document.querySelectorAll('.tile.missing').length > 0`), 'caught tiles are lit, uncaught greyed');
   await shot('guide');
   await js(`window.scrollTo(0, 1500)`);

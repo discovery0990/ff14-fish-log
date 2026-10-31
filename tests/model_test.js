@@ -5,7 +5,8 @@ import { esc, fishView, fmtDuration, guideView, holeView, homeView, profileView,
 import { toEtHours } from '../app/engine.js';
 
 const DATA = JSON.parse(await Deno.readTextFile(new URL('../app/data/fish.json', import.meta.url)));
-const m = createModel(DATA);
+const SPRITES = JSON.parse(await Deno.readTextFile(new URL('../app/data/sprites.json', import.meta.url)));
+const m = createModel(DATA, SPRITES);
 const byName = (n) => Object.entries(DATA.fish).find(([, f]) => f.name === n)[0];
 const zoneByName = (n) => Object.entries(DATA.zones).find(([, z]) => z.name === n)[0];
 const regionByName = (n) => Object.entries(DATA.regions).find(([, r]) => r.name === n)[0];
@@ -440,4 +441,18 @@ Deno.test('backup: catch dates round trip, are optional, and merge keeps the ear
   assertEquals([t.caughtAt('4964'), t.caughtAt('4950'), t.caughtAt('4942')], [T, T + 5000, T]);
   t.importBackup(b, 'replace');
   assertEquals([t.caughtAt('4964'), t.caughtAt('4950')], [T, null]);
+});
+
+Deno.test('guide sheets match fish.json (rerun tools/build_sprites.py if not)', async () => {
+  for (const sheet of SPRITES.sheets) {
+    const bytes = await Deno.readFile(new URL(`../app/${sheet.file}`, import.meta.url));
+    // A WebP file (RIFF....WEBP) for every sheet named.
+    assertEquals(new TextDecoder().decode(bytes.slice(8, 12)), 'WEBP', sheet.file);
+  }
+  for (const f of Object.values(DATA.fish)) assert(m.sprite(f.icon), `${f.name}'s icon ${f.icon} is in no sheet`);
+  const html = guideView(ctxFor(createStore(memStorage())), 'rod');
+  assert(!html.includes('<img'), 'guide tiles use the sheets, not separate icons');
+  assertStringIncludes(html, 'icons/guide/rod-0.');
+  // Without sheets, the guide falls back to separate icons.
+  assertStringIncludes(guideView({ ...ctxFor(createStore(memStorage())), m: createModel(DATA) }, 'rod'), '<img');
 });

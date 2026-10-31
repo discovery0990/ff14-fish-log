@@ -17,6 +17,7 @@ On patch day:
 1. Bump `GAME_VERSION`, `GAME_VERSION_NAME`, `TEAMCRAFT_SHA` and the expected log counts in `tools/build_data.py`.
 2. Run the build with `--refresh`.
 3. Review the stats and diff it prints.
+4. Run `python3 tools/build_sprites.py` (needs Pillow) to rebuild the Fish guide's icon sheets. The unit tests fail if they're out of date.
 
 ## Tests
 

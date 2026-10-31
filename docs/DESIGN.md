@@ -190,6 +190,7 @@ The file is 858 KB (258 KB gzipped); the log entries (`text`, newlines kept for 
 - Downloaded once at build time as the 2× `_hr1` versions (`/api/asset?path=ui/icon/…_hr1.tex&format=png`) to `app/icons/<id>.png`. Fish and baits are 80px, weathers 64px. The build fails on any icon narrower than 64px.
 - That's 1,348 unique icons, 17 MB. Lossless PNG compression is a possible later saving.
 - They're served from Pages and cached by the service worker on first view. No runtime calls to XIVAPI.
+- **Fish guide sheets:** the guide shows a whole log at once, which as separate PNGs is about 12 MB for Rod. `tools/build_sprites.py` (needs Pillow; run after the data build) packs the fish icons into one lossy WebP sheet per log and expansion, at 80px and quality 75 (indistinguishable at tile size): 10 sheets, 1.8 MB for both logs. They're written as `app/icons/guide/<log>-<exp>.<hash>.webp`, so the worker's keep-forever icon cache never serves a stale sheet. `app/data/sprites.json` lists each sheet's icon ids in slot order, and the guide looks icons up by id, falling back to the separate PNGs if the file doesn't load. A unit test fails if any fish's icon isn't in a sheet.
 
 ### Build-time assertions (the build fails if any fail)
 

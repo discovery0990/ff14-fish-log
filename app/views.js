@@ -164,7 +164,7 @@ export function homeView(ctx) {
         <div class="row overall"><span class="num hi">${countText(all)}</span><span class="sub">caught</span>
           <span class="grow">${progress(all, 'thin')}</span></div></div>
       <a class="iconbtn" href="#/guide/${tab === 'spear' ? 'spear' : 'rod'}" aria-label="Fish guide">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.8C10 5.3 7 4.8 3.5 5.2v13c3.5-.4 6.5.1 8.5 1.6 2-1.5 5-2 8.5-1.6v-13C17 4.8 14 5.3 12 6.8zM12 6.8v13"/><path class="thin" d="M6 9.5h3.5M6 12.5h3.5M14.5 9.5h3.5M14.5 12.5h3.5"/></svg>
       </a>
       <a class="iconbtn" href="#/profile" aria-label="Profile and filters">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>

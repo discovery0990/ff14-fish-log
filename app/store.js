@@ -5,6 +5,7 @@ export const STORAGE_KEY = 'fishlog:v1';
 export const defaultState = () => ({
   v: 1,
   caught: [],          // fish ids (strings)
+  caughtAt: {},        // fish id → ms when marked caught (fish caught before dates were kept have none)
   discovered: [],      // hole ids
   profile: {
     lvl: null,         // fisher level; null = not set (no level filtering)
@@ -40,7 +41,7 @@ export const BACKUP_APP = 'fishlog';
 export function makeBackup(state, now) {
   return {
     app: BACKUP_APP, v: 1, exportedAt: new Date(now).toISOString(),
-    caught: state.caught, discovered: state.discovered, profile: state.profile,
+    caught: state.caught, caughtAt: state.caughtAt, discovered: state.discovered, profile: state.profile,
   };
 }
 
@@ -68,9 +69,17 @@ export function parseBackup(text, data) {
     lvl: num(p.lvl, 1, 100), gath: num(p.gath, 0, 9999),
     exp: Array.isArray(p.exp) ? p.exp.filter((e) => Number.isInteger(e)) : null,
   };
+  // Optional (older backups have no dates): keep valid times for kept fish.
+  const caughtAt = {};
+  if (b.caughtAt && typeof b.caughtAt === 'object') {
+    for (const f of caught) {
+      const at = b.caughtAt[f];
+      if (Number.isFinite(at) && at > 0) caughtAt[f] = at;
+    }
+  }
   const t = Date.parse(b.exportedAt);
   return {
-    ok: true, caught, discovered, profile, exportedAt: Number.isNaN(t) ? null : t,
+    ok: true, caught, caughtAt, discovered, profile, exportedAt: Number.isNaN(t) ? null : t,
     dropped: caughtAll.length - caught.length + discAll.length - discovered.length,
   };
 }
@@ -91,10 +100,11 @@ export function createStore(storage = globalThis.localStorage) {
   let state = readState(storage);
   let caught = new Set(state.caught);
   let discovered = new Set(state.discovered);
+  let caughtAt = { ...state.caughtAt };
   const listeners = new Set();
 
   function commit() {
-    state = { ...state, caught: [...caught], discovered: [...discovered], createdAt: state.createdAt ?? Date.now() };
+    state = { ...state, caught: [...caught], caughtAt: { ...caughtAt }, discovered: [...discovered], createdAt: state.createdAt ?? Date.now() };
     try {
       storage?.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
@@ -108,14 +118,18 @@ export function createStore(storage = globalThis.localStorage) {
     isCaught: (fid) => caught.has(String(fid)),
     isDiscovered: (hid) => discovered.has(hid),
     caughtCount: () => caught.size,
+    /** When a fish was marked caught (ms), or null if unknown or uncaught. */
+    caughtAt: (fid) => caughtAt[String(fid)] ?? null,
 
     /** Toggle a fish; marking it caught at a hole also discovers the hole. */
-    toggleCaught(fid, hid) {
+    toggleCaught(fid, hid, now = Date.now()) {
       fid = String(fid);
       if (caught.has(fid)) {
         caught.delete(fid);
+        delete caughtAt[fid];
       } else {
         caught.add(fid);
+        caughtAt[fid] = now;
         if (hid) discovered.add(hid);
       }
       commit();
@@ -142,10 +156,15 @@ export function createStore(storage = globalThis.localStorage) {
     importBackup(b, mode) {
       if (mode === 'replace') {
         caught = new Set(b.caught);
+        caughtAt = { ...b.caughtAt };
         discovered = new Set(b.discovered);
         if (b.profile) state = { ...state, profile: { ...defaultState().profile, ...b.profile } };
       } else {
         for (const f of b.caught) caught.add(f);
+        // Keep the earlier date when both sides have one.
+        for (const [f, at] of Object.entries(b.caughtAt ?? {})) {
+          if (!(caughtAt[f] <= at)) caughtAt[f] = at;
+        }
         for (const h of b.discovered) discovered.add(h);
       }
       commit();

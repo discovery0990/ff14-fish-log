@@ -85,6 +85,42 @@ export function createModel(data) {
   }
 
   /**
+   * Like count, over a set of fish rather than holes: a fish is in reach if
+   * it's caught or catchable at any of its holes.
+   */
+  function countFish(fids, isCaught, profile) {
+    let caught = 0, reach = 0;
+    for (const fid of fids) {
+      if (isCaught(fid)) {
+        caught++;
+        reach++;
+      } else if (!profile || (fishHoles[fid] ?? []).some((hid) =>
+        !isLocked(hid, profile) && !gatheringShort(data.fish[fid].at[hid] ?? {}, profile))) {
+        reach++;
+      }
+    }
+    return { caught, total: fids.length, reach };
+  }
+
+  // Each log's fish in log order, grouped by expansion from the fish's level
+  // (ARR to Lv 50, then 10 levels each). Zone tags can't be used: every ocean
+  // fish sits in The Endeavor, which the game tags ARR.
+  const logFish = { rod: [], spear: [] };
+  for (const [fid, f] of Object.entries(data.fish)) logFish[f.log].push(fid);
+  for (const fids of Object.values(logFish)) fids.sort((a, b) => data.fish[a].no - data.fish[b].no);
+  const fishExp = (fid) => Math.max(0, Math.ceil((data.fish[fid].lvl - 50) / 10));
+  /** [[expansion id, [fid]]] for a log, in expansion order. */
+  function guideGroups(log) {
+    const by = new Map();
+    for (const fid of logFish[log] ?? []) {
+      const exp = fishExp(fid);
+      if (!by.has(exp)) by.set(exp, []);
+      by.get(exp).push(fid);
+    }
+    return [...by.entries()].sort((a, b) => a[0] - b[0]);
+  }
+
+  /**
    * 'show' | 'grey' | 'hide' for a hole under the profile filters. Only
    * restricted holes are level-locked: below their level they're not on your
    * map and casting fails. Every other hole is on the map and fishable at any
@@ -240,7 +276,7 @@ export function createModel(data) {
   }
 
   return {
-    upSoon, search, isLocked, expOff,
+    upSoon, search, isLocked, expOff, countFish, guideGroups, logFish: (log) => logFish[log] ?? [],
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
     isMooch, moochChain, moochTargets, status, windows, weatherNow, gatheringShort,

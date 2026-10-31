@@ -3,7 +3,7 @@
 import { TABS, createModel } from './model.js';
 import { createStore, makeBackup, parseBackup, shouldRemind } from './store.js';
 import {
-  fishView, holeView, homeBody, homeView, notFound, profileView, soonView,
+  fishView, guideView, holeView, homeBody, homeView, notFound, profileView, soonView,
 } from './views.js';
 
 const LIVE_REFRESH_MS = 15_000;
@@ -78,6 +78,7 @@ function view() {
   if (a === 'hole' && b) return holeView(ctx, b);
   if (a === 'fish' && b) return fishView(ctx, b, params.get('h'), params.get('from'));
   if (a === 'profile') return profileView(ctx);
+  if (a === 'guide') return guideView(ctx, b ?? 'rod');
   return notFound();
 }
 
@@ -340,6 +341,7 @@ async function main() {
   const listKey = () => {
     const p = parseRoute().parts;
     if (!p.length) return 'rod';
+    if (p[0] === 'guide') return `guide/${p[1] ?? 'rod'}`;
     if (!TABS.includes(p[0])) return null;
     return !p[1] ? p[0] : p[1] === 'soon' ? `${p[0]}/soon` : null;
   };
@@ -360,9 +362,12 @@ async function main() {
   // Keep timers and the ET clock live. Skip while hidden, or while any field
   // has focus: replacing a focused input closes the iOS keyboard and would
   // discard a half-typed number.
+  // The fish guide has nothing live and a grid of over a thousand icons, so
+  // it's left alone rather than rebuilt under a scrolling finger.
   const refresh = () => {
     const editing = document.activeElement?.tagName === 'INPUT';
-    if (document.visibilityState === 'visible' && !editing) render({ keepScroll: true });
+    const still = parseRoute().parts[0] === 'guide';
+    if (document.visibilityState === 'visible' && !editing && !still) render({ keepScroll: true });
   };
   setInterval(refresh, LIVE_REFRESH_MS);
   // The timer doesn't run in the background, so coming back to the app (or

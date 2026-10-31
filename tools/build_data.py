@@ -128,28 +128,35 @@ def build(fetch, skip_icons):
             failures.append(msg)
 
     # --- Fish logs ---------------------------------------------------------
+    # `no` is the fish's place in its log: sheet row order (rows come back
+    # sorted by row id). `text` is the log entry the game shows once caught;
+    # its newlines are deliberate (verses, quotes).
     fp = fetch.sheet_all('FishParameter', 'Item@as(raw),IsInLog,FishingRecordType@as(raw),'
-                         'GatheringItemLevel.GatheringItemLevel,GatheringItemLevel.Stars')
+                         'GatheringItemLevel.GatheringItemLevel,GatheringItemLevel.Stars,Text')
     rod_log = {}
     for f in fp.values():
         if f['IsInLog'] and f['Item@as(raw)']:
             lvl = f['GatheringItemLevel']['fields']
             rod_log[f['Item@as(raw)']] = {'lvl': lvl['GatheringItemLevel'], 'stars': lvl['Stars'],
-                                          'rec': f['FishingRecordType@as(raw)']}
+                                          'rec': f['FishingRecordType@as(raw)'],
+                                          'no': len(rod_log) + 1, 'text': f['Text'].strip()}
 
     sfi = fetch.sheet_all('SpearfishingItem', 'Item@as(raw),IsInLog,FishingRecordType@as(raw),'
-                          'GatheringItemLevel.GatheringItemLevel,GatheringItemLevel.Stars')
+                          'GatheringItemLevel.GatheringItemLevel,GatheringItemLevel.Stars,Description')
     spear_row_item = {rid: f['Item@as(raw)'] for rid, f in sfi.items() if f.get('Item@as(raw)')}
     spear_log = {}
     for f in sfi.values():
         if f.get('IsInLog') and f.get('Item@as(raw)'):
             lvl = f['GatheringItemLevel']['fields']
             spear_log[f['Item@as(raw)']] = {'lvl': lvl['GatheringItemLevel'], 'stars': lvl['Stars'],
-                                            'rec': f['FishingRecordType@as(raw)']}
+                                            'rec': f['FishingRecordType@as(raw)'],
+                                            'no': len(spear_log) + 1, 'text': f['Description'].strip()}
 
     check(len(rod_log) == EXPECTED_ROD, f'rod log has {len(rod_log)} fish, expected {EXPECTED_ROD}')
     check(len(spear_log) == EXPECTED_SPEAR, f'spear log has {len(spear_log)} fish, expected {EXPECTED_SPEAR}')
     check(not (set(rod_log) & set(spear_log)), 'a fish is in both logs')
+    no_text = [fid for fid, f in {**rod_log, **spear_log}.items() if not f['text']]
+    check(not no_text, f'{len(no_text)} log fish have no log entry text, e.g. {no_text[:5]}')
 
     # --- Holes -------------------------------------------------------------
     rod_spots = fetch.sheet_all('FishingSpot', 'PlaceName@as(raw),PlaceName.Name,GatheringLevel,'

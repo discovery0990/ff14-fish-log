@@ -305,6 +305,28 @@ try {
   await js(`document.querySelector('[data-act=zone][data-zid="67"]').click()`);
   check(await js(`!document.querySelector('a.item.hole') && /Completed holes \\(\\d+\\)/.test(document.querySelector('[data-act=fold][data-key="holes:rod:67"]')?.textContent ?? '')`), 'completed holes fold inside an open zone');
   await shot('folds');
+
+  // --- Fish guide: grid fills in; a caught fish shows its log entry; Back keeps the scroll
+  await go('#/rod');
+  await js(`document.querySelector('a[aria-label="Fish guide"]').click()`);
+  await waitFor(() => js(`location.hash === '#/guide/rod' && !!document.querySelector('.grid .tile')`), 'guide opens from Home');
+  check(await js(`document.querySelectorAll('.tile').length`) >= 1517, 'guide shows every rod log fish as a tile');
+  check(await js(`document.querySelectorAll('.tile:not(.missing)').length > 0 && document.querySelectorAll('.tile.missing').length > 0`), 'caught tiles are lit, uncaught greyed');
+  await shot('guide');
+  await js(`window.scrollTo(0, 1500)`);
+  const guideY = await js(`window.scrollY`);
+  await js(`document.querySelector('.tile:not(.missing)').click()`);
+  await waitFor(() => js(`location.hash.startsWith('#/fish/')`), 'tile opens fish');
+  check(await js(`!!document.querySelector('.logtext p')?.textContent.trim()`), 'a caught fish shows its log entry');
+  check(await js(`document.querySelector('.back span').textContent`) === 'Fish guide', 'Back from a guide fish names the guide');
+  await shot('guide-fish');
+  await js(`document.querySelector('.back').click()`);
+  await waitFor(() => js(`location.hash === '#/guide/rod'`), 'back to guide');
+  await sleep(100);
+  check(Math.abs(await js(`window.scrollY`) - guideY) < 5, 'Back to the guide restores its scroll');
+  await js(`document.querySelector('a[href="#/guide/spear"]').click()`);
+  await waitFor(() => js(`location.hash === '#/guide/spear'`), 'spear guide');
+  check(await js(`document.querySelectorAll('.tile').length`) === 289, 'spearfishing guide shows its 289 fish');
 } catch (err) {
   failures++;
   console.log(`FAIL ${err.message}`);

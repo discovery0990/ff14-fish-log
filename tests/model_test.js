@@ -1,7 +1,7 @@
 import { assert, assertEquals, assertStringIncludes } from 'jsr:@std/assert@1.0.13';
 import { createModel } from '../app/model.js';
 import { createStore, makeBackup, parseBackup, shouldRemind } from '../app/store.js';
-import { esc, fishView, fmtDuration, holeView, homeView, profileView, soonView } from '../app/views.js';
+import { esc, fishView, fmtDuration, guideView, holeView, homeView, profileView, soonView } from '../app/views.js';
 import { toEtHours } from '../app/engine.js';
 
 const DATA = JSON.parse(await Deno.readTextFile(new URL('../app/data/fish.json', import.meta.url)));
@@ -188,6 +188,8 @@ Deno.test('every view renders for every region, zone, hole and fish', () => {
   homeView({ ...ctx, query: 'goby' });
   homeView({ ...ctx, remind: true });
   for (const fid of Object.keys(DATA.fish)) fishView(ctx, fid, null);
+  guideView(ctx, 'rod');
+  guideView(ctx, 'spear');
 });
 
 Deno.test('hole view: Hopeseed Pond shows mooch, warning and feeds lines', () => {
@@ -350,4 +352,92 @@ Deno.test('regions, zones, holes and fish follow the in-game Fishing Log order',
   assertEquals(eln[0], 'South Bloodshore');
   assertEquals(eln.at(-1), 'North Isle of Endless Summer'); // added in 4.0: last
   assertEquals(m.holeFish('r5').map((x) => DATA.fish[x.fid].name).slice(0, 2), ['Mudcrab', 'Black Eel']);
+});
+
+// ------------------------------------------------------------ fish guide
+
+Deno.test('guide: every log fish once, in log order, grouped by expansion from level', () => {
+  for (const log of ['rod', 'spear']) {
+    const groups = m.guideGroups(log);
+    const flat = groups.flatMap(([, fids]) => fids);
+    assertEquals(flat.length, DATA.meta.stats[log]);
+    assertEquals(new Set(flat).size, flat.length);
+    for (const [exp, fids] of groups) {
+      for (const fid of fids) {
+        const lvl = DATA.fish[fid].lvl;
+        assert(exp === 0 ? lvl <= 50 : lvl > 40 + exp * 10 && lvl <= 50 + exp * 10, `${DATA.fish[fid].name} Lv ${lvl} in exp ${exp}`);
+      }
+      const nos = fids.map((f) => DATA.fish[f].no);
+      assertEquals(nos, [...nos].sort((a, b) => a - b));
+    }
+  }
+  // Ocean fish go by level, not by The Endeavor's ARR tag.
+  const ocean = Object.keys(DATA.fish).find((f) => DATA.fish[f].lvl > 60 && Object.keys(DATA.fish[f].at).every((h) => DATA.holes[h].ocean));
+  assert(ocean && m.guideGroups('rod').find(([, fids]) => fids.includes(ocean))[0] > 0);
+});
+
+Deno.test('every log fish has its log entry text', () => {
+  for (const f of Object.values(DATA.fish)) assert(f.text?.trim(), f.name);
+});
+
+Deno.test('guide: tiles fill in as fish are caught; latest catches come first', () => {
+  const store = createStore(memStorage());
+  const black = byName('Black Ghost'), malm = byName('Malm Kelp');
+  let html = guideView(ctxFor(store), 'rod');
+  assert(!html.includes('Latest catches'));
+  assertStringIncludes(html, `class="tile missing" href="#/fish/${black}?from=guide/rod"`);
+  store.toggleCaught(black, null, T);
+  store.toggleCaught(malm, null, T + 1000);
+  html = guideView(ctxFor(store), 'rod');
+  assertStringIncludes(html, `class="tile" href="#/fish/${black}?from=guide/rod"`);
+  const latest = html.slice(html.indexOf('Latest catches'), html.indexOf('</section>', html.indexOf('Latest catches')));
+  assert(latest.indexOf(malm) < latest.indexOf(black), 'newest first');
+  assertStringIncludes(html, '2 / 1,517');
+});
+
+Deno.test('fish view: log entry and date only once caught', () => {
+  const store = createStore(memStorage());
+  const fid = byName('Black Ghost');
+  let html = fishView(ctxFor(store), fid, 'r5', 'guide/rod');
+  assertStringIncludes(html, 'Catch it to read its log entry.');
+  assert(!html.includes(esc(DATA.fish[fid].text)));
+  assertStringIncludes(html, 'href="#/guide/rod"'); // Back goes to the guide on a deep link
+  store.toggleCaught(fid, 'r5', T);
+  html = fishView(ctxFor(store), fid, 'r5', 'guide/rod');
+  assertStringIncludes(html, esc(DATA.fish[fid].text));
+  assertStringIncludes(html, `Caught ${new Date(T).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`);
+});
+
+Deno.test('store: caughtAt is set on catch, cleared on undo, and survives reload', () => {
+  const storage = memStorage();
+  const s = createStore(storage);
+  s.toggleCaught('4964', 'r5', T);
+  assertEquals(createStore(storage).caughtAt('4964'), T);
+  s.toggleCaught('4964', 'r5');
+  assertEquals(s.caughtAt('4964'), null);
+  // State saved before dates were kept still loads.
+  const old = memStorage();
+  old.setItem('fishlog:v1', JSON.stringify({ v: 1, caught: ['4964'], discovered: [] }));
+  const o = createStore(old);
+  assert(o.isCaught('4964'));
+  assertEquals(o.caughtAt('4964'), null);
+});
+
+Deno.test('backup: catch dates round trip, are optional, and merge keeps the earlier', () => {
+  const s = createStore(memStorage());
+  s.toggleCaught('4964', 'r5', T);
+  const b = parseBackup(JSON.stringify(makeBackup(s.state, T)), DATA);
+  assertEquals(b.caughtAt, { 4964: T });
+  // Older backups have no dates; junk dates and dates for dropped fish are skipped.
+  assertEquals(parseBackup(JSON.stringify({ app: 'fishlog', v: 1, caught: ['4964'], discovered: [] }), DATA).caughtAt, {});
+  const junk = parseBackup(JSON.stringify({ app: 'fishlog', v: 1, caught: ['4964', '4950'], caughtAt: { 4964: 'x', 4950: T, 999999: T }, discovered: [] }), DATA);
+  assertEquals(junk.caughtAt, { 4950: T });
+
+  const t = createStore(memStorage());
+  t.toggleCaught('4964', null, T + 5000);
+  t.toggleCaught('4950', null, T + 5000);
+  t.importBackup({ ...b, caughtAt: { 4964: T, 4950: T + 9000, 4942: T } , caught: ['4964', '4950', '4942'] }, 'merge');
+  assertEquals([t.caughtAt('4964'), t.caughtAt('4950'), t.caughtAt('4942')], [T, T + 5000, T]);
+  t.importBackup(b, 'replace');
+  assertEquals([t.caughtAt('4964'), t.caughtAt('4950')], [T, null]);
 });

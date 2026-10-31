@@ -83,6 +83,7 @@ function screenName(m, hash) {
   if (a === 'hole') return m.data.holes[b]?.name ?? null;
   if (a === 'fish') return m.data.fish[b]?.name ?? null;
   if (a === 'profile') return 'Profile';
+  if (a === 'guide') return 'Fish guide';
   return null;
 }
 
@@ -159,6 +160,9 @@ export function homeView(ctx) {
       <div class="grow stack-xs"><h1>Fish Log</h1><div class="sub">${prof} · ET <span class="num">${fmtEtClock(now)}</span></div>
         <div class="row overall"><span class="num hi">${countText(all)}</span><span class="sub">caught</span>
           <span class="grow">${progress(all, 'thin')}</span></div></div>
+      <a class="iconbtn" href="#/guide/${tab === 'spear' ? 'spear' : 'rod'}" aria-label="Fish guide">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg>
+      </a>
       <a class="iconbtn" href="#/profile" aria-label="Profile and filters">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
       </a>
@@ -579,7 +583,8 @@ export function holeView(ctx, hid) {
 }
 
 // Where a fish screen's Back goes when it was opened from Home or Up soon.
-const FROM = /^(rod|spear|ocean)(\/soon)?$/;
+const FROM = /^(rod|spear|ocean)(\/soon)?$|^guide\/(rod|spear)$/;
+const fromLabel = (from) => (from.startsWith('guide/') ? 'Fish guide' : from.endsWith('/soon') ? 'Up soon' : 'Home');
 
 // Ocean holes get no window status (their weather follows the voyage), so
 // no status there doesn't mean the fish is always up.
@@ -649,17 +654,79 @@ export function fishView(ctx, fid, fromHole, from = null) {
   }).join('');
 
   return `
-    ${FROM.test(from ?? '') ? back(ctx, `#/${from}`, from.endsWith('/soon') ? 'Up soon' : 'Home', holeTab(h)) : back(ctx, `#/hole/${hid}`, h.name, holeTab(h))}
+    ${FROM.test(from ?? '') ? back(ctx, `#/${from}`, fromLabel(from), holeTab(h)) : back(ctx, `#/hole/${hid}`, h.name, holeTab(h))}
     <header class="row">${icon(f.icon, 'icon lg')}
       <div class="grow"><h1>${esc(f.name)}</h1><div class="sub">Lv ${f.lvl}${stars}${rec ? ` · ${esc(rec)}` : ''}${availability(h, st)}</div></div>
     </header>
     <button class="big${caught ? ' done' : ''}" data-act="caught" data-fid="${fid}" data-hid="${discoverHid}" aria-pressed="${caught}">${caught ? 'Caught — tap to undo' : 'Mark caught'}</button>
+    ${caught ? logEntry(store, fid, f) : ''}
     ${banner}
     ${facts.length ? `<section><h2 class="sec">How to catch${holes.length > 1 ? ` · ${esc(h.name)}` : ''}</h2>
       <dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>` : ''}
     ${chain}${windows}
     <section><h2 class="sec">Found at</h2><div class="list">${found}</div>
-      ${holes.some((x) => !store.isDiscovered(x)) ? undiscLegend : ''}</section>`;
+      ${holes.some((x) => !store.isDiscovered(x)) ? undiscLegend : ''}</section>
+    ${caught ? '' : '<section><h2 class="sec">Log entry</h2><p class="note">Catch it to read its log entry.</p></section>'}`;
+}
+
+/** The game's log text for a caught fish, and when you marked it. */
+function logEntry(store, fid, f) {
+  const at = store.caughtAt(fid);
+  const when = at ? `Caught ${fmtDate(at)}` : 'Caught before dates were kept';
+  return `
+    <section><h2 class="sec">Log entry</h2>
+      <div class="card logtext"><p>${esc(f.text)}</p><span class="sub">${when}</span></div></section>`;
+}
+
+/** "31 Oct 2026". */
+const fmtDate = (ms) => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+const GUIDE_LOGS = { rod: 'Rod', spear: 'Spearfishing' };
+const RECENT_SHOWN = 8;
+
+/** One fish in the guide grid: the icon, greyed until caught. */
+function tile(m, store, fid, log) {
+  const f = m.data.fish[fid];
+  const caught = store.isCaught(fid);
+  return `<a class="tile${caught ? '' : ' missing'}" href="#/fish/${fid}?from=guide/${log}" aria-label="${esc(f.name)}${caught ? '' : ' (not caught)'}" title="${esc(f.name)}">${icon(f.icon)}</a>`;
+}
+
+/**
+ * The fish guide: every fish in a log as a grid of icons that fills in as
+ * you catch them, by expansion, with the latest catches first.
+ */
+export function guideView(ctx, log) {
+  const { m, store } = ctx;
+  if (!GUIDE_LOGS[log]) return notFound();
+  const { profile } = store.state;
+  const tab = log === 'spear' ? 'spear' : 'rod';
+  const all = m.countFish(m.logFish(log), store.isCaught, profile);
+  const tabs = Object.entries(GUIDE_LOGS).map(([k, l]) =>
+    `<a role="tab" href="#/guide/${k}" class="tab${k === log ? ' on' : ''}" aria-selected="${k === log}">${l}</a>`).join('');
+
+  const recent = m.logFish(log).filter((fid) => store.caughtAt(fid))
+    .sort((a, b) => store.caughtAt(b) - store.caughtAt(a)).slice(0, RECENT_SHOWN);
+  const recentSec = recent.length ? `
+    <section><h2 class="sec">Latest catches</h2>
+      <div class="grid">${recent.map((fid) => tile(m, store, fid, log)).join('')}</div></section>` : '';
+
+  const groups = m.guideGroups(log).map(([exp, fids]) => {
+    const c = m.countFish(fids, store.isCaught, profile);
+    return `
+      <section><div class="row"><h2 class="sec grow">${esc(m.data.expansions[exp])}</h2>${countNum(c)}</div>
+        ${progress(c, 'thin')}
+        <div class="grid">${fids.map((fid) => tile(m, store, fid, log)).join('')}</div></section>`;
+  }).join('');
+
+  return `
+    ${back(ctx, `#/${tab}`, 'Home', tab)}
+    <header class="stack-s"><h1>Fish guide</h1>
+      <div class="row"><span class="grow">${progress(all)}</span><span class="num hi">${countText(all)}</span></div></header>
+    <nav class="tabs two" role="tablist" aria-label="Log">${tabs}</nav>
+    ${recentSec}
+    ${groups}
+    ${all.reach < all.total ? '<p class="note legend"><span class="num">(N)</span> is the full total, when some fish need more Gathering or a hole above your level.</p>' : ''}
+    <p class="note">In log order. Greyed fish aren't caught yet; tap any fish for how to catch it, or a caught one to read its log entry.</p>`;
 }
 
 export function notFound() {

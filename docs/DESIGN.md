@@ -46,7 +46,7 @@ There's no way to import in-game progress (PS5, no plugins), so all progress is 
 
 The mockup is at https://claude.ai/artifact/528uaT9rVpkYAw5xb5dgAz.
 
-**Back** retraces the path you took: it goes to the previous screen and names it (e.g. a hole opened from a fish's Found at list goes back to that fish, then to the hole you started from). Each history entry keeps the screens before it, so this survives a reload. With no path behind a screen (a deep link, a fresh start), Back goes up instead: a fish to Home or Up soon if opened from there, else to its hole; everything else to Home. Screens below Home also get a Home button at the top right, always, so it's found without looking.
+**Back** retraces the path you took: it goes to the previous screen and names it (e.g. a hole opened from a fish's Found at list goes back to that fish, then to the hole you started from). Each history entry keeps the screens before it, so this survives a reload. With no path behind a screen (a deep link, a fresh start), Back goes up instead: a fish to Home, Up soon or the Fish guide if opened from there, else to its hole; everything else to Home. Screens below Home also get a Home button at the top right, always, so it's found without looking.
 
 Regions, zones, holes and fish all follow the in-game Fishing Log order: FishingSpot.Order for rod holes (zones and regions by their first hole; Elysian Fields has 0 and goes last), SpearfishingNotebook row order for spearfishing, and each hole's own item list for fish.
 
@@ -64,8 +64,14 @@ Regions, zones, holes and fish all follow the in-game Fishing Log order: Fishing
    - **Also caught here** section: community-reported fish (see Data).
    - Spearfishing holes show speed and shadow size instead of bait, tug and hookset.
    - There's no "mark all caught" action.
-3. **Fish detail**: catch facts, numbered mooch-chain steps (for the hole you came from), the next N windows with local times and durations, and every hole the fish is found at.
-4. **Profile and filters**
+3. **Fish detail**: catch facts, numbered mooch-chain steps (for the hole you came from), the next N windows with local times and durations, and every hole the fish is found at. Once caught, the fish's in-game log entry and the date you marked it ("Caught before dates were kept" for older catches) show under the Mark caught button; until then a line at the bottom says to catch it to read it.
+4. **Fish guide** (`#/guide/rod`, `#/guide/spear`; a grid button beside Profile in the Home header, always shown, opening the Spearfishing log from the Spearfishing tab and the Rod log otherwise)
+   - Every fish in the log as a grid of icons that fills in as you catch them. Caught icons are lit; uncaught ones are greyed and dimmed (the icons are opaque item frames, so a silhouette would be a black square). Tapping any icon opens the fish; Back returns to the guide at the same scroll position. Tiles never toggle caught.
+   - Header count and bar for the whole log, Rod / Spearfishing tabs, then "Latest catches" (the last 8 dated catches, newest first), then one section per expansion with its own count and bar.
+   - Order is the log's sheet row order (`FishParameter` / `SpearfishingItem` rows), not verified against the in-game guide, so no "No. N" is shown. Expansion comes from the fish's level (ARR to Lv 50, then 10 levels each), not its zone: every ocean fish sits in The Endeavor, tagged ARR.
+   - Counts use the same caught / in reach (total) format; a fish is in reach if it's caught or catchable at any of its holes.
+   - The live 15-second redraw skips this screen: nothing on it is live, and rebuilding 1,500 tiles under a scrolling finger would drop taps.
+5. **Profile and filters**
    - Fisher level (1–100) and Gathering (0–9,999), each a number field plus ±1 steppers.
    - Expansions unlocked. (Restricted holes above your level are always listed, greyed; the Up soon horizon lives on the Up soon screen.)
    - Export/import progress.
@@ -102,10 +108,10 @@ Nothing comes from the upstream icykoneko repo, except as a test oracle.
 
 | Field | Source |
 |---|---|
-| Rod log membership, record type, description | `FishParameter`: `IsInLog`, `Item`, `FishingRecordType`, `Text` |
+| Rod log membership, record type, log entry, log order | `FishParameter`: `IsInLog`, `Item`, `FishingRecordType`, `Text` (→ `text`), row order (→ `no`) |
 | Fish level and stars | `FishParameter.GatheringItemLevel` → `GatheringItemLevelConvertTable` |
 | Fish name and icon | `Item.Name`, `Item.Icon` |
-| Spearfishing log membership | `SpearfishingItem`: `IsInLog`, `Item` |
+| Spearfishing log membership, log entry, log order | `SpearfishingItem`: `IsInLog`, `Item`, `Description` (→ `text`), row order (→ `no`) |
 | Rod hole | `FishingSpot`: `PlaceName`, `GatheringLevel`, `TerritoryType`, `Item[]`, `X`, `Z`, `Radius`, `FishingSpotCategory` |
 | Spearfishing hole | `SpearfishingNotebook`: `PlaceName`, `GatheringLevel`, `TerritoryType`, `IsShadowNode`, `GatheringPointBase.Item[]` (→ `SpearfishingItem` rows) |
 | Zone, region, expansion | `TerritoryType`: `PlaceName`, `PlaceNameRegion`, `ExVersion` |
@@ -140,7 +146,7 @@ These were verified against the upstream repo's 1,110 hand-curated fish.
 
 ### Build output: `app/data/fish.json`
 
-The file is 392 KB. Real excerpts:
+The file is 858 KB (258 KB gzipped); the log entries (`text`, newlines kept for verses and quotes) are about half of it. Real excerpts:
 
 ```json
 {
@@ -153,7 +159,7 @@ The file is 392 KB. Real excerpts:
                    "fish": [4950, 4958, 4964, 4942, 4939, 4979, 4976, 7934], "extra": []}},
   "weatherRates": {"3": [[3, 5], [7, 15], …]},
   "weathers": {"7": {"name": "Rain", "icon": 60207}},
-  "fish": {"4964": {"name": "Black Ghost", "icon": 29213, "log": "rod", "lvl": 28, "stars": 0, "rec": 3,
+  "fish": {"4964": {"name": "Black Ghost", "icon": 29213, "log": "rod", "lvl": 28, "stars": 0, "rec": 3, "no": 66, "text": "Native to the rivers…",
                     "at": {"r5": {"bait": 4942, "tug": "medium", "hook": "powerful"},
                            "r15": {"bait": 4942, "tug": "medium", "hook": "powerful"}}}},
   "baits": {"2592": {"name": "Midge Basket", "icon": 27002}},
@@ -233,7 +239,7 @@ return s2 % 100
 ### Structure
 
 - Static files under `app/`: `index.html`, `app.js`, `engine.js`, `store.js`, `views/*.js`, `styles.css`, `manifest.webmanifest`, `sw.js`, `data/`, `icons/`.
-- **Routing** is hash-based (`#/rod`, `#/rod/soon`, `#/hole/r5`, `#/fish/4964`), so it works on Pages with no server rewrites.
+- **Routing** is hash-based (`#/rod`, `#/rod/soon`, `#/hole/r5`, `#/fish/4964`, `#/guide/rod`), so it works on Pages with no server rewrites.
 - **Rendering**: views are template functions that build DOM. Data is small enough (~1–2 MB JSON) to load whole at startup.
 - **Look**: dark theme, IBM Plex Sans/Mono, 44px touch targets, as in the mockup.
 
@@ -242,7 +248,7 @@ return s2 % 100
 - localStorage key `fishlog:v1`, holding:
 
   ```json
-  {"v": 1, "caught": [ids], "discovered": [holeIds], "profile": {...}, "last": "r5"}
+  {"v": 1, "caught": [ids], "caughtAt": {id: ms}, "discovered": [holeIds], "profile": {...}, "last": "r5"}
   ```
 
 - Saved on every change.
@@ -254,6 +260,7 @@ return s2 % 100
   - `<input type="file" accept=".json,application/json">` opens the iOS Files picker.
   - The file is validated (version, ID types, unknown IDs dropped with a count), then a summary is shown ("412 caught, 37 holes discovered, exported 28 Oct").
   - The user then picks **Merge** (union, the default) or **Replace**.
+  - `caughtAt` (when each fish was marked caught) is optional, so older backups still import. Merge keeps the earlier date per fish; Replace takes the backup's.
 - **Backup reminder:**
   - Profile always shows "Last export: N days ago" (or "never").
   - Home shows a dismissible banner when ≥14 days have passed and ≥10 new catches have been made since the last export. Thresholds are constants for now.

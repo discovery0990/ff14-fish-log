@@ -58,13 +58,30 @@ export function createModel(data) {
     ].map((x) => ({ ...x, entry: data.fish[x.fid].at[hid] ?? {} }));
   }
 
-  /** Distinct fish across holes, with how many are caught. */
-  function count(hids, isCaught) {
+  /**
+   * Distinct fish across holes: how many are caught, and how many are in
+   * reach for the profile (caught already, or catchable at one of these
+   * holes: not locked there and enough Gathering). Without a profile every
+   * fish is in reach.
+   */
+  function count(hids, isCaught, profile) {
     const all = new Set();
-    for (const hid of hids) for (const { fid } of holeFish(hid)) all.add(fid);
+    const reach = new Set();
+    for (const hid of hids) {
+      const locked = profile && isLocked(hid, profile);
+      for (const { fid, entry } of holeFish(hid)) {
+        all.add(fid);
+        if (!profile || (!locked && !gatheringShort(entry, profile))) reach.add(fid);
+      }
+    }
     let caught = 0;
-    for (const fid of all) if (isCaught(fid)) caught++;
-    return { caught, total: all.size };
+    for (const fid of all) {
+      if (isCaught(fid)) {
+        caught++;
+        reach.add(fid);
+      }
+    }
+    return { caught, total: all.size, reach: reach.size };
   }
 
   /**

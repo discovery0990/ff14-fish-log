@@ -33,7 +33,21 @@ Deno.test('every fish is in exactly one log', () => {
 Deno.test('Central Shroud: 5 holes, 28 distinct fish (27 listed + Copperfish reported at The Vein)', () => {
   const z = zoneByName('Central Shroud');
   assertEquals(m.zoneHolesAll('rod', z).length, 5);
-  assertEquals(m.count(m.zoneHolesAll('rod', z), () => false), { caught: 0, total: 28 });
+  assertEquals(m.count(m.zoneHolesAll('rod', z), () => false), { caught: 0, total: 28, reach: 28 });
+});
+
+Deno.test('a fish needing more Gathering is out of reach, until caught', () => {
+  const matriarch = byName('The Matriarch'); // needs 349 Gathering at Exploratory Ice Hole
+  assertEquals(m.count(['r32'], () => false, profile({ gath: 348 })), { caught: 0, total: 5, reach: 4 });
+  assertEquals(m.count(['r32'], () => false, profile({ gath: 349 })).reach, 5);
+  assertEquals(m.count(['r32'], () => false, profile()).reach, 5);
+  assertEquals(m.count(['r32'], (f) => f === matriarch, profile({ gath: 0 })), { caught: 1, total: 5, reach: 5 });
+});
+
+Deno.test('fish at a locked hole are out of reach', () => {
+  const total = m.count(['r21'], () => false).total; // Lake Tahtotl, restricted Lv 50
+  assertEquals(m.count(['r21'], () => false, profile({ lvl: 49, gath: 9999 })).reach, 0);
+  assertEquals(m.count(['r21'], () => false, profile({ lvl: 50, gath: 9999 })).reach, total);
 });
 
 Deno.test('Black Shroud counts every catchable fish once (82), more than its log share of 62', () => {
@@ -183,7 +197,7 @@ Deno.test('hole view: Hopeseed Pond shows mooch, warning and feeds lines', () =>
   assertStringIncludes(html, 'Midge Basket <span class="arrow" aria-label="then mooch">→</span> Ala Mhigan Fighting Fish');
   assertStringIncludes(html, 'Needs Gathering 345 — you have 340');
   assertStringIncludes(html, 'Mooch bait for Black Ghost');
-  assertStringIncludes(html, '0 / 8');
+  assertStringIncludes(html, '0 / 7<span class="out">+1</span>'); // Gathering 340: one fish out of reach
 });
 
 Deno.test('hole view: also-caught-here section only where there are extras', () => {

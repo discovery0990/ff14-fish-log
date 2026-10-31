@@ -68,8 +68,12 @@ function statusPill(st, now) {
 
 const icon = (id, cls = 'icon') => (id ? `<img class="${cls}" src="icons/${id}.png" alt="" loading="lazy">` : `<span class="${cls}"></span>`);
 
-const progress = ({ caught, total }, cls = '') =>
-  `<div class="bar ${cls}"><div style="width:${total ? Math.round((caught / total) * 100) : 0}%"></div></div>`;
+/** Caught fill, and a darker tail for fish out of reach. */
+const progress = ({ caught, total, reach = total }, cls = '') => {
+  const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
+  const tail = reach < total ? `<div class="out" style="width:${pct(total - reach)}%"></div>` : '';
+  return `<div class="bar ${cls}"><div style="width:${pct(caught)}%"></div>${tail}</div>`;
+};
 
 /** What Back calls the screen at a hash, or null if it isn't one. */
 function screenName(m, hash) {
@@ -133,7 +137,7 @@ function extrasLine(m, e) {
 export function homeView(ctx) {
   const { m, store, tab, now } = ctx;
   const { profile } = store.state;
-  const total = Object.keys(m.data.fish).length;
+  const all = m.count(Object.keys(m.data.holes), store.isCaught, profile);
   const prof = profile.lvl == null
     ? '<a href="#/profile" class="link">Set your level →</a>'
     : `FSH Lv ${profile.lvl}${profile.gath != null ? ` · Gathering ${profile.gath}` : ''}`;
@@ -153,8 +157,8 @@ export function homeView(ctx) {
   const header = `
     <header class="top">
       <div class="grow stack-xs"><h1>Fish Log</h1><div class="sub">${prof} · ET <span class="num">${fmtEtClock(now)}</span></div>
-        <div class="row overall"><span class="num hi">${store.caughtCount().toLocaleString()} / ${total.toLocaleString()}</span><span class="sub">caught</span>
-          <span class="grow">${progress({ caught: store.caughtCount(), total }, 'thin')}</span></div></div>
+        <div class="row overall"><span class="num hi">${countText(all)}</span><span class="sub">caught</span>
+          <span class="grow">${progress(all, 'thin')}</span></div></div>
       <a class="iconbtn" href="#/profile" aria-label="Profile and filters">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
       </a>
@@ -190,27 +194,39 @@ export function homeBody(ctx) {
     const open = ctx.openRegion === r;
     const head = `
       <button class="item region${open ? ' open' : ''}" data-act="region" data-rid="${r}" aria-expanded="${open}">
-        <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span><span class="num${done(c) ? ' done' : ''}">${countText(c)}</span>${chevron}</div>
+        <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span>${countNum(c)}${chevron}</div>
         ${progress(c, 'thin')}
       </button>`;
     return open ? branch(head + zoneRows(ctx, r)) : head;
   };
+  const counts = regions.map((r) => [r, m.count(m.regionHolesAll(tab, r), store.isCaught, profile)]);
   const regionRows = folded(ctx, `regions:${tab}`, 'Completed regions', 'item region',
-    regions.map((r) => [r, m.count(m.regionHolesAll(tab, r), store.isCaught)]), ([, c]) => done(c), row);
+    counts, ([, c]) => done(c), row);
+  const gated = counts.some(([, c]) => c.reach < c.total);
 
-  return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden)}`;
+  return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden, gated)}`;
 }
 
-function regionsBlock(regionRows, hidden) {
+function regionsBlock(regionRows, hidden, gated) {
   return `
     <section><h2 class="sec">Regions</h2>
       <div class="list">${regionRows || '<p class="empty">Nothing matches your filters.</p>'}</div>
+      ${gated ? `<p class="note legend"><span class="num">+N</span> fish need more Gathering, or a hole above your level.</p>` : ''}
       ${hidden ? `<p class="note">${hidden} region${hidden > 1 ? 's' : ''} hidden by your level and expansion filters.</p>` : ''}
     </section>`;
 }
 
-const countText = ({ caught, total }) => `${caught} / ${total}`;
+/**
+ * Caught out of the fish in reach, then a muted +N for the ones beyond your
+ * Gathering or level, so the full total is still there.
+ */
+const countText = ({ caught, total, reach = total }) =>
+  `${caught.toLocaleString()} / ${reach.toLocaleString()}${reach < total ? `<span class="out">+${(total - reach).toLocaleString()}</span>` : ''}`;
+/** Every fish caught: the row folds away. */
 const done = ({ caught, total }) => total > 0 && caught === total;
+/** Everything in reach caught (maybe all): the count turns teal. */
+const doneInReach = ({ caught, total, reach = total }) => reach > 0 && caught === reach;
+const countNum = (c) => `<span class="num${doneInReach(c) ? ' done' : ''}">${countText(c)}</span>`;
 
 /**
  * Rows with the completed ones folded under a "Completed (N)" row, which
@@ -237,7 +253,7 @@ const branch = (html) => `<div class="branch">${html}</div>`;
 function zoneRows(ctx, rid) {
   const { m, store, tab } = ctx;
   const { profile } = store.state;
-  const zones = m.visibleZones(tab, rid, profile).map((z) => [z, m.count(m.zoneHolesAll(tab, z), store.isCaught)]);
+  const zones = m.visibleZones(tab, rid, profile).map((z) => [z, m.count(m.zoneHolesAll(tab, z), store.isCaught, profile)]);
   return folded(ctx, `zones:${tab}:${rid}`, 'Completed zones', 'item zone', zones, ([, c]) => done(c), ([z, c]) => {
     const vis = m.visibleHoles(tab, z, profile);
     const lv = vis.map((h) => m.data.holes[h].lvl);
@@ -249,7 +265,7 @@ function zoneRows(ctx, rid) {
     const expanded = ctx.openZone === z;
     const head = `
       <button class="item zone region${expanded ? ' open' : ''}" data-act="zone" data-zid="${z}" aria-expanded="${expanded}">
-        <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span><span class="num${done(c) ? ' done' : ''}">${countText(c)}</span>${chevron}</div>
+        <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span>${countNum(c)}${chevron}</div>
         <div class="row"><span class="sub grow">${plural(vis.length, 'hole')}${undisc ? ` · <span class="undisc-name">${undisc} new</span>` : ''}${locked ? ` · ${locked} locked` : ''} · ${lvText}</span>${open ? `<span class="tag open">${open} open now</span>` : ''}</div>
       </button>`;
     return expanded ? branch(head + holeRows(ctx, z)) : head;
@@ -263,7 +279,7 @@ function zoneRows(ctx, rid) {
 function holeRows(ctx, zid) {
   const { m, store, tab, now } = ctx;
   const { profile } = store.state;
-  const holes = m.visibleHoles(tab, zid, profile).map((hid) => [hid, m.count([hid], store.isCaught)]);
+  const holes = m.visibleHoles(tab, zid, profile).map((hid) => [hid, m.count([hid], store.isCaught, profile)]);
   return folded(ctx, `holes:${tab}:${zid}`, 'Completed holes', 'item hole', holes, ([, hc]) => done(hc), ([hid, hc]) => {
     const h = m.data.holes[hid];
     const grey = m.holeVisibility(hid, profile) === 'grey';
@@ -283,7 +299,7 @@ function holeRows(ctx, zid) {
     }
     return `
       <a class="item hole${grey ? ' grey' : ''}" href="#/hole/${hid}">
-        <div class="row"><span class="title grow">${holeName(m, store, hid)}<span class="lv">Lv ${h.lvl}</span></span><span class="num${done(hc) ? ' done' : ''}">${countText(hc)}</span></div>
+        <div class="row"><span class="title grow">${holeName(m, store, hid)}<span class="lv">Lv ${h.lvl}</span></span>${countNum(hc)}</div>
         ${tags.length ? `<div class="tags">${tags.join('')}</div>` : ''}
       </a>`;
   });
@@ -416,7 +432,7 @@ function searchResults(ctx) {
     if (r.type === 'hole') {
       const h = m.data.holes[r.id];
       return `<a class="item row" href="#/hole/${r.id}"><span class="grow"><span class="title">${holeName(m, store, r.id)}</span>
-        <span class="sub">Hole · ${esc(m.data.zones[h.zone].name)} · Lv ${h.lvl} · ${xyText(h)} · ${countText(m.count([r.id], store.isCaught))}${hiddenTag(hiddenWhy(m, r.id, profile))}</span></span>${chevron}</a>`;
+        <span class="sub">Hole · ${esc(m.data.zones[h.zone].name)} · Lv ${h.lvl} · ${xyText(h)} · ${countText(m.count([r.id], store.isCaught, profile))}${hiddenTag(hiddenWhy(m, r.id, profile))}</span></span>${chevron}</a>`;
     }
     const z = m.data.zones[r.id];
     return `<a class="item row" href="#/${r.tab}/zone/${r.id}"><span class="grow"><span class="title">${esc(z.name)}</span>
@@ -530,7 +546,7 @@ export function holeView(ctx, hid) {
       <div class="row"><span class="title grow">Caught (${caughtRows.length})</span>${chevron}</div></button>
     ${ctx.showCaught ? `<div class="fishes">${caughtRows.map(row).join('')}</div>` : ''}` : '';
   const extras = rows.filter((r) => r.extra);
-  const c = m.count([hid], store.isCaught);
+  const c = m.count([hid], store.isCaught, profile);
 
   // Region › Zone, each opening that row on Home (unless filters hide it there).
   const rid = String(zone.region);

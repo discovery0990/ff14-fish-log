@@ -113,9 +113,12 @@ section { display: flex; flex-direction: column; gap: 10px; }
 .back svg, .chev { width: 20px; height: 20px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; flex: none; }
 
 /* Progress */
-.bar { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.bar { display: flex; height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
 .bar.thin { height: 4px; border-radius: 2px; }
 .bar > div { height: 100%; background: var(--accent); }
+/* Fish out of reach (Gathering or level): a darker tail at the end. */
+.bar > .out { margin-left: auto; background: var(--bg); }
+.num .out { margin-left: 4px; color: var(--muted); }
 
 /* Tabs and chips */
 .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: var(--surface); border-radius: 12px; }

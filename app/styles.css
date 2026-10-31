@@ -269,6 +269,8 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .switch.on { background: var(--accent); justify-content: flex-end; }
 .switch span { width: 22px; height: 22px; border-radius: 11px; background: var(--text); }
 button.chip { background: none; }
+/* A setting that's off: its options stay visible and tappable, just quieter. */
+.dimmed { opacity: .55; }
 button.chip.on { background: var(--accent-bg); }
 
 /* Update toast */

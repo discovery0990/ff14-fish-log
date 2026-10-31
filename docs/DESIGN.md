@@ -69,7 +69,7 @@ Regions, zones, holes and fish all follow the in-game Fishing Log order: Fishing
    - Every fish in the log as a grid that fills in as you catch them, grouped by expansion. Each expansion is a row with its count and bar that expands in place, one open at a time (like regions on Home), all closed at first; the open one stays open for the session, so Back from a fish returns to it at the same scroll position, and its header sticks while its grid scrolls.
    - Caught fish show their icon and open the fish. Uncaught fish are anonymous tiles with a soft glow, teal, or pink for folklore fish, as the game's guide colours them (checked in game: the first pink is #409, Spring Urchin, the first folklore fish). They aren't links and don't name the fish (open it from search or a hole instead). The tiles are plain CSS, no image.
    - Expansion and order come from the game's guide key (`FishParameter.Unknown1`, `SpearfishingItem.Unknown2`: thousands = expansion + 2, ocean fish numbered one by one after their expansion's main fish), not level: ocean fish (mostly Lv 1-50) go under their route's expansion, and a few low-level fish under later ones (Castaway Chocobo Chick is Stormblood). Within an open expansion, ocean fish are set apart under "Ocean fishing". The game's own guide is a flat 5×5 paged grid; matching its layout isn't a goal.
-   - Folklore fish need a folklore tome to be caught at all (`FishParameter.GatheringSubCategory` → its Item, the tome): 296 rod fish, 12 tomes, no spearfishing fish. The fish screen lists the tome under How to catch, and the hole screen notes "Needs the X folklore tome" on uncaught ones. Not yet: ticking off owned tomes in Profile so the rest drop out of Up soon and reach counts, like Gathering.
+   - Folklore fish need a folklore tome to be caught at all (`FishParameter.GatheringSubCategory` → its Item, the tome): 296 rod fish, 12 tomes, no spearfishing fish. The fish screen lists the tome under How to catch, and the hole screen notes "Needs the X folklore tome" on uncaught ones. With tomes tracked (Profile), a missing tome turns the note into a warning, and the fish is out of reach like a Gathering shortfall; owned tomes need no note.
    - Big fish: green item rarity on non-ocean holes (consolegameswiki "Big Fishing": "all green-rarity overworld fish are considered big fish"; green ocean fish are ocean fishing's own specials). 335 at 7.57; legendaries are among them. Shown as "Big fish" on the fish screen's sub-line.
    - The fish screen's sub-line starts with the fish's guide number ("No. 409"), counted per log, for checking against the game.
    - Header count and bar for the whole log, Rod / Spearfishing tabs, then "Latest catches" (the last 8 dated catches, newest first), then the expansions. Counts use the same caught / in reach (total) format; a fish is in reach if it's caught or catchable at any of its holes.
@@ -77,6 +77,7 @@ Regions, zones, holes and fish all follow the in-game Fishing Log order: Fishing
 5. **Profile and filters**
    - Fisher level (1–100) and Gathering (0–9,999), each a number field plus ±1 steppers.
    - Expansions unlocked. (Restricted holes above your level are always listed, greyed; the Up soon horizon lives on the Up soon screen.)
+   - Folklore tomes: a "Track folklore tomes" switch and a chip per tome (12, grouped by expansion, always shown). Tapping a chip turns tracking on. Off (`tomes: null`), nothing is filtered.
    - Export/import progress.
 
 ### Filtering rules
@@ -88,6 +89,7 @@ Regions, zones, holes and fish all follow the in-game Fishing Log order: Fishing
 - Zone expansion not unlocked → the zone is hidden. Ocean holes ignore this filter: they all sit in The Endeavor, which the game tags ARR even for the Stormblood and Endwalker routes, so the Ocean tab always lists every route.
 - Zone expansions come from `TerritoryType.ExVersion`, which tags every housing district ARR. `data/overrides.json` `zoneExp` corrects Shirogane to Stormblood.
 - Fish needs more Gathering than the profile → the fish is shown at the hole with a warning, and left out of Up soon.
+- Tomes tracked and the fish's folklore tome not ticked → the same as a Gathering shortfall: shown at the hole with a warning ("Needs the X folklore tome — not in your Profile"), out of reach in counts, left out of Up soon, "open now" and the open highlight. Caught fish are always in reach.
 - Progress totals always count all fish, whatever the filters.
 
 ### Discovery

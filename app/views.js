@@ -214,11 +214,13 @@ export function homeBody(ctx) {
   return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden, gated)}`;
 }
 
+const REACH_LEGEND = '<span class="num">(N)</span> is the full total, when some fish need more Gathering, a folklore tome you don\'t have, or a hole above your level.';
+
 function regionsBlock(regionRows, hidden, gated) {
   return `
     <section><h2 class="sec">Regions</h2>
       <div class="list">${regionRows || '<p class="empty">Nothing matches your filters.</p>'}</div>
-      ${gated ? `<p class="note legend"><span class="num">(N)</span> is the full total, when some fish need more Gathering or a hole above your level.</p>` : ''}
+      ${gated ? `<p class="note legend">${REACH_LEGEND}</p>` : ''}
       ${hidden ? `<p class="note">${hidden} region${hidden > 1 ? 's' : ''} hidden by your level and expansion filters.</p>` : ''}
     </section>`;
 }
@@ -294,7 +296,7 @@ function holeRows(ctx, zid) {
       tags.push(`<span class="tag">Locked until Lv ${h.lvl}</span>`);
     } else {
       const open = m.holeFish(hid)
-        .filter(({ fid, entry }) => !store.isCaught(fid) && !m.gatheringShort(entry, profile))
+        .filter(({ fid, entry }) => !store.isCaught(fid) && !m.blocked(fid, entry, profile))
         .map(({ fid }) => [fid, m.status(fid, hid, now)])
         .filter(([, st]) => st?.state === 'open');
       for (const [fid, st] of open.slice(0, 2)) {
@@ -321,7 +323,7 @@ function openCount(ctx, hids) {
   for (const hid of hids) {
     if (m.isLocked(hid, profile)) continue;
     for (const { fid, entry } of m.holeFish(hid)) {
-      if (store.isCaught(fid) || m.gatheringShort(entry, profile)) continue;
+      if (store.isCaught(fid) || m.blocked(fid, entry, profile)) continue;
       if (m.status(fid, hid, now)?.state === 'open') n++;
     }
   }
@@ -491,6 +493,7 @@ export function profileView(ctx) {
       <p class="note">Most holes can be fished at any level. A few (restricted holes) are locked until you reach their level: they're not on your map and you can't cast there, so the app greys them out until then. Fish needing more Gathering than you have are flagged at the hole and left out of Up soon. Leave blank to turn off.</p>
     </section>
     <section><h2 class="sec">Expansions unlocked</h2><div class="chips">${exps}</div></section>
+    ${tomesSection(m, p)}
     <section><h2 class="sec">Backup</h2>
       ${ctx.flash ? `<p class="note hi">${esc(ctx.flash)}</p>` : ''}
       ${importPanel}
@@ -505,6 +508,43 @@ export function profileView(ctx) {
       FINAL FANTASY XIV © SQUARE ENIX CO., LTD. All rights reserved. Game data and icons via XIVAPI;
       catch conditions from FFXIV Teamcraft. Fish Log is an unofficial fan project, not affiliated with
       or endorsed by Square Enix. Fonts: IBM Plex (SIL OFL 1.1).</p>`;
+}
+
+/**
+ * Folklore tomes owned: a switch to track them, and a chip per tome by
+ * expansion. Tapping a chip turns tracking on. Off, nothing is filtered.
+ */
+function tomesSection(m, p) {
+  const tracking = Array.isArray(p.tomes);
+  const byExp = new Map();
+  for (const f of Object.values(m.data.fish)) {
+    if (f.folk && !byExp.has(f.folk)) byExp.set(f.folk, f.exp);
+  }
+  const ids = Object.keys(m.data.tomes).map(Number).sort((a, b) => (byExp.get(a) - byExp.get(b)) || a - b);
+  const groups = new Map();
+  for (const id of ids) {
+    const exp = byExp.get(id);
+    if (!groups.has(exp)) groups.set(exp, []);
+    groups.get(exp).push(id);
+  }
+  const chips = [...groups].map(([exp, tids]) => `
+    <div class="stack-xs"><span class="sub">${esc(m.data.expansions[exp])}</span><div class="chips">${tids.map((id) => {
+      const on = tracking && p.tomes.includes(id);
+      const name = m.data.tomes[id].replace(/^Tome of Ichthyological Folklore - /, '');
+      return `<button class="chip${on ? ' on' : ''}" data-act="tome" data-tome="${id}" aria-pressed="${on}">${esc(name)}</button>`;
+    }).join('')}</div></div>`).join('');
+  const owned = tracking ? p.tomes.length : 0;
+  return `
+    <section><h2 class="sec">Folklore tomes</h2>
+      <div class="list">
+        <button class="item row switch-row" data-act="tomes-track" role="switch" aria-checked="${tracking}">
+          <span class="grow">Track folklore tomes${tracking ? ` <span class="dim">· ${owned} of ${ids.length}</span>` : ''}</span><span class="switch${tracking ? ' on' : ''}" aria-hidden="true"><span></span></span>
+        </button></div>
+      <div class="stack-s${tracking ? '' : ' dimmed'}">${chips}</div>
+      <p class="note">Folklore fish can't be caught without their tome. ${tracking
+        ? 'Fish needing a tome you haven\'t ticked are flagged at the hole and left out of Up soon and the in-reach counts.'
+        : 'Turn this on, or tap a tome, to leave fish you can\'t catch yet out of Up soon and the in-reach counts.'}</p>
+    </section>`;
 }
 
 export function holeView(ctx, hid) {
@@ -526,13 +566,18 @@ export function holeView(ctx, hid) {
     const f = m.data.fish[r.fid];
     const e = r.entry;
     // Out of Gathering reach: still listed with its window, but not lit up as open.
-    const open = r.st?.state === 'open' && !r.caught && !m.gatheringShort(e, profile);
+    const open = r.st?.state === 'open' && !r.caught && !m.blocked(r.fid, e, profile);
     const cond = r.st && !r.caught
       ? `<span class="cond"><span class="hi">${esc(condText(m, e))}</span> ${statusPill(r.st, now)}</span>` : '';
     const warn = !r.caught && m.gatheringShort(e, profile)
       ? `<span class="warn">Needs Gathering ${e.minG} — you have ${profile.gath}</span>` : '';
     const feeds = targets[r.fid] ? `<span class="feeds">Mooch bait for ${targets[r.fid].map(esc).join(', ')}</span>` : '';
-    const folk = f.folk && !r.caught ? `<span class="folk">Needs the ${esc(tomeShort(m, f))} folklore tome</span>` : '';
+    // Folklore: a warning when tracked tomes lack it, a plain note when tomes
+    // aren't tracked, nothing once you have it.
+    const folk = !f.folk || r.caught || (profile.tomes && !m.tomeMissing(r.fid, profile)) ? ''
+      : m.tomeMissing(r.fid, profile)
+        ? `<span class="warn">Needs the ${esc(tomeShort(m, f))} folklore tome — not in your Profile</span>`
+        : `<span class="folk">Needs the ${esc(tomeShort(m, f))} folklore tome</span>`;
     return `
       <div class="fish${r.caught ? ' caught' : ''}${open ? ' open' : ''}">
         <button class="check" data-act="caught" data-fid="${r.fid}" data-hid="${hid}" aria-pressed="${r.caught}"
@@ -622,7 +667,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
   if (e.spawn != null) facts.push(['Time', `ET ${etHM(e.spawn)}–${etHM(e.spawn + e.dur)}`]);
   if (e.pred?.length) facts.push(['Catch first', e.pred.map(([id, n]) => `${n}× ${m.fishName(id)}`).join(', ')]);
   if (e.snag) facts.push(['Snagging', 'Required']);
-  if (f.folk) facts.push(['Folklore', m.data.tomes[f.folk]]);
+  if (f.folk) facts.push(['Folklore', m.data.tomes[f.folk] + (m.tomeMissing(fid, store.state.profile) ? ' (not in your Profile)' : '')]);
 
   let chain = '';
   if (f.log === 'rod' && m.isMooch(e)) {
@@ -759,7 +804,7 @@ export function guideView(ctx, log) {
     <nav class="tabs two" role="tablist" aria-label="Log">${tabs}</nav>
     ${recentSec}
     <section><h2 class="sec">By expansion</h2><div class="list">${rows}</div>
-      ${all.reach < all.total ? '<p class="note legend"><span class="num">(N)</span> is the full total, when some fish need more Gathering or a hole above your level.</p>' : ''}
+      ${all.reach < all.total ? `<p class="note legend">${REACH_LEGEND}</p>` : ''}
       <p class="note legend"><span class="tile mystery inline" aria-hidden="true"></span> not caught yet · <span class="tile mystery folk inline" aria-hidden="true"></span> folklore fish (needs a tome) not caught yet. Tap a caught fish to read its log entry.</p></section>`;
 }
 

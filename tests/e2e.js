@@ -339,6 +339,16 @@ try {
   await js(`document.querySelector('a[href="#/guide/spear"]').click()`);
   await waitFor(() => js(`location.hash === '#/guide/spear'`), 'spear guide');
   check(await js(`document.querySelectorAll('[data-act=guide-exp]').length`) === 4, 'spearfishing guide lists its 4 expansions');
+
+  // --- Folklore tomes: tapping a tome turns tracking on; the switch turns it off
+  await go('#/profile');
+  check((await stored()).profile.tomes == null, 'tomes start untracked');
+  await js(`document.querySelector('[data-act=tome][data-tome="12701"]').click()`);
+  check(JSON.stringify((await stored()).profile.tomes) === '[12701]', 'tapping a tome tracks tomes with it ticked');
+  check(await js(`document.querySelector('[data-act=tomes-track]').getAttribute('aria-checked')`) === 'true', 'the switch shows tracking on');
+  await shot('profile-tomes');
+  await js(`document.querySelector('[data-act=tomes-track]').click()`);
+  check((await stored()).profile.tomes === null, 'the switch turns tracking off');
 } catch (err) {
   failures++;
   console.log(`FAIL ${err.message}`);

@@ -71,7 +71,7 @@ export function createModel(data, sprites = null) {
       const locked = profile && isLocked(hid, profile);
       for (const { fid, entry } of holeFish(hid)) {
         all.add(fid);
-        if (!profile || (!locked && !gatheringShort(entry, profile))) reach.add(fid);
+        if (!profile || (!locked && !blocked(fid, entry, profile))) reach.add(fid);
       }
     }
     let caught = 0;
@@ -95,7 +95,7 @@ export function createModel(data, sprites = null) {
         caught++;
         reach++;
       } else if (!profile || (fishHoles[fid] ?? []).some((hid) =>
-        !isLocked(hid, profile) && !gatheringShort(data.fish[fid].at[hid] ?? {}, profile))) {
+        !isLocked(hid, profile) && !blocked(fid, data.fish[fid].at[hid] ?? {}, profile))) {
         reach++;
       }
     }
@@ -230,6 +230,16 @@ export function createModel(data, sprites = null) {
   /** Current weather id at a hole (null for ocean holes). */
   const weatherNow = (hid, now) => (data.holes[hid].ocean ? null : weatherOf(hid)(periodOf(now)));
 
+  /**
+   * A folklore fish whose tome the profile doesn't list. Only when tomes are
+   * tracked (profile.tomes is a list); null means not tracked.
+   */
+  const tomeMissing = (fid, profile) =>
+    Array.isArray(profile?.tomes) && data.fish[fid]?.folk != null && !profile.tomes.includes(data.fish[fid].folk);
+
+  /** Can't be caught yet with this profile: Gathering short or tome missing. */
+  const blocked = (fid, entry, profile) => gatheringShort(entry, profile) || tomeMissing(fid, profile);
+
   const gatheringShort = (entry, profile) =>
     profile.gath != null && entry.minG != null && entry.minG > profile.gath;
 
@@ -252,7 +262,7 @@ export function createModel(data, sprites = null) {
     const best = new Map();
     for (const [fid, hid] of windowed[tab] ?? []) {
       if (isCaught(fid) || holeVisibility(hid, profile) !== 'show' || !holeOk(hid)) continue;
-      if (gatheringShort(data.fish[fid].at[hid], profile)) continue;
+      if (blocked(fid, data.fish[fid].at[hid], profile)) continue;
       const st = status(fid, hid, now);
       if (!st || st.state === 'rare') continue;
       if (st.state === 'upcoming' && st.start - now > horizonMs) continue;
@@ -290,6 +300,6 @@ export function createModel(data, sprites = null) {
     upSoon, search, isLocked, expOff, countFish, isOceanFish, sprite: (icon) => spriteAt.get(icon) ?? null, guideGroups, logFish: (log) => logFish[log] ?? [],
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
-    isMooch, moochChain, moochTargets, status, windows, weatherNow, gatheringShort,
+    isMooch, moochChain, moochTargets, status, windows, weatherNow, gatheringShort, tomeMissing, blocked,
   };
 }

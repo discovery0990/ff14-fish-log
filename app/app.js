@@ -272,6 +272,16 @@ root.addEventListener('click', (ev) => {
       store.setProfile({ exp: next.length === all.length ? null : next });
       break;
     }
+    case 'tomes-track':
+      store.setProfile({ tomes: Array.isArray(store.state.profile.tomes) ? null : [] });
+      break;
+    case 'tome': {
+      // Tapping a tome also turns tracking on.
+      const id = Number(d.tome);
+      const cur = store.state.profile.tomes ?? [];
+      store.setProfile({ tomes: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id].sort((x, y) => x - y) });
+      break;
+    }
     case 'fold':
       if (!ui.folds.delete(d.key)) ui.folds.add(d.key);
       renderPinned(el, `[data-act=fold][data-key="${d.key}"]`);

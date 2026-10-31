@@ -11,6 +11,7 @@ export const defaultState = () => ({
     lvl: null,         // fisher level; null = not set (no level filtering)
     gath: null,        // Gathering; null = not set (no warnings)
     exp: null,         // unlocked expansion ids; null = all
+    tomes: null,       // folklore tome item ids owned; null = not tracked (no filtering)
   },
   upSoonHours: 2,      // "Up soon" horizon
   upSoonHoles: 'all',  // "Up soon" holes: all | disc | undisc
@@ -68,6 +69,7 @@ export function parseBackup(text, data) {
   const profile = p && {
     lvl: num(p.lvl, 1, 100), gath: num(p.gath, 0, 9999),
     exp: Array.isArray(p.exp) ? p.exp.filter((e) => Number.isInteger(e)) : null,
+    tomes: Array.isArray(p.tomes) ? p.tomes.filter((t) => Number.isInteger(t) && data.tomes?.[t]) : null,
   };
   // Optional (older backups have no dates): keep valid times for kept fish.
   const caughtAt = {};

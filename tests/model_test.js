@@ -271,13 +271,13 @@ Deno.test('up soon: within horizon, open first, uncaught, eligible, one per fish
 Deno.test('backup round trip and validation', () => {
   const s = createStore(memStorage());
   s.toggleCaught('4964', 'r5');
-  s.setProfile({ lvl: 40, gath: 340, exp: [0, 1] });
+  s.setProfile({ lvl: 40, gath: 340, exp: [0, 1], tomes: [12701, 99999] });
   const text = JSON.stringify(makeBackup(s.state, T));
   const b = parseBackup(text, DATA);
   assert(b.ok);
   assertEquals(b.caught, ['4964']);
   assertEquals(b.discovered, ['r5']);
-  assertEquals(b.profile, { lvl: 40, gath: 340, exp: [0, 1] });
+  assertEquals(b.profile, { lvl: 40, gath: 340, exp: [0, 1], tomes: [12701] }); // unknown tome ids dropped
   assertEquals(b.exportedAt, T);
 
   assertEquals(parseBackup('nope', DATA).ok, false);
@@ -504,4 +504,43 @@ Deno.test('guide sheets match fish.json (rerun tools/build_sprites.py if not)', 
   assertStringIncludes(html, 'icons/guide/rod-0.');
   // Without sheets, the guide falls back to separate icons.
   assertStringIncludes(guideView({ ...ctx, m: createModel(DATA) }, 'rod'), '<img');
+});
+
+Deno.test('tomes: untracked filters nothing; tracked leaves out fish whose tome is missing', () => {
+  const fid = byName('Spring Urchin'); // Coerthas tome (12701)
+  const hid = Object.keys(DATA.fish[fid].at)[0];
+  const off = profile();
+  const none = profile({ tomes: [] });
+  const has = profile({ tomes: [12701] });
+  assert(!m.tomeMissing(fid, off) && m.tomeMissing(fid, none) && !m.tomeMissing(fid, has));
+  assert(!m.tomeMissing(byName('Mudcrab'), none), 'non-folklore fish never need a tome');
+  // In-reach counts.
+  const reach = (p) => m.count([hid], () => false, p).reach;
+  assert(reach(none) < reach(off));
+  assertEquals(reach(has), reach(off));
+  assertEquals(m.countFish([fid], () => false, none).reach, 0);
+  assertEquals(m.countFish([fid], (f) => f === fid, none).reach, 1, 'caught fish are always in reach');
+  // Up soon leaves out missing-tome fish.
+  const folkWindowed = Object.entries(DATA.fish).find(([f, x]) => x.folk && x.log === 'rod' && Object.keys(x.at).some((h) => m.status(f, h, T)));
+  assert(folkWindowed, 'some folklore fish has a window');
+  const [wf] = folkWindowed;
+  const soon = (p) => m.upSoon('rod', { now: T, horizonMs: 30 * 864e5, isCaught: () => false, profile: p }).some((x) => x.fid === wf);
+  assert(soon(off) && !soon(none) && soon(profile({ tomes: [DATA.fish[wf].folk] })));
+});
+
+Deno.test('tomes: hole row warns only when tracked and missing; Profile lists 12 tomes by expansion', () => {
+  const store = createStore(memStorage());
+  const fid = byName('Spring Urchin');
+  const hid = Object.keys(DATA.fish[fid].at)[0];
+  assert(!holeView(ctxFor(store), hid).includes('not in your Profile'));
+  assertStringIncludes(holeView(ctxFor(store), hid), '<span class="folk">Needs the Coerthas folklore tome</span>');
+  store.setProfile({ tomes: [] });
+  assertStringIncludes(holeView(ctxFor(store), hid), 'Needs the Coerthas folklore tome — not in your Profile');
+  assertStringIncludes(fishView(ctxFor(store), fid, hid), 'Coerthas (not in your Profile)');
+  store.setProfile({ tomes: [12701] });
+  assert(!holeView(ctxFor(store), hid).includes('Needs the Coerthas folklore tome'), 'no note once you have it');
+  const prof = profileView(ctxFor(store));
+  assertEquals(prof.split('data-act="tome"').length - 1, 12);
+  assertStringIncludes(prof, 'aria-pressed="true">Coerthas</button>');
+  assert(prof.indexOf('>Coerthas<') < prof.indexOf('>Othard<') && prof.indexOf('>Othard<') < prof.indexOf('>Alexandria<'), 'by expansion');
 });

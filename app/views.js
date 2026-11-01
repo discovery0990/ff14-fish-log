@@ -227,7 +227,8 @@ function regionsBlock(regionRows, hidden, gated) {
 
 /**
  * Caught out of the fish in reach, then the full total, muted, when some
- * are beyond your Gathering or level.
+ * are beyond your Gathering or level (or, on zone and hole rows, waiting
+ * on a window).
  */
 const countText = ({ caught, total, reach = total }) =>
   `${caught.toLocaleString()} / ${reach.toLocaleString()}${reach < total ? `<span class="out">(${total.toLocaleString()})</span>` : ''}`;
@@ -258,9 +259,10 @@ const branch = (html) => `<div class="branch">${html}</div>`;
 
 /** A region's zones, shown under it on Home when it's expanded. */
 function zoneRows(ctx, rid) {
-  const { m, store, tab } = ctx;
+  const { m, store, tab, now } = ctx;
   const { profile } = store.state;
-  const zones = m.visibleZones(tab, rid, profile).map((z) => [z, m.count(m.zoneHolesAll(tab, z), store.isCaught, profile)]);
+  // Zone and hole rows count what's catchable now: fish waiting on a window drop out.
+  const zones = m.visibleZones(tab, rid, profile).map((z) => [z, m.count(m.zoneHolesAll(tab, z), store.isCaught, profile, now)]);
   return folded(ctx, `zones:${tab}:${rid}`, 'Completed zones', 'item zone', zones, ([, c]) => done(c), ([z, c]) => {
     const vis = m.visibleHoles(tab, z, profile);
     const lv = vis.map((h) => m.data.holes[h].lvl);
@@ -286,7 +288,7 @@ function zoneRows(ctx, rid) {
 function holeRows(ctx, zid) {
   const { m, store, tab, now } = ctx;
   const { profile } = store.state;
-  const holes = m.visibleHoles(tab, zid, profile).map((hid) => [hid, m.count([hid], store.isCaught, profile)]);
+  const holes = m.visibleHoles(tab, zid, profile).map((hid) => [hid, m.count([hid], store.isCaught, profile, now)]);
   return folded(ctx, `holes:${tab}:${zid}`, 'Completed holes', 'item hole', holes, ([, hc]) => done(hc), ([hid, hc]) => {
     const h = m.data.holes[hid];
     const grey = m.holeVisibility(hid, profile) === 'grey';

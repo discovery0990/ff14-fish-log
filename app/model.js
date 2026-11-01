@@ -62,16 +62,19 @@ export function createModel(data, sprites = null) {
    * Distinct fish across holes: how many are caught, and how many are in
    * reach for the profile (caught already, or catchable at one of these
    * holes: not locked there and enough Gathering). Without a profile every
-   * fish is in reach.
+   * fish is in reach. Given `now`, an uncaught fish is in reach only where it
+   * can be caught right now: no window, or its window is open.
    */
-  function count(hids, isCaught, profile) {
+  function count(hids, isCaught, profile, now) {
     const all = new Set();
     const reach = new Set();
     for (const hid of hids) {
       const locked = profile && isLocked(hid, profile);
       for (const { fid, entry } of holeFish(hid)) {
         all.add(fid);
-        if (!profile || (!locked && !blocked(fid, entry, profile))) reach.add(fid);
+        if (profile && (locked || blocked(fid, entry, profile))) continue;
+        if (now != null && (status(fid, hid, now)?.state ?? 'open') !== 'open') continue;
+        reach.add(fid);
       }
     }
     let caught = 0;

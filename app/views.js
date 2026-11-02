@@ -191,7 +191,7 @@ export function homeView(ctx) {
  * search input is never replaced (iOS closes the keyboard if it is).
  */
 export function homeBody(ctx) {
-  const { m, store, tab } = ctx;
+  const { m, store, tab, now } = ctx;
   const { profile } = store.state;
   if (ctx.query.trim()) return searchResults(ctx);
   const regions = m.visibleRegions(tab, profile);
@@ -206,7 +206,8 @@ export function homeBody(ctx) {
       </button>`;
     return open ? branch(head + zoneRows(ctx, r)) : head;
   };
-  const counts = regions.map((r) => [r, m.count(m.regionHolesAll(tab, r), store.isCaught, profile)]);
+  // Like zone and hole rows, regions count what's catchable now.
+  const counts = regions.map((r) => [r, m.count(m.regionHolesAll(tab, r), store.isCaught, profile, now)]);
   const regionRows = folded(ctx, `regions:${tab}`, 'Completed regions', 'item region',
     counts, ([, c]) => done(c), row);
   const gated = counts.some(([, c]) => c.reach < c.total);
@@ -214,7 +215,7 @@ export function homeBody(ctx) {
   return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden, gated)}`;
 }
 
-const REACH_LEGEND = '<span class="num">(N)</span> is the full total, when some fish need more Gathering, a folklore tome you don\'t have, or a hole above your level.';
+const REACH_LEGEND = '<span class="num">(N)</span> is the full total, when some fish are waiting on a time or weather window, need more Gathering, a folklore tome you don\'t have, or a hole above your level.';
 
 function regionsBlock(regionRows, hidden, gated) {
   return `
@@ -227,8 +228,8 @@ function regionsBlock(regionRows, hidden, gated) {
 
 /**
  * Caught out of the fish in reach, then the full total, muted, when some
- * are beyond your Gathering or level (or, on zone and hole rows, waiting
- * on a window).
+ * are beyond your Gathering or level (or, on region, zone and hole rows,
+ * waiting on a window).
  */
 const countText = ({ caught, total, reach = total }) =>
   `${caught.toLocaleString()} / ${reach.toLocaleString()}${reach < total ? `<span class="out">(${total.toLocaleString()})</span>` : ''}`;

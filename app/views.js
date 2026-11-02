@@ -59,6 +59,19 @@ function condText(m, e) {
   return parts.join(' · ');
 }
 
+/**
+ * Why bait fish in a fish's mooch chain at a hole are out of reach, one line
+ * each, e.g. "Mooch bait Fullmoon Sardine needs Gathering 500".
+ */
+function baitBlockText(m, fid, hid, profile) {
+  return m.chainBlocks(fid, hid, profile).map(({ id, entry }) => {
+    const why = [];
+    if (m.gatheringShort(entry, profile)) why.push(`Gathering ${entry.minG}`);
+    if (m.tomeMissing(id, profile)) why.push(`the ${tomeShort(m, m.data.fish[id])} folklore tome`);
+    return `Mooch bait ${m.fishName(id)} needs ${why.join(' and ')}`;
+  });
+}
+
 /** A fish's own conditions at a hole, then any its mooch bait fish need. */
 function fullCondText(m, fid, hid) {
   const own = condText(m, m.data.fish[fid].at[hid] ?? {});
@@ -306,7 +319,7 @@ function holeRows(ctx, zid) {
       tags.push(`<span class="tag">Locked until Lv ${h.lvl}</span>`);
     } else {
       const open = m.holeFish(hid)
-        .filter(({ fid, entry }) => !store.isCaught(fid) && !m.blocked(fid, entry, profile))
+        .filter(({ fid }) => !store.isCaught(fid) && !m.blocked(fid, hid, profile))
         .map(({ fid }) => [fid, m.status(fid, hid, now)])
         .filter(([, st]) => st?.state === 'open');
       for (const [fid, st] of open.slice(0, 2)) {
@@ -332,8 +345,8 @@ function openCount(ctx, hids) {
   let n = 0;
   for (const hid of hids) {
     if (m.isLocked(hid, profile)) continue;
-    for (const { fid, entry } of m.holeFish(hid)) {
-      if (store.isCaught(fid) || m.blocked(fid, entry, profile)) continue;
+    for (const { fid } of m.holeFish(hid)) {
+      if (store.isCaught(fid) || m.blocked(fid, hid, profile)) continue;
       if (m.status(fid, hid, now)?.state === 'open') n++;
     }
   }
@@ -576,11 +589,12 @@ export function holeView(ctx, hid) {
     const f = m.data.fish[r.fid];
     const e = r.entry;
     // Out of Gathering reach: still listed with its window, but not lit up as open.
-    const open = r.st?.state === 'open' && !r.caught && !m.blocked(r.fid, e, profile);
+    const open = r.st?.state === 'open' && !r.caught && !m.blocked(r.fid, hid, profile);
     const cond = r.st && !r.caught
       ? `<span class="cond"><span class="hi">${esc(fullCondText(m, r.fid, hid))}</span> ${statusPill(r.st, now)}</span>` : '';
     const warn = !r.caught && m.gatheringShort(e, profile)
       ? `<span class="warn">Needs Gathering ${e.minG} — you have ${profile.gath}</span>` : '';
+    const baitWarn = r.caught ? '' : baitBlockText(m, r.fid, hid, profile).map((t) => `<span class="warn">${esc(t)}</span>`).join('');
     const feeds = targets[r.fid] ? `<span class="feeds">Mooch bait for ${targets[r.fid].map(esc).join(', ')}</span>` : '';
     // Folklore: a warning when tracked tomes lack it, a plain note when tomes
     // aren't tracked, nothing once you have it.
@@ -594,7 +608,7 @@ export function holeView(ctx, hid) {
           aria-label="${r.caught ? 'Unmark' : 'Mark caught:'} ${esc(f.name)}">${r.caught ? checkSvg : ''}</button>
         <a class="body" href="#/fish/${r.fid}?h=${hid}">
           <span class="row">${icon(f.icon, 'icon sm')}<span class="title">${esc(f.name)}</span></span>
-          ${baitLine(m, r.fid, hid, e)}${extrasLine(m, e)}${cond}${warn}${folk}${feeds}
+          ${baitLine(m, r.fid, hid, e)}${extrasLine(m, e)}${cond}${warn}${folk}${baitWarn}${feeds}
         </a>
       </div>`;
   };
@@ -697,6 +711,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
           return `<li><span class="dot${i === steps.length - 1 ? ' last' : ''}">${i + 1}</span>
             <span class="grow"><span class="sub">${verb}</span><span class="title">${what}</span>${how}${when}</span></li>`;
         }).join('')}</ol>
+        ${baitBlockText(m, fid, hid, store.state.profile).map((t) => `<p class="note warn">${esc(t)}</p>`).join('')}
         ${holes.length > 1 ? '<p class="note">Chains can differ per hole — this one is for the hole you came from.</p>' : ''}
       </section>`;
   }

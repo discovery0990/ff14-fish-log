@@ -70,9 +70,9 @@ export function createModel(data, sprites = null) {
     const reach = new Set();
     for (const hid of hids) {
       const locked = profile && isLocked(hid, profile);
-      for (const { fid, entry } of holeFish(hid)) {
+      for (const { fid } of holeFish(hid)) {
         all.add(fid);
-        if (profile && (locked || blocked(fid, entry, profile))) continue;
+        if (profile && (locked || blocked(fid, hid, profile))) continue;
         if (now != null && (status(fid, hid, now)?.state ?? 'open') !== 'open') continue;
         reach.add(fid);
       }
@@ -98,7 +98,7 @@ export function createModel(data, sprites = null) {
         caught++;
         reach++;
       } else if (!profile || (fishHoles[fid] ?? []).some((hid) =>
-        !isLocked(hid, profile) && !blocked(fid, data.fish[fid].at[hid] ?? {}, profile))) {
+        !isLocked(hid, profile) && !blocked(fid, hid, profile))) {
         reach++;
       }
     }
@@ -210,11 +210,11 @@ export function createModel(data, sprites = null) {
   }
 
   /**
-   * Mooch bait fish earlier in the chain at a hole that have a time or
-   * weather window of their own, nearest first: [{id, entry}]. You catch
-   * each one just before mooching it, so their windows must be open too.
+   * Mooch bait fish earlier in the chain at a hole, nearest first:
+   * [{id, entry}]. Each one has to be caught just before it's mooched, so
+   * its window and requirements apply to everything after it.
    */
-  function chainWindows(fid, hid) {
+  function chainBait(fid, hid) {
     const out = [];
     const seen = new Set([String(fid)]);
     let e = data.fish[fid]?.at[hid];
@@ -222,10 +222,13 @@ export function createModel(data, sprites = null) {
       const id = String(e.bait);
       seen.add(id);
       e = data.fish[id].at[hid];
-      if (e && hasWindow(e)) out.push({ id, entry: e });
+      if (e) out.push({ id, entry: e });
     }
     return out;
   }
+
+  /** Bait fish in the mooch chain that have a time or weather window. */
+  const chainWindows = (fid, hid) => chainBait(fid, hid).filter(({ entry }) => hasWindow(entry));
 
   /**
    * What must hold to catch the fish at a hole, if it has a window we can
@@ -263,8 +266,19 @@ export function createModel(data, sprites = null) {
   const tomeMissing = (fid, profile) =>
     Array.isArray(profile?.tomes) && data.fish[fid]?.folk != null && !profile.tomes.includes(data.fish[fid].folk);
 
-  /** Can't be caught yet with this profile: Gathering short or tome missing. */
-  const blocked = (fid, entry, profile) => gatheringShort(entry, profile) || tomeMissing(fid, profile);
+  /** This fish alone, at this entry, needs more Gathering or a missing tome. */
+  const selfBlocked = (fid, entry, profile) => gatheringShort(entry, profile) || tomeMissing(fid, profile);
+
+  /** Bait fish in the mooch chain at a hole that the profile can't catch yet. */
+  const chainBlocks = (fid, hid, profile) =>
+    chainBait(fid, hid).filter(({ id, entry }) => selfBlocked(id, entry, profile));
+
+  /**
+   * Can't be caught yet at a hole with this profile: Gathering short or tome
+   * missing, for the fish or any bait fish in its mooch chain there.
+   */
+  const blocked = (fid, hid, profile) =>
+    selfBlocked(fid, data.fish[fid]?.at[hid] ?? {}, profile) || chainBlocks(fid, hid, profile).length > 0;
 
   const gatheringShort = (entry, profile) =>
     profile.gath != null && entry.minG != null && entry.minG > profile.gath;
@@ -288,7 +302,7 @@ export function createModel(data, sprites = null) {
     const best = new Map();
     for (const [fid, hid] of windowed[tab] ?? []) {
       if (isCaught(fid) || holeVisibility(hid, profile) !== 'show' || !holeOk(hid)) continue;
-      if (blocked(fid, data.fish[fid].at[hid], profile)) continue;
+      if (blocked(fid, hid, profile)) continue;
       const st = status(fid, hid, now);
       if (!st || st.state === 'rare') continue;
       if (st.state === 'upcoming' && st.start - now > horizonMs) continue;
@@ -326,6 +340,6 @@ export function createModel(data, sprites = null) {
     upSoon, search, isLocked, expOff, countFish, isOceanFish, sprite: (icon) => spriteAt.get(icon) ?? null, guideGroups, logFish: (log) => logFish[log] ?? [],
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
-    isMooch, moochChain, moochTargets, chainWindows, status, windows, weatherNow, gatheringShort, tomeMissing, blocked,
+    isMooch, moochChain, moochTargets, chainWindows, chainBlocks, status, windows, weatherNow, gatheringShort, tomeMissing, blocked,
   };
 }

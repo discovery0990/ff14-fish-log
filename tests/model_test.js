@@ -170,6 +170,27 @@ Deno.test('windows: a mooch inherits its bait fish\'s window (Silver Shark via F
   assertStringIncludes(holeView(ctxFor(createStore(memStorage())), hid), 'Fullmoon Sardine: ET 18:00');
 });
 
+Deno.test('blocked: a mooch is out of reach when its bait fish is (Gathering or tome)', () => {
+  const d = structuredClone(DATA);
+  const shark = byName('Silver Shark'), sardine = byName('Fullmoon Sardine');
+  const hid = Object.keys(d.fish[shark].at).find((h) => d.holes[h].name === 'Costa del Sol');
+  d.fish[sardine].at[hid].minG = 9999;
+  const mm = createModel(d);
+  const p = profile({ lvl: 100, gath: 5000, tomes: [] });
+  assert(!m.blocked(shark, hid, p), 'reachable with real data');
+  assert(mm.blocked(shark, hid, p), 'bait needs more Gathering');
+  assertEquals(mm.chainBlocks(shark, hid, p).map(({ id }) => id), [sardine]);
+  const store = createStore(memStorage());
+  store.state.profile = p;
+  assertStringIncludes(holeView({ ...ctxFor(store), m: mm }, hid), 'Mooch bait Fullmoon Sardine needs Gathering 9999');
+
+  d.fish[sardine].at[hid].minG = undefined;
+  d.fish[sardine].folk = Object.keys(d.tomes)[0];
+  const mt = createModel(d);
+  assert(mt.blocked(shark, hid, p), 'bait needs a tome not in the profile');
+  assert(!mt.blocked(shark, hid, { ...p, tomes: [d.fish[sardine].folk] }), 'tome listed: in reach');
+});
+
 Deno.test('windows and status: null for unconditional fish and ocean holes', () => {
   assertEquals(m.windows(byName('Mudcrab'), 'r5', T, 1), null);
   assertEquals(m.status(byName('Mudcrab'), 'r5', T), null);

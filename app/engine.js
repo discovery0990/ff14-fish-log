@@ -61,12 +61,28 @@ export function zoneWeather(rates) {
   };
 }
 
-/** True if a catch entry has any time or weather condition. */
-export const hasWindow = (cond) =>
-  cond.spawn != null || (cond.w?.length > 0) || (cond.pw?.length > 0);
+/**
+ * True if a catch entry has any time or weather condition. A list of
+ * conditions (all must hold at once, e.g. a mooch chain) has one if any does.
+ */
+export const hasWindow = (cond) => Array.isArray(cond)
+  ? cond.some(hasWindow)
+  : cond.spawn != null || (cond.w?.length > 0) || (cond.pw?.length > 0);
 
-/** The [start, end) ET-hour pieces of period p where `cond` holds. */
+/**
+ * The [start, end) ET-hour pieces of period p where `cond` holds. A list of
+ * conditions holds where every one of them does.
+ */
 function periodIntervals(cond, weatherOf, p) {
+  if (Array.isArray(cond)) {
+    let out = null;
+    for (const c of cond) {
+      const iv = periodIntervals(c, weatherOf, p);
+      out = out == null ? iv : intersect(out, iv);
+      if (!out.length) return out;
+    }
+    return out ?? periodIntervals({}, weatherOf, p);
+  }
   if (cond.w?.length && !cond.w.includes(weatherOf(p))) return [];
   if (cond.pw?.length && !cond.pw.includes(weatherOf(p - 1))) return [];
   const lo = p * PERIOD_HOURS, hi = lo + PERIOD_HOURS;
@@ -81,8 +97,21 @@ function periodIntervals(cond, weatherOf, p) {
   return out;
 }
 
+/** Overlaps of two sorted lists of [start, end) intervals. */
+function intersect(a, b) {
+  const out = [];
+  for (const [s1, e1] of a) {
+    for (const [s2, e2] of b) {
+      const s = Math.max(s1, s2), e = Math.min(e1, e2);
+      if (s < e) out.push([s, e]);
+    }
+  }
+  return out.sort((x, y) => x[0] - y[0]);
+}
+
 /**
- * The next `count` windows when `cond` ({spawn, dur, w, pw}) holds, as
+ * The next `count` windows when `cond` ({spawn, dur, w, pw}, or a list of
+ * them that must all hold) holds, as
  * [{start, end}] in real ms. A window open at `fromMs` is included with its
  * real start time. Searching stops after `horizonMs` (an empty result means
  * "rare"). `weatherOf` maps period index → weather id (see zoneWeather).

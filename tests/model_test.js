@@ -158,6 +158,18 @@ Deno.test('windows: Black Eel at Hopeseed Pond is ET 17:00–10:00', () => {
   assertEquals(toEtHours(win.end) - toEtHours(win.start), 17);
 });
 
+Deno.test('windows: a mooch inherits its bait fish\'s window (Silver Shark via Fullmoon Sardine)', () => {
+  const shark = byName('Silver Shark');
+  const hid = Object.keys(DATA.fish[shark].at).find((h) => DATA.holes[h].name === 'Costa del Sol');
+  const e = DATA.fish[shark].at[hid];
+  assert(e.spawn == null && !e.w?.length, 'Silver Shark has no window of its own');
+  assertEquals(m.chainWindows(shark, hid).map(({ id }) => DATA.fish[id].name), ['Fullmoon Sardine']);
+  const [win] = m.windows(shark, hid, T, 1);
+  assertEquals(toEtHours(win.start) % 24, 18);
+  assertEquals(toEtHours(win.end) - toEtHours(win.start), 12);
+  assertStringIncludes(holeView(ctxFor(createStore(memStorage())), hid), 'Fullmoon Sardine: ET 18:00');
+});
+
 Deno.test('windows and status: null for unconditional fish and ocean holes', () => {
   assertEquals(m.windows(byName('Mudcrab'), 'r5', T, 1), null);
   assertEquals(m.status(byName('Mudcrab'), 'r5', T), null);

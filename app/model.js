@@ -210,24 +210,47 @@ export function createModel(data, sprites = null) {
   }
 
   /**
-   * The fish's catch entry at a hole if it has a window we can forecast,
-   * else null. Ocean holes never do: their weather follows the voyage.
+   * Mooch bait fish earlier in the chain at a hole that have a time or
+   * weather window of their own, nearest first: [{id, entry}]. You catch
+   * each one just before mooching it, so their windows must be open too.
    */
-  function windowedEntry(fid, hid) {
+  function chainWindows(fid, hid) {
+    const out = [];
+    const seen = new Set([String(fid)]);
+    let e = data.fish[fid]?.at[hid];
+    while (e && isMooch(e) && !seen.has(String(e.bait))) {
+      const id = String(e.bait);
+      seen.add(id);
+      e = data.fish[id].at[hid];
+      if (e && hasWindow(e)) out.push({ id, entry: e });
+    }
+    return out;
+  }
+
+  /**
+   * What must hold to catch the fish at a hole, if it has a window we can
+   * forecast: its own entry, or a list with its mooch chain's windowed bait
+   * fish (all at once). Else null. Ocean holes never do: their weather
+   * follows the voyage.
+   */
+  function windowCond(fid, hid) {
     const e = data.fish[fid]?.at[hid];
-    return e && !data.holes[hid].ocean && hasWindow(e) ? e : null;
+    if (!e || data.holes[hid].ocean) return null;
+    const chain = chainWindows(fid, hid).map((x) => x.entry);
+    const conds = [...(hasWindow(e) ? [e] : []), ...chain];
+    return conds.length === 0 ? null : conds.length === 1 ? conds[0] : conds;
   }
 
   /** Live window status, or null if the fish has no window here. */
   function status(fid, hid, now) {
-    const e = windowedEntry(fid, hid);
-    return e && windowStatus(e, weatherOf(hid), now);
+    const c = windowCond(fid, hid);
+    return c && windowStatus(c, weatherOf(hid), now);
   }
 
   /** The next `count` windows ([{start, end}] in ms), or null if none here. */
   function windows(fid, hid, now, count) {
-    const e = windowedEntry(fid, hid);
-    return e && nextWindows(e, weatherOf(hid), now, { count });
+    const c = windowCond(fid, hid);
+    return c && nextWindows(c, weatherOf(hid), now, { count });
   }
 
   /** Current weather id at a hole (null for ocean holes). */
@@ -251,7 +274,7 @@ export function createModel(data, sprites = null) {
   for (const tab of TABS) windowed[tab] = [];
   for (const [fid, f] of Object.entries(data.fish)) {
     for (const hid of Object.keys(f.at)) {
-      if (windowedEntry(fid, hid)) windowed[holeTab(data.holes[hid])].push([fid, hid]);
+      if (windowCond(fid, hid)) windowed[holeTab(data.holes[hid])].push([fid, hid]);
     }
   }
 
@@ -303,6 +326,6 @@ export function createModel(data, sprites = null) {
     upSoon, search, isLocked, expOff, countFish, isOceanFish, sprite: (icon) => spriteAt.get(icon) ?? null, guideGroups, logFish: (log) => logFish[log] ?? [],
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
-    isMooch, moochChain, moochTargets, status, windows, weatherNow, gatheringShort, tomeMissing, blocked,
+    isMooch, moochChain, moochTargets, chainWindows, status, windows, weatherNow, gatheringShort, tomeMissing, blocked,
   };
 }

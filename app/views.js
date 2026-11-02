@@ -59,6 +59,13 @@ function condText(m, e) {
   return parts.join(' · ');
 }
 
+/** A fish's own conditions at a hole, then any its mooch bait fish need. */
+function fullCondText(m, fid, hid) {
+  const own = condText(m, m.data.fish[fid].at[hid] ?? {});
+  const bait = m.chainWindows(fid, hid).map(({ id, entry }) => `${m.fishName(id)}: ${condText(m, entry)}`);
+  return [own, ...bait].filter(Boolean).join(' · ');
+}
+
 function statusPill(st, now) {
   if (!st) return '';
   if (st.state === 'open') return `<span class="pill open">OPEN · ${fmtDuration(st.end - now)} left</span>`;
@@ -380,7 +387,7 @@ function upSoonRows(ctx, list) {
         ${icon(f.icon)}
         <span class="grow stack-xs">
           <span class="row"><span class="title grow">${esc(f.name)}</span>${statusPill(st, now)}</span>
-          <span class="sub">${holeName(m, store, hid)} · ${esc(condText(m, f.at[hid]))}</span></span>
+          <span class="sub">${holeName(m, store, hid)} · ${esc(fullCondText(m, fid, hid))}</span></span>
       </a>`;
   }).join('');
 }
@@ -571,7 +578,7 @@ export function holeView(ctx, hid) {
     // Out of Gathering reach: still listed with its window, but not lit up as open.
     const open = r.st?.state === 'open' && !r.caught && !m.blocked(r.fid, e, profile);
     const cond = r.st && !r.caught
-      ? `<span class="cond"><span class="hi">${esc(condText(m, e))}</span> ${statusPill(r.st, now)}</span>` : '';
+      ? `<span class="cond"><span class="hi">${esc(fullCondText(m, r.fid, hid))}</span> ${statusPill(r.st, now)}</span>` : '';
     const warn = !r.caught && m.gatheringShort(e, profile)
       ? `<span class="warn">Needs Gathering ${e.minG} — you have ${profile.gath}</span>` : '';
     const feeds = targets[r.fid] ? `<span class="feeds">Mooch bait for ${targets[r.fid].map(esc).join(', ')}</span>` : '';
@@ -678,14 +685,17 @@ export function fishView(ctx, fid, fromHole, from = null) {
   let chain = '';
   if (f.log === 'rod' && m.isMooch(e)) {
     const { steps } = m.moochChain(fid, hid);
+    const baitWin = Object.fromEntries(m.chainWindows(fid, hid).map(({ id, entry }) => [id, entry]));
     chain = `
       <section><h2 class="sec">Mooch chain · ${esc(h.name)}</h2>
         <ol class="steps">${steps.map((s, i) => {
           const verb = s.unknown ? 'Start with' : !s.fish ? 'Cast with' : i === steps.length - 1 ? 'Catch' : 'Hook, then mooch it';
           const what = s.unknown ? 'Unknown — no data yet' : esc(m.fishName(s.id));
           const how = s.fish ? `<span class="sub"><span class="hi">${tugText(s.tug, 'Tug ?')}</span> · ${hookText(s.hook, 'Hookset ?')}</span>` : '';
+          // A bait fish's own window limits when the whole chain works.
+          const when = s.fish && i < steps.length - 1 && baitWin[s.id] ? `<span class="sub">${esc(condText(m, baitWin[s.id]))}</span>` : '';
           return `<li><span class="dot${i === steps.length - 1 ? ' last' : ''}">${i + 1}</span>
-            <span class="grow"><span class="sub">${verb}</span><span class="title">${what}</span>${how}</span></li>`;
+            <span class="grow"><span class="sub">${verb}</span><span class="title">${what}</span>${how}${when}</span></li>`;
         }).join('')}</ol>
         ${holes.length > 1 ? '<p class="note">Chains can differ per hole — this one is for the hole you came from.</p>' : ''}
       </section>`;

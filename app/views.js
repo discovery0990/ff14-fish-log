@@ -97,9 +97,10 @@ const progress = ({ caught, total, reach = total }, cls = '') => {
 
 /** What Back calls the screen at a hash, or null if it isn't one. */
 function screenName(m, hash) {
-  const [a, b] = hash.replace(/^#\/?/, '').split('?')[0].split('/');
+  const [a, b, c, d] = hash.replace(/^#\/?/, '').split('?')[0].split('/');
   if (!a || (TABS.includes(a) && !b)) return 'Home';
   if (TABS.includes(a) && b === 'soon') return 'Up soon';
+  if (TABS.includes(a) && b === 'left') return placeName(m, c, d);
   if (a === 'hole') return m.data.holes[b]?.name ?? null;
   if (a === 'fish') return m.data.fish[b]?.name ?? null;
   if (a === 'profile') return 'Profile';
@@ -222,7 +223,7 @@ export function homeBody(ctx) {
     const head = `
       <button class="item region${open ? ' open' : ''}" data-act="region" data-rid="${r}" aria-expanded="${open}">
         <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span>${countNum(c)}${chevron}</div>
-        ${progress(c, 'thin')}
+        ${barRow(c, `#/${tab}/left/region/${r}`)}
       </button>`;
     return open ? branch(head + zoneRows(ctx, r)) : head;
   };
@@ -235,7 +236,31 @@ export function homeBody(ctx) {
   return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden, gated)}`;
 }
 
-const REACH_LEGEND = '<span class="num">(N)</span> is the full total, when some fish are waiting on a time or weather window, need more Gathering, a folklore tome you don\'t have, or a hole above your level.';
+// Why fish can't be caught right now, in the order they're shown.
+const WHY = [
+  ['window', '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>', 'on a window', 'Waiting on a window'],
+  ['gath', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l9-9M6.5 6.5a13 13 0 0 1 11 11"/></svg>', 'need more Gathering', 'Need more Gathering'],
+  ['tome', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6zM9.5 4v16"/></svg>', 'need a folklore tome', 'Need a folklore tome'],
+  ['lock', '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="11" width="12" height="9" rx="1.5"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></svg>', 'in a hole above your level', 'Hole above your level'],
+];
+const whySvg = Object.fromEntries(WHY.map(([k, svg]) => [k, svg]));
+
+/**
+ * Icon counts of why a row's remaining fish can't be caught right now, or ''
+ * when nothing's in the way. With `href`, tapping them goes there.
+ */
+function whyIcons(why, href = null) {
+  const parts = WHY.filter(([k]) => why?.[k]);
+  if (!parts.length) return '';
+  const label = parts.map(([k, , t]) => `${why[k]} ${t}`).join(', ');
+  const inner = parts.map(([k, svg]) => `<span class="w">${svg}<span class="num">${why[k]}</span></span>`).join('');
+  return href
+    ? `<span class="why tap" data-act="go" data-href="${href}" role="link" aria-label="Can't catch now: ${label}">${inner}</span>`
+    : `<span class="why" aria-label="Can't catch now: ${label}">${inner}</span>`;
+}
+
+const REACH_LEGEND = `<span class="num">(N)</span> is the full total. The rest can't be caught right now:
+  ${WHY.map(([, svg, t]) => `<span class="w">${svg}</span> ${t}`).join(', ')}. Tap the icons to see which fish.`;
 
 function regionsBlock(regionRows, hidden, gated) {
   return `
@@ -253,6 +278,12 @@ function regionsBlock(regionRows, hidden, gated) {
  */
 const countText = ({ caught, total, reach = total }) =>
   `${caught.toLocaleString()} / ${reach.toLocaleString()}${reach < total ? `<span class="out">(${total.toLocaleString()})</span>` : ''}`;
+/** A region's progress bar, with the why-not icons beside it when there are any. */
+const barRow = (c, href) => {
+  const icons = whyIcons(c.why, href);
+  return icons ? `<div class="row">${progress(c, 'thin')}${icons}</div>` : progress(c, 'thin');
+};
+
 /** Every fish caught: the row folds away. */
 const done = ({ caught, total }) => total > 0 && caught === total;
 const countNum = (c) => `<span class="num">${countText(c)}</span>`;
@@ -296,7 +327,7 @@ function zoneRows(ctx, rid) {
     const head = `
       <button class="item zone region${expanded ? ' open' : ''}" data-act="zone" data-zid="${z}" aria-expanded="${expanded}">
         <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span>${countNum(c)}${chevron}</div>
-        <div class="row"><span class="sub grow">${plural(vis.length, 'hole')}${undisc ? ` · <span class="undisc-name">${undisc} new</span>` : ''}${locked ? ` · ${locked} locked` : ''} · ${lvText}</span>${open ? `<span class="tag open">${open} open now</span>` : ''}</div>
+        <div class="row"><span class="sub grow">${plural(vis.length, 'hole')}${undisc ? ` · <span class="undisc-name">${undisc} new</span>` : ''}${locked ? ` · ${locked} locked` : ''} · ${lvText}</span>${open ? `<span class="tag open">${open} open now</span>` : ''}${whyIcons(c.why, `#/${tab}/left/zone/${z}`)}</div>
       </button>`;
     return expanded ? branch(head + holeRows(ctx, z)) : head;
   });
@@ -330,10 +361,14 @@ function holeRows(ctx, zid) {
     return `
       <a class="item hole${grey ? ' grey' : ''}" href="#/hole/${hid}">
         <div class="row"><span class="title grow">${holeName(m, store, hid)}<span class="lv">Lv ${h.lvl}</span></span>${countNum(hc)}</div>
-        ${tags.length ? `<div class="tags">${tags.join('')}</div>` : ''}
+        ${tagRow(tags, grey ? '' : whyIcons(hc.why))}
       </a>`;
   });
 }
+
+/** A hole row's tags, with its why-not icons at the end of the line. */
+const tagRow = (tags, icons) => (tags.length || icons
+  ? `<div class="row"><div class="tags grow">${tags.join('')}</div>${icons}</div>` : '');
 
 /**
  * Uncaught fish you could catch right now across these holes: window open,
@@ -621,7 +656,8 @@ export function holeView(ctx, hid) {
       <div class="row"><span class="title grow">Caught (${caughtRows.length})</span>${chevron}</div></button>
     ${ctx.showCaught ? `<div class="fishes">${caughtRows.map(row).join('')}</div>` : ''}` : '';
   const extras = rows.filter((r) => r.extra);
-  const c = m.count([hid], store.isCaught, profile);
+  // Like the hole's row on Home: what's catchable now.
+  const c = m.count([hid], store.isCaught, profile, now);
 
   // Region › Zone, each opening that row on Home (unless filters hide it there).
   const rid = String(zone.region);
@@ -645,6 +681,7 @@ export function holeView(ctx, hid) {
         <button class="toggle${disc ? ' on' : ''}" data-act="disc" data-hid="${hid}" aria-pressed="${disc}">${disc ? 'Discovered' : 'Not discovered'}</button>
       </div>
       <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c)}</span></div>
+      ${c.why && whyIcons(c.why) ? `<div class="row why-line">${whyIcons(c.why)}</div>` : ''}
     </header>
     ${why ? `<p class="banner">${m.isLocked(hid, profile)
       ? `Locked: you can't cast here until Fisher Lv ${h.lvl}.`
@@ -655,9 +692,72 @@ export function holeView(ctx, hid) {
       <div class="fishes">${extras.map(row).join('')}</div></section>` : ''}`;
 }
 
-// Where a fish screen's Back goes when it was opened from Home or Up soon.
-const FROM = /^(rod|spear|ocean)(\/soon)?$|^guide\/(rod|spear)$/;
-const fromLabel = (from) => (from.startsWith('guide/') ? 'Fish guide' : from.endsWith('/soon') ? 'Up soon' : 'Home');
+/** A region's or zone's name, for the Remaining screen; null if unknown. */
+function placeName(m, kind, id) {
+  if (kind === 'region') return m.data.regions[id]?.name ?? null;
+  if (kind === 'zone') return m.data.zones[id]?.name ?? null;
+  return null;
+}
+
+/**
+ * The fish in a region or zone you can't catch right now, grouped by why:
+ * waiting on a window (soonest first), Gathering (least needed first), a
+ * folklore tome, or a hole above your level. Each at its best hole.
+ */
+export function remainingView(ctx, tab, kind, id) {
+  const { m, store, now } = ctx;
+  const { profile } = store.state;
+  const name = placeName(m, kind, id);
+  const hids = !name ? [] : kind === 'region' ? m.regionHolesAll(tab, id) : m.zoneHolesAll(tab, id);
+  if (!hids.length) return notFound();
+  const c = m.count(hids, store.isCaught, profile, now);
+  const left = m.remaining(hids, store.isCaught, profile, now);
+  const from = encodeURIComponent(`${tab}/left/${kind}/${id}`);
+
+  // What the fish (or a bait fish in its mooch chain) needs at that hole.
+  const chainAt = (fid, hid) => [{ id: fid, entry: m.data.fish[fid].at[hid] ?? {} }, ...m.chainBait(fid, hid)];
+  const gathNeed = (fid, hid) => Math.max(...chainAt(fid, hid).map(({ entry }) => entry.minG ?? 0));
+  const tomesNeeded = (fid, hid) => [...new Set(chainAt(fid, hid)
+    .filter(({ id: f }) => m.tomeMissing(f, profile)).map(({ id: f }) => tomeShort(m, m.data.fish[f])))];
+
+  const detail = {
+    window: (x) => [statusPill(x.st, now), fullCondText(m, x.fid, x.hid)],
+    gath: (x) => ['', `Needs Gathering ${gathNeed(x.fid, x.hid)}${profile.gath != null ? ` — you have ${profile.gath}` : ''}`],
+    tome: (x) => ['', `Needs the ${tomesNeeded(x.fid, x.hid).join(' and ')} folklore tome`],
+    lock: (x) => ['', `Hole unlocks at Fisher Lv ${m.data.holes[x.hid].lvl}`],
+  };
+  const sortKey = { gath: (x) => gathNeed(x.fid, x.hid) };
+
+  const sections = WHY.map(([k, svg, , title]) => {
+    let xs = left.filter((x) => x.why === k);
+    if (!xs.length) return '';
+    if (sortKey[k]) xs = [...xs].sort((a, b) => sortKey[k](a) - sortKey[k](b));
+    const rows = xs.map((x) => {
+      const f = m.data.fish[x.fid];
+      const [pill, note] = detail[k](x);
+      return `
+        <a class="item row" href="#/fish/${x.fid}?h=${x.hid}&from=${from}">
+          ${icon(f.icon)}
+          <span class="grow stack-xs">
+            <span class="row"><span class="title grow">${esc(f.name)}</span>${pill}</span>
+            <span class="sub">${holeName(m, store, x.hid)}${note ? ` · ${esc(note)}` : ''}</span></span>
+        </a>`;
+    }).join('');
+    return `<section><h2 class="sec why-sec">${svg}${title} · ${xs.length}</h2><div class="list">${rows}</div></section>`;
+  }).join('');
+
+  return `
+    ${back(ctx, `#/${tab}/${kind}/${id}`, name, tab)}
+    <header class="stack-s"><h1>${esc(name)}</h1>
+      <div class="sub">Uncaught ${tab === 'spear' ? 'spearfishing ' : tab === 'ocean' ? 'ocean ' : ''}fish you can't catch right now</div>
+      <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c)}</span></div></header>
+    ${left.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : ''}
+    ${sections || '<p class="empty">Nothing in the way: every uncaught fish here can be caught now.</p>'}`;
+}
+
+// Where a fish screen's Back goes when it was opened from Home, Up soon or
+// a Remaining list.
+const FROM = /^(rod|spear|ocean)(\/soon|\/left\/(region|zone)\/\d+)?$|^guide\/(rod|spear)$/;
 
 // Ocean holes get no window status (their weather follows the voyage), so
 // no status there doesn't mean the fish is always up.
@@ -735,7 +835,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
   }).join('');
 
   return `
-    ${FROM.test(from ?? '') ? back(ctx, `#/${from}`, fromLabel(from), holeTab(h)) : back(ctx, `#/hole/${hid}`, h.name, holeTab(h))}
+    ${FROM.test(from ?? '') ? back(ctx, `#/${from}`, screenName(m, `#/${from}`) ?? 'Home', holeTab(h)) : back(ctx, `#/hole/${hid}`, h.name, holeTab(h))}
     <header class="row">${icon(f.icon, 'icon lg')}
       <div class="grow"><h1>${esc(f.name)}</h1><div class="sub">No. ${f.no} · Lv ${f.lvl}${stars}${rec ? ` · ${esc(rec)}` : ''}${f.big ? ' · Big fish' : ''}${availability(h, st)}</div></div>
     </header>

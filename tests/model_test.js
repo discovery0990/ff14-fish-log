@@ -1,7 +1,7 @@
 import { assert, assertEquals, assertStringIncludes } from 'jsr:@std/assert@1.0.13';
 import { createModel } from '../app/model.js';
 import { createStore, makeBackup, parseBackup, shouldRemind } from '../app/store.js';
-import { esc, fishView, fmtDuration, guideView, holeView, homeView, profileView, soonView } from '../app/views.js';
+import { esc, fishView, fmtDuration, guideView, holeView, homeView, profileView, remainingView, soonView } from '../app/views.js';
 import { toEtHours } from '../app/engine.js';
 
 const DATA = JSON.parse(await Deno.readTextFile(new URL('../app/data/fish.json', import.meta.url)));
@@ -34,15 +34,15 @@ Deno.test('every fish is in exactly one log', () => {
 Deno.test('Central Shroud: 5 holes, 28 distinct fish (27 listed + Copperfish reported at The Vein)', () => {
   const z = zoneByName('Central Shroud');
   assertEquals(m.zoneHolesAll('rod', z).length, 5);
-  assertEquals(m.count(m.zoneHolesAll('rod', z), () => false), { caught: 0, total: 28, reach: 28 });
+  assertEquals(m.count(m.zoneHolesAll('rod', z), () => false), { caught: 0, total: 28, reach: 28, why: { window: 0, gath: 0, tome: 0, lock: 0 } });
 });
 
 Deno.test('a fish needing more Gathering is out of reach, until caught', () => {
   const matriarch = byName('The Matriarch'); // needs 349 Gathering at Exploratory Ice Hole
-  assertEquals(m.count(['r32'], () => false, profile({ gath: 348 })), { caught: 0, total: 5, reach: 4 });
+  assertEquals(m.count(['r32'], () => false, profile({ gath: 348 })), { caught: 0, total: 5, reach: 4, why: { window: 0, gath: 1, tome: 0, lock: 0 } });
   assertEquals(m.count(['r32'], () => false, profile({ gath: 349 })).reach, 5);
   assertEquals(m.count(['r32'], () => false, profile()).reach, 5);
-  assertEquals(m.count(['r32'], (f) => f === matriarch, profile({ gath: 0 })), { caught: 1, total: 5, reach: 5 });
+  assertEquals(m.count(['r32'], (f) => f === matriarch, profile({ gath: 0 })), { caught: 1, total: 5, reach: 5, why: { window: 0, gath: 0, tome: 0, lock: 0 } });
 });
 
 Deno.test('fish at a locked hole are out of reach', () => {
@@ -216,6 +216,8 @@ Deno.test('every view renders for every region, zone, hole and fish', () => {
     for (const r of Object.keys(DATA.regions)) if (m.regionHolesAll(tab, r).length) homeView({ ...ctx, tab, openRegion: r });
     soonView({ ...ctx, tab }, tab);
     for (const z of Object.keys(DATA.zones)) if (m.zoneHolesAll(tab, z).length) homeView({ ...ctx, tab, openRegion: String(DATA.zones[z].region), openZone: z, folds: new Set([`holes:${tab}:${z}`]) });
+    for (const r of Object.keys(DATA.regions)) if (m.regionHolesAll(tab, r).length) remainingView(ctx, tab, 'region', r);
+    for (const z of Object.keys(DATA.zones)) if (m.zoneHolesAll(tab, z).length) remainingView(ctx, tab, 'zone', z);
   }
   for (const hid of Object.keys(DATA.holes)) holeView(ctx, hid);
   profileView(ctx);
@@ -582,4 +584,41 @@ Deno.test('tomes: hole row warns only when tracked and missing; Profile lists 12
   assertEquals(prof.split('data-act="tome"').length - 1, 12);
   assertStringIncludes(prof, 'aria-pressed="true">Coerthas</button>');
   assert(prof.indexOf('>Coerthas<') < prof.indexOf('>Othard<') && prof.indexOf('>Othard<') < prof.indexOf('>Alexandria<'), 'by expansion');
+});
+
+// ------------------------------------------------------------ why not
+
+Deno.test('why-not counts add up to the gap between total and reach, and match Remaining', () => {
+  const p = profile({ lvl: 20, gath: 300, tomes: [] });
+  const sets = [];
+  for (const tab of ['rod', 'spear', 'ocean']) {
+    for (const r of Object.keys(DATA.regions)) if (m.regionHolesAll(tab, r).length) sets.push(m.regionHolesAll(tab, r));
+    for (const z of Object.keys(DATA.zones)) if (m.zoneHolesAll(tab, z).length) sets.push(m.zoneHolesAll(tab, z));
+  }
+  for (const hid of Object.keys(DATA.holes)) sets.push([hid]);
+  const kinds = new Set();
+  for (const hids of sets) {
+    const c = m.count(hids, () => false, p, T);
+    const { window, gath, tome, lock } = c.why;
+    assertEquals(c.total - c.reach, window + gath + tome + lock, hids.join(','));
+    const left = m.remaining(hids, () => false, p, T);
+    assertEquals(left.length, c.total - c.reach);
+    for (const x of left) kinds.add(x.why);
+  }
+  assertEquals([...kinds].sort(), ['gath', 'lock', 'tome', 'window'], 'the profile exercises every reason');
+});
+
+Deno.test('Remaining: lists the fish, links them with their hole, and Back from the fish returns there', () => {
+  const store = createStore(memStorage());
+  store.state.profile = profile({ lvl: 100, gath: 0, tomes: [] });
+  const r = regionByName('La Noscea');
+  const html = remainingView(ctxFor(store), 'rod', 'region', r);
+  assertStringIncludes(html, 'Need more Gathering');
+  const m2 = html.match(/#\/fish\/(\d+)\?h=(\w+)&from=([^"]+)"/);
+  assert(m2, 'fish rows link with ?h= and from=');
+  const back = fishView(ctxFor(store), m2[1], m2[2], decodeURIComponent(m2[3]));
+  assertStringIncludes(back, `href="#/rod/left/region/${r}"`);
+  assertStringIncludes(back, '<span>La Noscea</span>');
+  // The why-not icons on the region row link to the same screen.
+  assertStringIncludes(homeView(ctxFor(store)), `data-href="#/rod/left/region/${r}"`);
 });

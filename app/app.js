@@ -3,7 +3,7 @@
 import { TABS, createModel } from './model.js';
 import { createStore, makeBackup, parseBackup, shouldRemind } from './store.js';
 import {
-  fishView, guideView, holeView, homeBody, homeView, notFound, profileView, soonView,
+  fishView, guideView, holeView, homeBody, homeView, notFound, profileView, remainingView, soonView,
 } from './views.js';
 
 const LIVE_REFRESH_MS = 15_000;
@@ -72,9 +72,10 @@ function syncTrail() {
 function view() {
   const { parts, params } = parseRoute();
   const ctx = makeCtx(parts);
-  const [a, b] = parts;
+  const [a, b, c, d] = parts;
   if (!a || (TABS.includes(a) && !b)) return homeView(ctx);
   if (TABS.includes(a) && b === 'soon') return soonView(ctx, a);
+  if (TABS.includes(a) && b === 'left' && d) return remainingView(ctx, a, c, d);
   if (a === 'hole' && b) return holeView(ctx, b);
   if (a === 'fish' && b) return fishView(ctx, b, params.get('h'), params.get('from'));
   if (a === 'profile') return profileView(ctx);
@@ -255,6 +256,8 @@ root.addEventListener('click', (ev) => {
   const d = el.dataset;
   switch (d.act) {
     case 'back': history.back(); break;
+    // A link inside a row that's itself a button or link (the why-not icons).
+    case 'go': location.hash = d.href; break;
     case 'caught': store.toggleCaught(d.fid, d.hid); break;
     case 'disc': store.toggleDiscovered(d.hid); break;
     case 'dismiss-reminder': store.setPrefs({ reminderDismissedAt: Date.now() }); break;

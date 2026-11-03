@@ -219,6 +219,10 @@ try {
   await js(`document.querySelector('[data-act="clear-search"]').click()`);
   await go('#/hole/r58');
   check(await js(`document.body.textContent.includes("can't cast here until Fisher Lv 45")`), 'locked hole explains why');
+  check(await js(`document.querySelector('header').textContent.includes('Locked until Lv 45')`), 'locked hole header says until when');
+  // Middle Hathoeva River (r12) is a restricted Lv 30 hole: open at Lv 40.
+  await go('#/hole/r12');
+  check(await js(`!document.querySelector('header').textContent.includes('Locked')`), 'restricted hole at or under your level is not labelled locked');
   // North Isle of Endless Summer (r156) is Lv 50 but not restricted.
   await go('#/hole/r156');
   check(await js(`!document.querySelector('.banner')`), 'an above-level, unrestricted hole has no lock note');

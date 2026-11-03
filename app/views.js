@@ -676,7 +676,7 @@ export function holeView(ctx, hid) {
         <div class="place">${place.join('<span class="dim" aria-hidden="true"> › </span>')}</div></div>
       <div class="row">
         <div class="grow">
-          <div class="sub">Lv ${h.lvl}${h.restricted ? ' · <span class="hi">Locked hole</span>' : ''} · <span class="num hi">${xyText(h)}</span></div>
+          <div class="sub">Lv ${h.lvl}${m.isLocked(hid, profile) ? ` · <span class="hi">Locked until Lv ${h.lvl}</span>` : ''} · <span class="num hi">${xyText(h)}</span></div>
           <div class="sub">ET <span class="num hi">${fmtEtClock(now)}</span>${w != null ? ` · <span class="hi">${esc(m.data.weathers[w]?.name)}</span>` : ''}</div></div>
         <button class="toggle${disc ? ' on' : ''}" data-act="disc" data-hid="${hid}" aria-pressed="${disc}">${disc ? 'Discovered' : 'Not discovered'}</button>
       </div>

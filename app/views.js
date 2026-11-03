@@ -863,7 +863,7 @@ function logEntry(store, fid, f, withDate) {
 const fmtDate = (ms) => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
 const GUIDE_LOGS = { rod: 'Rod', spear: 'Spearfishing' };
-// Enough for one row on a wide screen; CSS shows only the row that fits.
+// Enough for one row at the widest; app.js drops the tiles that would wrap.
 const RECENT_SHOWN = 16;
 
 /**

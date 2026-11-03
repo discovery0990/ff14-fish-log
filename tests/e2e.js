@@ -316,7 +316,9 @@ try {
   await js(`document.querySelector('a[aria-label="Fish guide"]').click()`);
   await waitFor(() => js(`location.hash === '#/guide/rod' && !!document.querySelector('[data-act=guide-exp]')`), 'guide opens from Home');
   check(await js(`(() => { const g = document.querySelector('.grid.one-row'), t = g?.querySelector('.tile');
-    return !!t && g.children.length > 1 && Math.abs(g.getBoundingClientRect().height - t.getBoundingClientRect().height) < 1; })()`), 'latest catches show one row');
+    const shown = [...g.children].filter((c) => c.style.display !== 'none');
+    return !!t && shown.length > 1 && shown.length < g.children.length && shown.every((c) => c.offsetTop === t.offsetTop)
+      && Math.abs(g.getBoundingClientRect().height - t.getBoundingClientRect().height) < 1; })()`), 'latest catches show one row, the rest removed');
   check(await js(`document.querySelectorAll('[data-act=guide-exp]').length`) === 6, 'rod guide lists 6 expansions');
   check(await js(`!document.querySelector('.guide-body')`), 'expansions start closed');
   await js(`document.querySelector('[data-act=guide-exp][data-exp="0"]').click()`);

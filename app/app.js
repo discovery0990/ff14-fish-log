@@ -134,6 +134,20 @@ function measureStuck() {
 }
 addEventListener('resize', measureStuck);
 
+/**
+ * One-row grids (Latest catches) drop the tiles that would wrap, so they
+ * aren't left in the page for keyboards and screen readers either.
+ */
+function trimRows() {
+  for (const g of root.querySelectorAll('.grid.one-row')) {
+    const tiles = [...g.children];
+    for (const t of tiles) t.style.display = '';
+    const top = tiles[0]?.offsetTop;
+    for (const t of tiles) if (t.offsetTop > top) t.style.display = 'none';
+  }
+}
+addEventListener('resize', trimRows);
+
 /** Re-render, keeping scroll and the focused input (and its caret). */
 function render({ keepScroll = false } = {}) {
   const y = window.scrollY;
@@ -169,6 +183,7 @@ function render({ keepScroll = false } = {}) {
     }
   }
   measureStuck();
+  trimRows();
   if (keepScroll) window.scrollTo(0, y);
   if (ui.scrollTo) {
     document.querySelector(ui.scrollTo)?.scrollIntoView({ block: 'start' });

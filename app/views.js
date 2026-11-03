@@ -863,7 +863,8 @@ function logEntry(store, fid, f, withDate) {
 const fmtDate = (ms) => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
 const GUIDE_LOGS = { rod: 'Rod', spear: 'Spearfishing' };
-const RECENT_SHOWN = 8;
+// Enough for one row on a wide screen; CSS shows only the row that fits.
+const RECENT_SHOWN = 16;
 
 /**
  * A guide icon, cut from its sheet (one image per log and expansion instead
@@ -889,7 +890,7 @@ function tile(m, store, fid, log) {
   return `<a class="tile" href="#/fish/${fid}?from=guide/${log}" aria-label="${esc(f.name)}" title="${esc(f.name)}">${spriteIcon(m, f.icon)}</a>`;
 }
 
-const grid = (m, store, fids, log) => `<div class="grid">${fids.map((fid) => tile(m, store, fid, log)).join('')}</div>`;
+const grid = (m, store, fids, log, cls = '') => `<div class="grid${cls}">${fids.map((fid) => tile(m, store, fid, log)).join('')}</div>`;
 
 /**
  * The fish guide: every fish in a log as a grid that fills in as you catch
@@ -908,7 +909,7 @@ export function guideView(ctx, log) {
   const recent = m.logFish(log).filter((fid) => store.caughtAt(fid))
     .sort((a, b) => store.caughtAt(b) - store.caughtAt(a)).slice(0, RECENT_SHOWN);
   const recentSec = recent.length ? `
-    <section><h2 class="sec">Latest catches</h2>${grid(m, store, recent, log)}</section>` : '';
+    <section><h2 class="sec">Latest catches</h2>${grid(m, store, recent, log, ' one-row')}</section>` : '';
 
   const openExp = ctx.guideOpen?.[log] ?? null;
   const rows = m.guideGroups(log).map(([exp, fids]) => {

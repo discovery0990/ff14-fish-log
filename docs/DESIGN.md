@@ -72,7 +72,7 @@ Regions, zones, holes and fish all follow the in-game Fishing Log order: Fishing
    - Folklore fish need a folklore tome to be caught at all (`FishParameter.GatheringSubCategory` → its Item, the tome): 296 rod fish, 12 tomes, no spearfishing fish. The fish screen lists the tome under How to catch, and the hole screen notes "Needs the X folklore tome" on uncaught ones. With tomes tracked (Profile), a missing tome turns the note into a warning, and the fish is out of reach like a Gathering shortfall; owned tomes need no note.
    - Big fish: green item rarity on non-ocean holes (consolegameswiki "Big Fishing": "all green-rarity overworld fish are considered big fish"; green ocean fish are ocean fishing's own specials). 335 at 7.57; legendaries are among them. Shown as "Big fish" on the fish screen's sub-line.
    - The fish screen's sub-line starts with the fish's guide number ("No. 409"), counted per log, for checking against the game.
-   - Header count and bar for the whole log, Rod / Spearfishing tabs, then "Latest catches" (the last 8 dated catches, newest first), then the expansions. Counts use the same caught / in reach (total) format; a fish is in reach if it's caught or catchable at any of its holes.
+   - Header count and bar for the whole log, Rod / Spearfishing tabs, then "Latest catches" (the most recent dated catches, newest first, one row: as many as fit the width), then the expansions. Counts use the same caught / in reach (total) format; a fish is in reach if it's caught or catchable at any of its holes.
    - The live 15-second redraw skips this screen: nothing on it is live.
 5. **Profile and filters**
    - Fisher level (1–100) and Gathering (0–9,999), each a number field plus ±1 steppers.

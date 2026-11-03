@@ -295,6 +295,7 @@ try {
     const st = JSON.parse(localStorage.getItem('fishlog:v1'));
     const holes = Object.values(d.holes).filter((h) => h.zone === 67);
     st.caught = [...new Set([...st.caught, ...holes.flatMap((h) => [...h.fish, ...h.extra]).map(String)])];
+    st.caught.forEach((f, i) => { st.caughtAt[f] ??= 1e12 + i; }); // dated, for Latest catches
     localStorage.setItem('fishlog:v1', JSON.stringify(st));
   })`);
   await go('#/rod');
@@ -314,6 +315,8 @@ try {
   await go('#/rod');
   await js(`document.querySelector('a[aria-label="Fish guide"]').click()`);
   await waitFor(() => js(`location.hash === '#/guide/rod' && !!document.querySelector('[data-act=guide-exp]')`), 'guide opens from Home');
+  check(await js(`(() => { const g = document.querySelector('.grid.one-row'), t = g?.querySelector('.tile');
+    return !!t && g.children.length > 1 && Math.abs(g.getBoundingClientRect().height - t.getBoundingClientRect().height) < 1; })()`), 'latest catches show one row');
   check(await js(`document.querySelectorAll('[data-act=guide-exp]').length`) === 6, 'rod guide lists 6 expansions');
   check(await js(`!document.querySelector('.guide-body')`), 'expansions start closed');
   await js(`document.querySelector('[data-act=guide-exp][data-exp="0"]').click()`);

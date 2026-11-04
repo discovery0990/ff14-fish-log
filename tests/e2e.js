@@ -215,14 +215,14 @@ try {
 
   // Red Mantis Falls (r58) is a restricted Lv 45 hole: locked at Lv 40.
   await js(`(() => { const i = document.getElementById('search'); i.value = 'red mantis falls'; i.dispatchEvent(new Event('input', {bubbles: true})); })()`);
-  check(await js(`document.getElementById('home-body').textContent.includes('Locked until Lv 45')`), 'search labels locked holes');
+  check(await js(`document.getElementById('home-body').textContent.includes('Restricted until Lv 45')`), 'search labels restricted holes');
   await js(`document.querySelector('[data-act="clear-search"]').click()`);
   await go('#/hole/r58');
-  check(await js(`document.body.textContent.includes("Locked until Lv 45: you can't cast here yet")`), 'locked hole explains why');
-  check(await js(`document.querySelector('header').textContent.includes('Locked until Lv 45')`), 'locked hole header says until when');
+  check(await js(`document.body.textContent.includes("Restricted until Lv 45: you can't cast here yet")`), 'restricted hole explains why');
+  check(await js(`document.querySelector('header').textContent.includes('Restricted until Lv 45')`), 'restricted hole header says until when');
   // Middle Hathoeva River (r12) is a restricted Lv 30 hole: open at Lv 40.
   await go('#/hole/r12');
-  check(await js(`!document.querySelector('header').textContent.includes('Locked')`), 'restricted hole at or under your level is not labelled locked');
+  check(await js(`!document.querySelector('header').textContent.includes('Restricted until')`), 'restricted hole at or under your level is not labelled restricted');
   // North Isle of Endless Summer (r156) is Lv 50 but not restricted.
   await go('#/hole/r156');
   check(await js(`!document.querySelector('.banner')`), 'an above-level, unrestricted hole has no lock note');
@@ -232,7 +232,7 @@ try {
   check(await js(`!!${holeRow('North Isle of Endless Summer')}`), 'unmarked hole is listed in its zone');
   check(await js(`${holeRow('Privateer Sterncastle')}?.classList.contains('grey')`), 'Lv 40: restricted Sterncastle is greyed');
   check(await js(`!${holeRow('Privateer Forecastle')}?.classList.contains('grey')`), 'Lv 40: Forecastle is not greyed');
-  check(await js(`document.querySelectorAll('a.item.hole.grey').length === 2 && document.body.textContent.includes('Locked until Lv 45')`), 'locked holes stay listed, greyed (Red Mantis Falls, Privateer Sterncastle)');
+  check(await js(`document.querySelectorAll('a.item.hole.grey').length === 2 && document.body.textContent.includes('Restricted until Lv 45')`), 'restricted holes stay listed, greyed (Red Mantis Falls, Privateer Sterncastle)');
   await js(`document.querySelector('[data-act=region][data-rid="22"]').click()`); // collapse
   check(await js(`document.body.textContent.includes('next 3h')`), 'Up soon uses the new horizon');
   await shot('home');

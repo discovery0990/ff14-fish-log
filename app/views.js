@@ -239,12 +239,12 @@ export function homeBody(ctx) {
 
 // Why fish can't be caught right now, in the order they're shown. Two
 // families: Later (waiting on a window: come back) and Not yet (something
-// you lack: a locked hole, Gathering or a tome), coloured apart.
+// you lack: a restricted hole, Gathering or a tome), coloured apart.
 const WHY = [
   ['window', '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>', 'waiting on a window', 'Waiting on a window'],
   ['gath', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l9-9M6.5 6.5a13 13 0 0 1 11 11"/></svg>', 'need more Gathering', 'Need more Gathering'],
   ['tome', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6zM9.5 4v16"/></svg>', 'need a folklore tome', 'Need a folklore tome'],
-  ['lock', '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="11" width="12" height="9" rx="1.5"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></svg>', 'locked hole', 'Locked hole'],
+  ['lock', '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="11" width="12" height="9" rx="1.5"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></svg>', 'restricted hole', 'Restricted hole'],
 ];
 const whySvg = Object.fromEntries(WHY.map(([k, svg]) => [k, svg]));
 const whyCls = (k) => (k === 'window' ? 'w' : 'w gate');
@@ -351,7 +351,7 @@ function zoneRows(ctx, rid) {
 
 /**
  * A zone's holes, shown under it on Home when it's expanded. Undiscovered
- * holes get the dashed name; locked ones are greyed with the reason.
+ * holes get the dashed name; restricted ones above your level are greyed with the reason.
  */
 function holeRows(ctx, zid) {
   const { m, store, tab, now } = ctx;
@@ -360,10 +360,10 @@ function holeRows(ctx, zid) {
   return folded(ctx, `holes:${tab}:${zid}`, 'Completed holes', 'item hole', holes, ([, hc]) => done(hc), ([hid, hc]) => {
     const h = m.data.holes[hid];
     const grey = m.holeVisibility(hid, profile) === 'grey';
-    // Only what's actionable: fish open now, or why the hole is locked.
+    // Only what's actionable: fish open now, or why the hole is restricted.
     const tags = [];
     if (grey) {
-      tags.push(`<span class="tag">Locked until Lv ${h.lvl}</span>`);
+      tags.push(`<span class="tag">Restricted until Lv ${h.lvl}</span>`);
     } else {
       const open = m.holeFish(hid)
         .filter(({ fid }) => !store.isCaught(fid) && !m.blocked(fid, hid, profile))
@@ -388,7 +388,7 @@ const tagRow = (tags, icons) => (tags.length || icons
 
 /**
  * Uncaught fish you could catch right now across these holes: window open,
- * hole not locked, and enough Gathering.
+ * hole not restricted, and enough Gathering.
  */
 function openCount(ctx, hids) {
   const { m, store, now } = ctx;
@@ -409,7 +409,7 @@ function hiddenWhy(m, hid, profile) {
   const h = m.data.holes[hid];
   const z = m.data.zones[h.zone];
   if (m.expOff(hid, profile)) return `${m.data.expansions[z.exp]} is off`;
-  if (m.isLocked(hid, profile)) return `Locked until Lv ${h.lvl}`;
+  if (m.isLocked(hid, profile)) return `Restricted until Lv ${h.lvl}`;
   return null;
 }
 
@@ -564,7 +564,7 @@ export function profileView(ctx) {
     <h1>Profile &amp; filters</h1>
     <section><h2 class="sec">My fisher</h2>
       <div class="list">${stepper('lvl', 'Fisher level', 1, 100)}${stepper('gath', 'Gathering', 0, 9999)}</div>
-      <p class="note">Most holes can be fished at any level. A few (restricted holes) are locked until you reach their level: they're not on your map and you can't cast there, so the app greys them out until then. Fish needing more Gathering than you have are flagged at the hole and left out of Up soon. Leave blank to turn off.</p>
+      <p class="note">Most holes can be fished at any level. A few are restricted until you reach their level: they're not on your map and you can't cast there, so the app greys them out until then. Fish needing more Gathering than you have are flagged at the hole and left out of Up soon. Leave blank to turn off.</p>
     </section>
     <section><h2 class="sec">Expansions</h2><div class="chips">${exps}</div></section>
     ${tomesSection(m, p)}
@@ -692,7 +692,7 @@ export function holeView(ctx, hid) {
         <div class="place">${place.join('<span class="dim" aria-hidden="true"> › </span>')}</div></div>
       <div class="row">
         <div class="grow">
-          <div class="sub">Lv ${h.lvl}${m.isLocked(hid, profile) ? ` · <span class="hi">Locked until Lv ${h.lvl}</span>` : ''} · <span class="num hi">${xyText(h)}</span></div>
+          <div class="sub">Lv ${h.lvl}${m.isLocked(hid, profile) ? ` · <span class="hi">Restricted until Lv ${h.lvl}</span>` : ''} · <span class="num hi">${xyText(h)}</span></div>
           <div class="sub">ET <span class="num hi">${fmtEtClock(now)}</span>${w != null ? ` · <span class="hi">${esc(m.data.weathers[w]?.name)}</span>` : ''}</div></div>
         <button class="toggle${disc ? ' on' : ''}" data-act="disc" data-hid="${hid}" aria-pressed="${disc}">${disc ? 'Discovered' : 'Undiscovered'}</button>
       </div>
@@ -700,7 +700,7 @@ export function holeView(ctx, hid) {
       ${c.why && whyIcons(c.why) ? `<div class="row why-line">${whyIcons(c.why)}</div>` : ''}
     </header>
     ${why ? `<p class="banner">${m.isLocked(hid, profile)
-      ? `${whyMark('lock')} Locked until Lv ${h.lvl}: you can't cast here yet.`
+      ? `${whyMark('lock')} Restricted until Lv ${h.lvl}: you can't cast here yet.`
       : `Hidden while browsing: ${esc(why)}. Change it in <a class="link" href="#/profile">Profile</a>.`}</p>` : ''}
     ${main ? `<div class="fishes">${main}</div>` : ''}
     ${caughtGroup}
@@ -740,7 +740,7 @@ export function remainingView(ctx, tab, kind, id) {
     window: (x) => [statusPill(x.st, now), fullCondText(m, x.fid, x.hid)],
     gath: (x) => ['', `Needs Gathering ${gathNeed(x.fid, x.hid)}${profile.gath != null ? ` — you have ${profile.gath}` : ''}`],
     tome: (x) => ['', `Needs the ${tomesNeeded(x.fid, x.hid).join(' and ')} folklore tome`],
-    lock: (x) => ['', `Locked until Lv ${m.data.holes[x.hid].lvl}`],
+    lock: (x) => ['', `Restricted until Lv ${m.data.holes[x.hid].lvl}`],
   };
   const sortKey = { gath: (x) => gathNeed(x.fid, x.hid) };
 

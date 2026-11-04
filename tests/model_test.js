@@ -428,7 +428,7 @@ Deno.test('folklore and log number show on the fish page and the hole row', () =
   const hid = Object.keys(DATA.fish[fid].at)[0];
   const page = fishView(ctxFor(store), fid, hid);
   assertStringIncludes(page, 'No. 409 · Lv');
-  assertStringIncludes(page, '<dt>Folklore</dt><dd>Tome of Ichthyological Folklore - Coerthas</dd>');
+  assertStringIncludes(page, '<dt>Folklore</dt><dd>Tome of Ichthyological Folklore - Coerthas (not in your Profile)</dd>');
   const notes = (html) => html.split('Needs the Coerthas folklore tome').length - 1;
   const before = notes(holeView(ctxFor(store), hid));
   assert(before >= 1);
@@ -471,7 +471,10 @@ Deno.test('guide: expansions collapse; uncaught fish are anonymous glowing tiles
   assertStringIncludes(html, `class="tile" href="#/fish/${black}?from=guide/rod"`);
   const latest = html.slice(html.indexOf('Latest catches'), html.indexOf('</section>', html.indexOf('Latest catches')));
   assert(latest.indexOf(malm) < latest.indexOf(black), 'newest first');
-  assertStringIncludes(html, '3 / 1,517');
+  // Folklore fish are out of reach until you tick their tomes.
+  const c = m.countFish(m.logFish('rod'), store.isCaught, store.state.profile);
+  assert(c.reach < c.total);
+  assertStringIncludes(html, `3 / ${c.reach.toLocaleString()}<span class="out">(1,517)</span>`);
 });
 
 Deno.test('fish view: log entry and date only once caught', () => {
@@ -544,18 +547,16 @@ Deno.test('guide sheets match fish.json (rerun tools/build_sprites.py if not)', 
   assertStringIncludes(guideView({ ...ctx, m: createModel(DATA) }, 'rod'), '<img');
 });
 
-Deno.test('tomes: untracked filters nothing; tracked leaves out fish whose tome is missing', () => {
+Deno.test('tomes: fish whose tome you lack are out of reach (none listed means none owned)', () => {
   const fid = byName('Spring Urchin'); // Coerthas tome (12701)
   const hid = Object.keys(DATA.fish[fid].at)[0];
-  const off = profile();
   const none = profile({ tomes: [] });
   const has = profile({ tomes: [12701] });
-  assert(!m.tomeMissing(fid, off) && m.tomeMissing(fid, none) && !m.tomeMissing(fid, has));
+  assert(m.tomeMissing(fid, none) && m.tomeMissing(fid, profile({ tomes: null })) && !m.tomeMissing(fid, has));
   assert(!m.tomeMissing(byName('Mudcrab'), none), 'non-folklore fish never need a tome');
   // In-reach counts.
   const reach = (p) => m.count([hid], () => false, p).reach;
-  assert(reach(none) < reach(off));
-  assertEquals(reach(has), reach(off));
+  assert(reach(none) < reach(has));
   assertEquals(m.countFish([fid], () => false, none).reach, 0);
   assertEquals(m.countFish([fid], (f) => f === fid, none).reach, 1, 'caught fish are always in reach');
   // Up soon leaves out missing-tome fish.
@@ -563,21 +564,19 @@ Deno.test('tomes: untracked filters nothing; tracked leaves out fish whose tome 
   assert(folkWindowed, 'some folklore fish has a window');
   const [wf] = folkWindowed;
   const soon = (p) => m.upSoon('rod', { now: T, horizonMs: 30 * 864e5, isCaught: () => false, profile: p }).some((x) => x.fid === wf);
-  assert(soon(off) && !soon(none) && soon(profile({ tomes: [DATA.fish[wf].folk] })));
+  assert(!soon(none) && soon(profile({ tomes: [DATA.fish[wf].folk] })));
 });
 
-Deno.test('tomes: hole row warns only when tracked and missing; Profile lists 12 tomes by expansion', () => {
+Deno.test('tomes: hole row warns until you have the tome; Profile lists 12 tomes by expansion, no switch', () => {
   const store = createStore(memStorage());
   const fid = byName('Spring Urchin');
   const hid = Object.keys(DATA.fish[fid].at)[0];
-  assert(!holeView(ctxFor(store), hid).includes('not in your Profile'));
-  assertStringIncludes(holeView(ctxFor(store), hid), '<span class="folk">Needs the Coerthas folklore tome</span>');
-  store.setProfile({ tomes: [] });
   assertStringIncludes(holeView(ctxFor(store), hid), 'Needs the Coerthas folklore tome — not in your Profile');
   assertStringIncludes(fishView(ctxFor(store), fid, hid), 'Coerthas (not in your Profile)');
   store.setProfile({ tomes: [12701] });
   assert(!holeView(ctxFor(store), hid).includes('Needs the Coerthas folklore tome'), 'no note once you have it');
   const prof = profileView(ctxFor(store));
+  assert(!prof.includes('tomes-track'), 'no tracking switch');
   assertEquals(prof.split('data-act="tome"').length - 1, 12);
   assertStringIncludes(prof, 'aria-pressed="true">Coerthas</button>');
   assert(prof.indexOf('>Coerthas<') < prof.indexOf('>Othard<') && prof.indexOf('>Othard<') < prof.indexOf('>Alexandria<'), 'by expansion');

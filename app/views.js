@@ -592,12 +592,9 @@ export function profileView(ctx) {
       or endorsed by Square Enix. Fonts: IBM Plex (SIL OFL 1.1).</p>`;
 }
 
-/**
- * Folklore tomes owned: a switch to track them, and a chip per tome by
- * expansion. Tapping a chip turns tracking on. Off, nothing is filtered.
- */
+/** Folklore tomes owned: a chip per tome, by expansion. */
 function tomesSection(m, p) {
-  const tracking = Array.isArray(p.tomes);
+  const owned = p.tomes ?? [];
   const byExp = new Map();
   for (const f of Object.values(m.data.fish)) {
     if (f.folk && !byExp.has(f.folk)) byExp.set(f.folk, f.exp);
@@ -611,21 +608,14 @@ function tomesSection(m, p) {
   }
   const chips = [...groups].map(([exp, tids]) => `
     <div class="stack-xs"><span class="sub">${esc(m.data.expansions[exp])}</span><div class="chips">${tids.map((id) => {
-      const on = tracking && p.tomes.includes(id);
+      const on = owned.includes(id);
       const name = m.data.tomes[id].replace(/^Tome of Ichthyological Folklore - /, '');
       return `<button class="chip${on ? ' on' : ''}" data-act="tome" data-tome="${id}" aria-pressed="${on}">${esc(name)}</button>`;
     }).join('')}</div></div>`).join('');
-  const owned = tracking ? p.tomes.length : 0;
   return `
-    <section><h2 class="sec">Folklore tomes</h2>
-      <div class="list">
-        <button class="item row switch-row" data-act="tomes-track" role="switch" aria-checked="${tracking}">
-          <span class="grow">Track folklore tomes${tracking ? ` <span class="dim">· ${owned} of ${ids.length}</span>` : ''}</span><span class="switch${tracking ? ' on' : ''}" aria-hidden="true"><span></span></span>
-        </button></div>
-      <div class="stack-s${tracking ? '' : ' dimmed'}">${chips}</div>
-      <p class="note">Folklore fish can't be caught without their tome. ${tracking
-        ? 'Fish needing a tome you haven\'t ticked are flagged at the hole and left out of Up soon and the in-reach counts.'
-        : 'Turn this on, or tap a tome, to leave fish you can\'t catch yet out of Up soon and the in-reach counts.'}</p>
+    <section><h2 class="sec">Folklore tomes <span class="dim">· ${owned.length} of ${ids.length}</span></h2>
+      <div class="stack-s">${chips}</div>
+      <p class="note">Tick the tomes you have. Folklore fish can't be caught without their tome, so fish needing one you haven't ticked are flagged at the hole and left out of Up soon and the in-reach counts.</p>
     </section>`;
 }
 
@@ -656,12 +646,9 @@ export function holeView(ctx, hid) {
       ? `<span class="warn">${whyMark('gath')} Needs Gathering ${e.minG} — you have ${profile.gath}</span>` : '';
     const baitWarn = r.caught ? '' : baitBlockText(m, r.fid, hid, profile).map(({ t, k }) => `<span class="warn">${whyMark(k)} ${esc(t)}</span>`).join('');
     const feeds = targets[r.fid] ? `<span class="feeds">Mooch bait for ${targets[r.fid].map(esc).join(', ')}</span>` : '';
-    // Folklore: a warning when tracked tomes lack it, a plain note when tomes
-    // aren't tracked, nothing once you have it.
-    const folk = !f.folk || r.caught || (profile.tomes && !m.tomeMissing(r.fid, profile)) ? ''
-      : m.tomeMissing(r.fid, profile)
-        ? `<span class="warn">${whyMark('tome')} Needs the ${esc(tomeShort(m, f))} folklore tome — not in your Profile</span>`
-        : `<span class="folk">Needs the ${esc(tomeShort(m, f))} folklore tome</span>`;
+    // Folklore: a warning until you have the tome, then nothing.
+    const folk = r.caught || !m.tomeMissing(r.fid, profile) ? ''
+      : `<span class="warn">${whyMark('tome')} Needs the ${esc(tomeShort(m, f))} folklore tome — not in your Profile</span>`;
     return `
       <div class="fish${r.caught ? ' caught' : ''}${open ? ' open' : ''}">
         <button class="check" data-act="caught" data-fid="${r.fid}" data-hid="${hid}" aria-pressed="${r.caught}"

@@ -345,15 +345,15 @@ try {
   await waitFor(() => js(`location.hash === '#/guide/spear'`), 'spear guide');
   check(await js(`document.querySelectorAll('[data-act=guide-exp]').length`) === 4, 'spearfishing guide lists its 4 expansions');
 
-  // --- Folklore tomes: tapping a tome turns tracking on; the switch turns it off
+  // --- Folklore tomes: none owned to start; tapping a tome ticks it, again unticks it
   await go('#/profile');
-  check((await stored()).profile.tomes == null, 'tomes start untracked');
+  check(JSON.stringify((await stored()).profile.tomes ?? []) === '[]', 'no tomes to start');
+  check(await js(`!document.querySelector('[data-act=tomes-track]')`), 'no tome tracking switch');
   await js(`document.querySelector('[data-act=tome][data-tome="12701"]').click()`);
-  check(JSON.stringify((await stored()).profile.tomes) === '[12701]', 'tapping a tome tracks tomes with it ticked');
-  check(await js(`document.querySelector('[data-act=tomes-track]').getAttribute('aria-checked')`) === 'true', 'the switch shows tracking on');
+  check(JSON.stringify((await stored()).profile.tomes) === '[12701]', 'tapping a tome ticks it');
   await shot('profile-tomes');
-  await js(`document.querySelector('[data-act=tomes-track]').click()`);
-  check((await stored()).profile.tomes === null, 'the switch turns tracking off');
+  await js(`document.querySelector('[data-act=tome][data-tome="12701"]').click()`);
+  check(JSON.stringify((await stored()).profile.tomes) === '[]', 'tapping it again unticks it');
 } catch (err) {
   failures++;
   console.log(`FAIL ${err.message}`);

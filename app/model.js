@@ -328,11 +328,11 @@ export function createModel(data, sprites = null) {
   const weatherNow = (hid, now) => (data.holes[hid].ocean ? null : weatherOf(hid)(periodOf(now)));
 
   /**
-   * A folklore fish whose tome the profile doesn't list. Only when tomes are
-   * tracked (profile.tomes is a list); null means not tracked.
+   * A folklore fish whose tome the profile doesn't list. Tomes are part of
+   * the game, not a filter: none listed means you have none.
    */
   const tomeMissing = (fid, profile) =>
-    Array.isArray(profile?.tomes) && data.fish[fid]?.folk != null && !profile.tomes.includes(data.fish[fid].folk);
+    !!profile && data.fish[fid]?.folk != null && !(profile.tomes ?? []).includes(data.fish[fid].folk);
 
   /** This fish alone, at this entry, needs more Gathering or a missing tome. */
   const selfBlocked = (fid, entry, profile) => gatheringShort(entry, profile) || tomeMissing(fid, profile);

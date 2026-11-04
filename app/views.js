@@ -92,9 +92,11 @@ const icon = (id, cls = 'icon') => (id ? `<img class="${cls}" src="icons/${id}.p
 
 /** Caught fill, and a darker tail for fish out of reach. */
 const progress = ({ caught, total, reach = total }, cls = '') => {
-  const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
+  const pct = (n) => (total ? +((n / total) * 100).toFixed(2) : 0);
   const tail = reach < total ? `<div class="out" style="width:${pct(total - reach)}%"></div>` : '';
-  return `<div class="bar ${cls}"><div style="width:${pct(caught)}%"></div>${tail}</div>`;
+  // Any catch at all shows, however small a share of the total.
+  const fill = `width:${pct(caught)}%${caught ? ';min-width:3px' : ''}`;
+  return `<div class="bar ${cls}"><div class="got" style="${fill}"></div>${tail}</div>`;
 };
 
 /** What Back calls the screen at a hash, or null if it isn't one. */
@@ -300,9 +302,11 @@ function regionsBlock(regionRows, hidden, gated) {
 const countText = ({ caught, total, reach = total }) =>
   `${caught.toLocaleString()} / ${reach.toLocaleString()}${reach < total ? `<span class="out">(${total.toLocaleString()})</span>` : ''}`;
 /** A region's progress bar, with the open-now and why-not icons beside it when there are any. */
+// The bar gets the full width, so every region's bar measures the same 100%;
+// the icons sit on their own line under it.
 const barRow = (c, href, open = 0) => {
   const icons = openIcon(open) + whyIcons(c.why, href);
-  return icons ? `<div class="row">${progress(c, 'thin')}${icons}</div>` : progress(c, 'thin');
+  return `${progress(c, 'thin')}${icons ? `<div class="row why-line">${icons}</div>` : ''}`;
 };
 
 /** Every fish caught: the row folds away. */

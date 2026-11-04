@@ -225,7 +225,7 @@ export function homeBody(ctx) {
     const head = `
       <button class="item region${open ? ' open' : ''}" data-act="region" data-rid="${r}" aria-expanded="${open}">
         <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span>${countNum(c)}${chevron}</div>
-        ${barRow(c, `#/${tab}/left/region/${r}`)}
+        ${barRow(c, `#/${tab}/left/region/${r}`, openCount(ctx, m.visibleZones(tab, r, profile).flatMap((z) => m.visibleHoles(tab, z, profile))))}
       </button>`;
     return open ? branch(head + zoneRows(ctx, r)) : head;
   };
@@ -299,9 +299,9 @@ function regionsBlock(regionRows, hidden, gated) {
  */
 const countText = ({ caught, total, reach = total }) =>
   `${caught.toLocaleString()} / ${reach.toLocaleString()}${reach < total ? `<span class="out">(${total.toLocaleString()})</span>` : ''}`;
-/** A region's progress bar, with the why-not icons beside it when there are any. */
-const barRow = (c, href) => {
-  const icons = whyIcons(c.why, href);
+/** A region's progress bar, with the open-now and why-not icons beside it when there are any. */
+const barRow = (c, href, open = 0) => {
+  const icons = openIcon(open) + whyIcons(c.why, href);
   return icons ? `<div class="row">${progress(c, 'thin')}${icons}</div>` : progress(c, 'thin');
 };
 
@@ -397,15 +397,16 @@ const tagRow = (tags, icons) => (tags.length || icons
 function openCount(ctx, hids) {
   const { m, store, now } = ctx;
   const { profile } = store.state;
-  let n = 0;
+  // Each fish once, even if it's open at more than one of these holes.
+  const open = new Set();
   for (const hid of hids) {
     if (m.isLocked(hid, profile)) continue;
     for (const { fid } of m.holeFish(hid)) {
       if (store.isCaught(fid) || m.blocked(fid, hid, profile)) continue;
-      if (m.status(fid, hid, now)?.state === 'open') n++;
+      if (m.status(fid, hid, now)?.state === 'open') open.add(fid);
     }
   }
-  return n;
+  return open.size;
 }
 
 /** Why browsing hides a hole under the current profile, or null. */

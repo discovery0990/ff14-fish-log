@@ -224,7 +224,7 @@ export function homeBody(ctx) {
     const open = ctx.openRegion === r;
     const head = `
       <button class="item region${open ? ' open' : ''}" data-act="region" data-rid="${r}" aria-expanded="${open}">
-        <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span>${countNum(c, true)}${chevron}</div>
+        <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span>${countNum(c)}${chevron}</div>
         ${barRow(c, `#/${tab}/left/region/${r}`)}
       </button>`;
     return open ? branch(head + zoneRows(ctx, r)) : head;
@@ -274,7 +274,7 @@ const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))
  * you can catch at all (the header and the guide).
  */
 const reachLegend = (now) => `${now
-  ? '<span class="num">4 / 6 <span class="now">now</span></span> on a row: 4 caught of the 6 you could catch right now.'
+  ? '<span class="num">4 / 6</span> on a row: 4 caught of the 6 you could catch right now.'
   : '<span class="num">4 / 6</span>: 4 caught of the 6 you can catch at your level, Gathering and tomes.'}
   <span class="num">(N)</span> is everything.
   ${now ? `<b>Later</b>: ${legendIcons(['window'])}. ` : ''}<b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}.
@@ -291,13 +291,11 @@ function regionsBlock(regionRows, hidden, gated) {
 
 /**
  * Caught out of the fish in reach, then the full total, muted, when some
- * are beyond your Gathering or level. With `now` (region, zone and hole
- * rows, which also drop fish waiting on a window) the reach is labelled
- * "now", so it isn't read as the header's overall progress.
+ * are beyond your Gathering or level (or, on region, zone and hole rows,
+ * waiting on a window).
  */
-const countText = ({ caught, total, reach = total }, now = false) =>
-  `${caught.toLocaleString()} / ${reach.toLocaleString()}${reach < total
-    ? `${now ? '<span class="now">now</span>' : ''}<span class="out">(${total.toLocaleString()})</span>` : ''}`;
+const countText = ({ caught, total, reach = total }) =>
+  `${caught.toLocaleString()} / ${reach.toLocaleString()}${reach < total ? `<span class="out">(${total.toLocaleString()})</span>` : ''}`;
 /** A region's progress bar, with the why-not icons beside it when there are any. */
 const barRow = (c, href) => {
   const icons = whyIcons(c.why, href);
@@ -306,7 +304,7 @@ const barRow = (c, href) => {
 
 /** Every fish caught: the row folds away. */
 const done = ({ caught, total }) => total > 0 && caught === total;
-const countNum = (c, now = false) => `<span class="num">${countText(c, now)}</span>`;
+const countNum = (c) => `<span class="num">${countText(c)}</span>`;
 
 /**
  * Rows with the completed ones folded under a "Completed (N)" row, which
@@ -346,7 +344,7 @@ function zoneRows(ctx, rid) {
     const expanded = ctx.openZone === z;
     const head = `
       <button class="item zone region${expanded ? ' open' : ''}" data-act="zone" data-zid="${z}" aria-expanded="${expanded}">
-        <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span>${countNum(c, true)}${chevron}</div>
+        <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span>${countNum(c)}${chevron}</div>
         <div class="row"><span class="sub grow">${plural(vis.length, 'hole')}${undisc ? ` · <span class="undisc-name">${undisc} undiscovered</span>` : ''}${locked ? ` · <span class="nw">${locked} locked</span>` : ''} · <span class="nw">${lvText}</span></span>${open ? `<span class="tag open">${open} open now</span>` : ''}${whyIcons(c.why, `#/${tab}/left/zone/${z}`)}</div>
       </button>`;
     return expanded ? branch(head + holeRows(ctx, z)) : head;
@@ -380,7 +378,7 @@ function holeRows(ctx, zid) {
     }
     return `
       <a class="item hole${grey ? ' grey' : ''}" href="#/hole/${hid}">
-        <div class="row"><span class="title grow">${holeName(m, store, hid)}<span class="lv">Lv ${h.lvl}</span></span>${countNum(hc, true)}</div>
+        <div class="row"><span class="title grow">${holeName(m, store, hid)}<span class="lv">Lv ${h.lvl}</span></span>${countNum(hc)}</div>
         ${tagRow(tags, whyIcons(hc.why))}
       </a>`;
   });
@@ -700,7 +698,7 @@ export function holeView(ctx, hid) {
           <div class="sub">ET <span class="num hi">${fmtEtClock(now)}</span>${w != null ? ` · <span class="hi">${esc(m.data.weathers[w]?.name)}</span>` : ''}</div></div>
         <button class="toggle${disc ? ' on' : ''}" data-act="disc" data-hid="${hid}" aria-pressed="${disc}">${disc ? 'Discovered' : 'Undiscovered'}</button>
       </div>
-      <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c, true)}</span></div>
+      <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c)}</span></div>
       ${c.why && whyIcons(c.why) ? `<div class="row why-line">${whyIcons(c.why)}</div>` : ''}
     </header>
     ${why ? `<p class="banner">${m.isLocked(hid, profile)
@@ -770,7 +768,7 @@ export function remainingView(ctx, tab, kind, id) {
     ${back(ctx, `#/${tab}/${kind}/${id}`, name, tab)}
     <header class="stack-s"><h1>${esc(name)}</h1>
       <div class="sub">Uncaught ${tab === 'spear' ? 'spearfishing ' : tab === 'ocean' ? 'ocean ' : ''}fish you can't catch right now</div>
-      <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c, true)}</span></div></header>
+      <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c)}</span></div></header>
     ${left.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : ''}
     ${sections || '<p class="empty">Nothing in the way: every uncaught fish here can be caught now.</p>'}`;
 }

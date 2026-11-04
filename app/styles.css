@@ -185,8 +185,6 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 /* Not yet (locked hole, Gathering, tome) stands apart from Later (a window). */
 .w.gate { color: var(--warn); }
 .warn .w svg, .banner .w svg { vertical-align: -2px; }
-/* Labels a row's count as what's catchable now, unlike the header's progress. */
-.num .now { margin-left: 3px; font-family: var(--sans); font-size: 11px; color: var(--muted); }
 /* A comfortable tap target on a phone, without making the row taller. */
 .why.tap { min-height: 32px; margin: -8px -8px -8px 0; padding: 0 8px; border-radius: 8px; }
 .why.tap:active { background: var(--track); }

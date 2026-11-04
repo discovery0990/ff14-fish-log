@@ -246,6 +246,10 @@ const WHY = [
   ['tome', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6zM9.5 4v16"/></svg>', 'need a folklore tome', 'Need a folklore tome'],
   ['lock', '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="11" width="12" height="9" rx="1.5"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></svg>', 'restricted hole', 'Restricted hole'],
 ];
+// Fish open now: an amber dot and count, sized like the why icons beside it.
+const OPEN_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/></svg>';
+const openIcon = (n) => (n
+  ? `<span class="why" aria-label="${n} open now" title="${n} open now"><span class="w open-now">${OPEN_SVG}<span class="num">${n}</span></span></span>` : '');
 const whySvg = Object.fromEntries(WHY.map(([k, svg]) => [k, svg]));
 const whyCls = (k) => (k === 'window' ? 'w' : 'w gate');
 /** A why icon on its own, coloured by family, e.g. in front of a warning. */
@@ -276,7 +280,7 @@ const reachLegend = (now) => `${now
   ? '<span class="num">4 / 6</span> on a row: 4 caught of the 6 you could catch right now.'
   : '<span class="num">4 / 6</span>: 4 caught of the 6 you can catch at your level, Gathering and tomes.'}
   <span class="num">(N)</span> is everything.
-  ${now ? `<span class="tag open num">2</span> open now. <b>Later</b>: ${legendIcons(['window'])}. ` : ''}<b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}.
+  ${now ? `<span class="w open-now">${OPEN_SVG}</span> open now. <b>Later</b>: ${legendIcons(['window'])}. ` : ''}<b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}.
   Tap the icons to see which fish.`;
 
 function regionsBlock(regionRows, hidden, gated) {
@@ -343,7 +347,7 @@ function zoneRows(ctx, rid) {
     const head = `
       <button class="item zone region${expanded ? ' open' : ''}" data-act="zone" data-zid="${z}" aria-expanded="${expanded}">
         <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span>${countNum(c)}${chevron}</div>
-        <div class="row"><span class="sub grow"><span class="nw">${disc} / ${plural(vis.length, 'hole')} discovered</span>${locked ? ` · <span class="nw">${locked} restricted</span>` : ''}</span>${open ? `<span class="tag open num" title="${open} open now" aria-label="${open} open now">${open}</span>` : ''}${whyIcons(c.why, `#/${tab}/left/zone/${z}`)}</div>
+        <div class="row"><span class="sub grow"><span class="nw">${disc} / ${vis.length} discovered</span>${locked ? ` · <span class="nw">${locked} restricted</span>` : ''}</span>${openIcon(open)}${whyIcons(c.why, `#/${tab}/left/zone/${z}`)}</div>
       </button>`;
     return expanded ? branch(head + holeRows(ctx, z)) : head;
   });

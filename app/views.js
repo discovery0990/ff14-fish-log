@@ -361,7 +361,7 @@ function holeRows(ctx, zid) {
     return `
       <a class="item hole${grey ? ' grey' : ''}" href="#/hole/${hid}">
         <div class="row"><span class="title grow">${holeName(m, store, hid)}<span class="lv">Lv ${h.lvl}</span></span>${countNum(hc)}</div>
-        ${tagRow(tags, grey ? '' : whyIcons(hc.why))}
+        ${tagRow(tags, whyIcons(hc.why))}
       </a>`;
   });
 }

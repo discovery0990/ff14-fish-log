@@ -99,11 +99,13 @@ section { display: flex; flex-direction: column; gap: 10px; }
 .row.top-align { align-items: flex-start; }
 .grow { flex: 1; min-width: 0; }
 .stack-s { display: flex; flex-direction: column; gap: 8px; }
-.top { display: flex; align-items: center; gap: 12px; }
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .top h1 { font-size: 24px; }
 .top .iconbtn { align-self: flex-start; }
-.overall { gap: 6px; margin-top: 4px; }
-.overall .grow { margin-left: 6px; }
+/* Overall progress: the header's full width, under the title and buttons. */
+.overall { flex-basis: 100%; }
+.overall .row { gap: 6px; }
+.overall .bar { height: 10px; border-radius: 5px; }
 
 /* Back link, and Home on the right */
 .topnav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: -8px; }

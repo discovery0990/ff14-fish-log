@@ -14,7 +14,6 @@ export const defaultState = () => ({
     tomes: null,       // folklore tome item ids owned; null = not tracked (no filtering)
   },
   upSoonHours: 2,      // "Up soon" horizon
-  upSoonHoles: 'all',  // "Up soon" holes: all | disc | undisc
   createdAt: null,     // ms, first save
   lastExport: null,    // ms
   caughtAtLastExport: 0,

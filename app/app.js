@@ -322,7 +322,6 @@ root.addEventListener('click', (ev) => {
       else openZone(d.zid, false);
       renderPinned(el, `[data-zid="${d.zid}"]`);
       break;
-    case 'soon-holes': store.setPrefs({ upSoonHoles: d.f }); break;
     case 'horizon': store.setPrefs({ upSoonHours: Number(d.h) }); break;
     case 'clear-search': {
       const input = document.getElementById('search');

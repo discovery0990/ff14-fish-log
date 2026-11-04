@@ -338,11 +338,10 @@ export function createModel(data, sprites = null) {
    * the profile shows (discovered or not), skipping fish needing more
    * Gathering. One entry per fish (its soonest hole); open windows first.
    */
-  /** holeOk (optional) limits which holes count, e.g. only discovered ones. */
-  function upSoon(tab, { now, horizonMs, isCaught, profile, holeOk = () => true }) {
+  function upSoon(tab, { now, horizonMs, isCaught, profile }) {
     const best = new Map();
     for (const [fid, hid] of windowed[tab] ?? []) {
-      if (isCaught(fid) || holeVisibility(hid, profile) !== 'show' || !holeOk(hid)) continue;
+      if (isCaught(fid) || holeVisibility(hid, profile) !== 'show') continue;
       if (blocked(fid, hid, profile)) continue;
       const st = status(fid, hid, now);
       if (!st || st.state === 'rare') continue;

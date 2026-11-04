@@ -59,7 +59,7 @@ export function createModel(data, sprites = null) {
   }
 
   // Why an uncaught fish can't be caught at a hole, nearest to reach first.
-  const WHY_RANK = { window: 0, gath: 1, tome: 2, lock: 3, away: 4 };
+  const WHY_RANK = { window: 0, gath: 1, tome: 2, lock: 3, away: 4, exp: 5 };
   // How far a fish is from catchable at a hole, ignoring time: windows don't
   // count, since you can wait for them.
   const GATE = { null: 0, window: 0, gath: 1, tome: 2, lock: 3 };
@@ -74,6 +74,8 @@ export function createModel(data, sprites = null) {
    */
   function whyNot(fid, hid, profile, now) {
     if (profile) {
+      // An expansion you've switched off: you can't get there (Home hides it).
+      if (expOff(hid, profile)) return 'exp';
       if (isLocked(hid, profile)) return 'lock';
       const chain = [{ id: fid, entry: data.fish[fid]?.at[hid] ?? {} }, ...chainBait(fid, hid)];
       if (chain.some(({ entry }) => gatheringShort(entry, profile))) return 'gath';
@@ -128,9 +130,10 @@ export function createModel(data, sprites = null) {
   /**
    * Distinct fish across holes: how many are caught, how many are in reach
    * for the profile (caught already, or catchable at one of these holes; see
-   * whyNot), and why the rest aren't: why = {window, gath, tome, lock, away},
+   * whyNot), and why the rest aren't: why = {window, gath, tome, lock, away, exp},
    * each fish counted once under its nearest reason; 'away' is blocked here
-   * but less so at another hole. Without a profile only windows count
+   * but less so at another hole; 'exp', its expansion is switched off (no
+   * icon: Home hides those). Without a profile only windows count
    * against reach, and only given `now`.
    */
   function count(hids, isCaught, profile, now) {
@@ -138,7 +141,7 @@ export function createModel(data, sprites = null) {
     for (const hid of hids) for (const { fid } of holeFish(hid)) all.add(fid);
     let caught = 0;
     for (const fid of all) if (isCaught(fid)) caught++;
-    const why = { window: 0, gath: 0, tome: 0, lock: 0, away: 0 };
+    const why = { window: 0, gath: 0, tome: 0, lock: 0, away: 0, exp: 0 };
     let reach = caught;
     for (const x of bestHoles(hids, isCaught, profile, now).values()) {
       if (x.why == null) reach++;
@@ -157,7 +160,7 @@ export function createModel(data, sprites = null) {
 
   /**
    * Like count, over a set of fish rather than holes: a fish is in reach if
-   * it's caught or catchable at any of its holes.
+   * it's caught or catchable at any of its holes (expansion on).
    */
   function countFish(fids, isCaught, profile) {
     let caught = 0, reach = 0;
@@ -166,7 +169,7 @@ export function createModel(data, sprites = null) {
         caught++;
         reach++;
       } else if (!profile || (fishHoles[fid] ?? []).some((hid) =>
-        !isLocked(hid, profile) && !blocked(fid, hid, profile))) {
+        !expOff(hid, profile) && !isLocked(hid, profile) && !blocked(fid, hid, profile))) {
         reach++;
       }
     }

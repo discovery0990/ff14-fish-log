@@ -34,15 +34,15 @@ Deno.test('every fish is in exactly one log', () => {
 Deno.test('Central Shroud: 5 holes, 28 distinct fish (27 listed + Copperfish reported at The Vein)', () => {
   const z = zoneByName('Central Shroud');
   assertEquals(m.zoneHolesAll('rod', z).length, 5);
-  assertEquals(m.count(m.zoneHolesAll('rod', z), () => false), { caught: 0, total: 28, reach: 28, why: { window: 0, gath: 0, tome: 0, lock: 0, away: 0 } });
+  assertEquals(m.count(m.zoneHolesAll('rod', z), () => false), { caught: 0, total: 28, reach: 28, why: { window: 0, gath: 0, tome: 0, lock: 0, away: 0, exp: 0 } });
 });
 
 Deno.test('a fish needing more Gathering is out of reach, until caught', () => {
   const matriarch = byName('The Matriarch'); // needs 349 Gathering at Exploratory Ice Hole
-  assertEquals(m.count(['r32'], () => false, profile({ gath: 348 })), { caught: 0, total: 5, reach: 4, why: { window: 0, gath: 1, tome: 0, lock: 0, away: 0 } });
+  assertEquals(m.count(['r32'], () => false, profile({ gath: 348 })), { caught: 0, total: 5, reach: 4, why: { window: 0, gath: 1, tome: 0, lock: 0, away: 0, exp: 0 } });
   assertEquals(m.count(['r32'], () => false, profile({ gath: 349 })).reach, 5);
   assertEquals(m.count(['r32'], () => false, profile()).reach, 5);
-  assertEquals(m.count(['r32'], (f) => f === matriarch, profile({ gath: 0 })), { caught: 1, total: 5, reach: 5, why: { window: 0, gath: 0, tome: 0, lock: 0, away: 0 } });
+  assertEquals(m.count(['r32'], (f) => f === matriarch, profile({ gath: 0 })), { caught: 1, total: 5, reach: 5, why: { window: 0, gath: 0, tome: 0, lock: 0, away: 0, exp: 0 } });
 });
 
 Deno.test('fish at a locked hole are out of reach', () => {
@@ -595,8 +595,8 @@ Deno.test('why-not counts add up to the gap between total and reach, and match R
   const kinds = new Set();
   for (const hids of sets) {
     const c = m.count(hids, () => false, p, T);
-    const { window, gath, tome, lock, away } = c.why;
-    assertEquals(c.total - c.reach, window + gath + tome + lock + away, hids.join(','));
+    const { window, gath, tome, lock, away, exp } = c.why;
+    assertEquals(c.total - c.reach, window + gath + tome + lock + away + exp, hids.join(','));
     const left = m.remaining(hids, () => false, p, T);
     assertEquals(left.length, c.total - c.reach);
     for (const x of left) kinds.add(x.why);
@@ -644,4 +644,16 @@ Deno.test('a fish restricted at one hole but catchable at another counts as else
   assert(left.every((x) => x.at && !m.isLocked(x.at, p)), 'elsewhere names a hole you can fish');
   assert(m.onlyHere(DATA.fish && Object.keys(DATA.fish).find((f) => DATA.fish[f].name === 'Hotrod')));
   assert(!m.onlyHere(Object.keys(DATA.fish).find((f) => DATA.fish[f].name === 'Abalathian Smelt')));
+});
+
+Deno.test('a switched-off expansion is out of reach in the guide and the Home header, as on Home', () => {
+  const p = profile({ lvl: 53, exp: [0, 1, 2, 3, 4] }); // Dawntrail (5) off
+  const dt = m.guideGroups('rod').find(([e]) => e === 5)[1];
+  const c = m.countFish(dt, () => false, p);
+  // Only Dawntrail-guide fish that also live in an expansion you have (or on ocean voyages) are in reach.
+  const elsewhere = dt.filter((f) => m.fishHoles(f).some((h) => !m.expOff(h, p) && !m.isLocked(h, p) && !m.blocked(f, h, p)));
+  assertEquals(c.reach, elsewhere.length);
+  assert(c.reach < c.total / 4, `${c.reach} of ${c.total}`);
+  const all = m.count(Object.keys(DATA.holes), () => false, p);
+  assert(all.why.exp > 0 && all.reach < m.count(Object.keys(DATA.holes), () => false, profile({ lvl: 53 })).reach);
 });

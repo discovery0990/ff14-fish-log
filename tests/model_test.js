@@ -619,3 +619,14 @@ Deno.test('Remaining: lists the fish, links them with their hole, and Back from 
   // The why-not icons on the region row link to the same screen.
   assertStringIncludes(homeView(ctxFor(store)), `data-href="#/rod/left/region/${r}"`);
 });
+
+Deno.test('hole view: the count is progress, the same whether windows are open or not', () => {
+  const store = createStore(memStorage());
+  // A hole with a fish waiting on a window at T.
+  const hid = Object.keys(DATA.holes).find((h) => m.count([h], store.isCaught, null, T).why.window > 0);
+  assert(hid, 'a hole with a closed window');
+  const c = m.count([hid], store.isCaught, null);
+  const text = `${c.caught} / ${c.reach}${c.reach < c.total ? `<span class="out">(${c.total})</span>` : ''}`;
+  assertStringIncludes(holeView(ctxFor(store), hid), `<span class="num hi">${text}</span>`);
+  assertStringIncludes(holeView(ctxFor(store), hid), 'aria-label="Can\'t catch now: ');
+});

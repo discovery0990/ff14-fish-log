@@ -231,11 +231,11 @@ export function homeBody(ctx) {
       </button>`;
     return open ? branch(head + zoneRows(ctx, r)) : head;
   };
-  // Like zone and hole rows, regions count what's catchable now.
-  const counts = regions.map((r) => [r, m.count(m.regionHolesAll(tab, r), store.isCaught, profile, now)]);
+  // Regions, zones and holes count progress; their icons say what's open or waiting now.
+  const counts = regions.map((r) => [r, rowCount(m.count(m.regionHolesAll(tab, r), store.isCaught, profile, now))]);
   const regionRows = folded(ctx, `regions:${tab}`, 'Completed regions', 'item region',
     counts, ([, c]) => done(c), row);
-  const gated = counts.some(([, c]) => c.reach < c.total);
+  const gated = counts.some(([, c]) => Object.values(c.why).some(Boolean));
   return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden, gated)}`;
 }
 
@@ -274,13 +274,10 @@ function whyIcons(why, href = null) {
 const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))
   .map(([k, svg, t]) => `<span class="${whyCls(k)}">${svg}</span> ${t}`).join(', ');
 /**
- * What the counts and icons mean. `now`: the counts are what you can catch
- * right now (rows), so windows count against them; otherwise they're what
- * you can catch at all (the header and the guide).
+ * What the counts and icons mean. Counts and bars are progress: windows never
+ * count against them. `now`: the rows also have open-now and window icons.
  */
-const reachLegend = (now) => `${now
-  ? '<span class="num">4 / 6</span> on a row: 4 caught of the 6 you could catch right now.'
-  : '<span class="num">4 / 6</span>: 4 caught of the 6 you can catch at your level, Gathering and tomes.'}
+const reachLegend = (now) => `<span class="num">4 / 6</span>: 4 caught of the 6 you can catch at your level, Gathering and tomes.
   <span class="num">(N)</span> is everything.
   ${now ? `<span class="w open-now">${OPEN_SVG}</span> open now. <b>Later</b>: ${legendIcons(['window'])}. ` : ''}<b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}.
   Tap the icons to see which fish.`;
@@ -296,8 +293,7 @@ function regionsBlock(regionRows, hidden, gated) {
 
 /**
  * Caught out of the fish in reach, then the full total, muted, when some
- * are beyond your Gathering or level (or, on region, zone and hole rows,
- * waiting on a window).
+ * are beyond your Gathering, tomes or level.
  */
 const countText = ({ caught, total, reach = total }) =>
   `${caught.toLocaleString()} / ${reach.toLocaleString()}${reach < total ? `<span class="out">(${total.toLocaleString()})</span>` : ''}`;
@@ -311,6 +307,12 @@ const barRow = (c, href, open = 0) => {
 
 /** Every fish caught: the row folds away. */
 const done = ({ caught, total }) => total > 0 && caught === total;
+/**
+ * A count taken with the time (so its why icons include windows), as
+ * progress: fish waiting on a window are back in reach, so the count and bar
+ * only move when you catch something or change your profile.
+ */
+const rowCount = (c) => ({ ...c, reach: c.reach + (c.why?.window ?? 0) });
 const countNum = (c) => `<span class="num">${countText(c)}</span>`;
 
 /**
@@ -338,8 +340,8 @@ const branch = (html) => `<div class="branch">${html}</div>`;
 function zoneRows(ctx, rid) {
   const { m, store, tab, now } = ctx;
   const { profile } = store.state;
-  // Zone and hole rows count what's catchable now: fish waiting on a window drop out.
-  const zones = m.visibleZones(tab, rid, profile).map((z) => [z, m.count(m.zoneHolesAll(tab, z), store.isCaught, profile, now)]);
+  // Zone and hole rows count progress, like regions; windows only show as icons.
+  const zones = m.visibleZones(tab, rid, profile).map((z) => [z, rowCount(m.count(m.zoneHolesAll(tab, z), store.isCaught, profile, now))]);
   return folded(ctx, `zones:${tab}:${rid}`, 'Completed zones', 'item zone', zones, ([, c]) => done(c), ([z, c]) => {
     const vis = m.visibleHoles(tab, z, profile);
     const open = openCount(ctx, vis);
@@ -364,7 +366,7 @@ function zoneRows(ctx, rid) {
 function holeRows(ctx, zid) {
   const { m, store, tab, now } = ctx;
   const { profile } = store.state;
-  const holes = m.visibleHoles(tab, zid, profile).map((hid) => [hid, m.count([hid], store.isCaught, profile, now)]);
+  const holes = m.visibleHoles(tab, zid, profile).map((hid) => [hid, rowCount(m.count([hid], store.isCaught, profile, now))]);
   return folded(ctx, `holes:${tab}:${zid}`, 'Completed holes', 'item hole', holes, ([, hc]) => done(hc), ([hid, hc]) => {
     const h = m.data.holes[hid];
     const grey = m.holeVisibility(hid, profile) === 'grey';
@@ -672,8 +674,8 @@ export function holeView(ctx, hid) {
       <div class="row"><span class="title grow">Caught (${caughtRows.length})</span>${chevron}</div></button>
     ${ctx.showCaught ? `<div class="fishes">${caughtRows.map(row).join('')}</div>` : ''}` : '';
   const extras = rows.filter((r) => r.extra);
-  // Like the hole's row on Home: what's catchable now.
-  const c = m.count([hid], store.isCaught, profile, now);
+  // Like the hole's row on Home: progress, with windows as icons.
+  const c = rowCount(m.count([hid], store.isCaught, profile, now));
 
   // Region › Zone, each opening that row on Home (unless filters hide it there).
   const rid = String(zone.region);
@@ -726,7 +728,7 @@ export function remainingView(ctx, tab, kind, id) {
   const name = placeName(m, kind, id);
   const hids = !name ? [] : kind === 'region' ? m.regionHolesAll(tab, id) : m.zoneHolesAll(tab, id);
   if (!hids.length) return notFound();
-  const c = m.count(hids, store.isCaught, profile, now);
+  const c = rowCount(m.count(hids, store.isCaught, profile, now));
   const left = m.remaining(hids, store.isCaught, profile, now);
   const from = encodeURIComponent(`${tab}/left/${kind}/${id}`);
 

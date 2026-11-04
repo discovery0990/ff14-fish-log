@@ -114,7 +114,9 @@ section { display: flex; flex-direction: column; gap: 10px; }
 .back svg, .chev { width: 20px; height: 20px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; flex: none; }
 
 /* Progress */
-.bar { display: flex; height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+/* Caught (accent), then fish in reach but not caught (a dim accent, so it
+   reads as yours to catch), then fish out of reach (a dark tail). */
+.bar { display: flex; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--accent) 35%, var(--surface)); overflow: hidden; }
 .bar.thin { height: 4px; border-radius: 2px; }
 .bar > div { height: 100%; background: var(--accent); }
 /* Fish out of reach (Gathering or level): a darker tail at the end. */

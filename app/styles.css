@@ -269,7 +269,7 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .search .clear svg { width: 20px; height: 20px; stroke: var(--muted); stroke-width: 2.2; }
 .search input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.item.zone .sub .undisc-name, .item.zone .sub .nw { white-space: nowrap; }
+.item.zone .sub .nw { white-space: nowrap; }
 .undisc-name { padding: 0 5px; border-radius: 5px; outline: 1px dashed var(--undisc); outline-offset: -1px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .legend { font-size: 12px; }
 .item .title, .item .sub { display: block; }

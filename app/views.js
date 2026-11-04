@@ -234,11 +234,7 @@ export function homeBody(ctx) {
   const regionRows = folded(ctx, `regions:${tab}`, 'Completed regions', 'item region',
     counts, ([, c]) => done(c), row);
   const gated = counts.some(([, c]) => c.reach < c.total);
-  // An open region's zone lines show undiscovered holes as a dashed number.
-  const undiscShown = regions.includes(ctx.openRegion) && m.visibleZones(tab, ctx.openRegion, profile)
-    .some((z) => m.visibleHoles(tab, z, profile).some((h) => !store.isDiscovered(h) && !m.isLocked(h, profile)));
-
-  return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden, gated, undiscShown)}`;
+  return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden, gated)}`;
 }
 
 // Why fish can't be caught right now, in the order they're shown. Two
@@ -283,12 +279,11 @@ const reachLegend = (now) => `${now
   ${now ? `<b>Later</b>: ${legendIcons(['window'])}. ` : ''}<b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}.
   Tap the icons to see which fish.`;
 
-function regionsBlock(regionRows, hidden, gated, undiscShown) {
+function regionsBlock(regionRows, hidden, gated) {
   return `
     <section><h2 class="sec">Regions</h2>
       <div class="list">${regionRows || '<p class="empty">Nothing matches your filters.</p>'}</div>
       ${gated ? `<p class="note legend">${reachLegend(true)}</p>` : ''}
-      ${undiscShown ? undiscLegend : ''}
       ${hidden ? `<p class="note">${hidden} region${hidden > 1 ? 's' : ''} hidden by your level and expansion filters.</p>` : ''}
     </section>`;
 }
@@ -339,17 +334,16 @@ function zoneRows(ctx, rid) {
   const zones = m.visibleZones(tab, rid, profile).map((z) => [z, m.count(m.zoneHolesAll(tab, z), store.isCaught, profile, now)]);
   return folded(ctx, `zones:${tab}:${rid}`, 'Completed zones', 'item zone', zones, ([, c]) => done(c), ([z, c]) => {
     const vis = m.visibleHoles(tab, z, profile);
-    const lv = vis.map((h) => m.data.holes[h].lvl);
-    const lvText = Math.min(...lv) === Math.max(...lv) ? `Lv ${lv[0]}` : `Lv ${Math.min(...lv)}–${Math.max(...lv)}`;
     const open = openCount(ctx, vis);
-    // Locked holes can't be discovered yet, so they're counted apart.
+    // Holes discovered, like fish caught; restricted holes above your level
+    // can't be discovered yet, so they're counted apart.
+    const disc = vis.filter((h) => store.isDiscovered(h)).length;
     const locked = vis.filter((h) => m.isLocked(h, profile)).length;
-    const undisc = vis.filter((h) => !store.isDiscovered(h) && !m.isLocked(h, profile)).length;
     const expanded = ctx.openZone === z;
     const head = `
       <button class="item zone region${expanded ? ' open' : ''}" data-act="zone" data-zid="${z}" aria-expanded="${expanded}">
         <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span>${countNum(c)}${chevron}</div>
-        <div class="row"><span class="sub grow">${plural(vis.length, 'hole')}${undisc ? ` · <span class="undisc-name" title="${plural(undisc, 'undiscovered hole')}" aria-label="${plural(undisc, 'undiscovered hole')}">${undisc}</span>` : ''}${locked ? ` · <span class="nw">${locked} locked</span>` : ''} · <span class="nw">${lvText}</span></span>${open ? `<span class="tag open">${open} open now</span>` : ''}${whyIcons(c.why, `#/${tab}/left/zone/${z}`)}</div>
+        <div class="row"><span class="sub grow"><span class="nw">${disc} / ${plural(vis.length, 'hole')} discovered</span>${locked ? ` · <span class="nw">${locked} restricted</span>` : ''}</span>${open ? `<span class="tag open">${open} open now</span>` : ''}${whyIcons(c.why, `#/${tab}/left/zone/${z}`)}</div>
       </button>`;
     return expanded ? branch(head + holeRows(ctx, z)) : head;
   });

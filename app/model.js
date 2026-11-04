@@ -158,24 +158,6 @@ export function createModel(data, sprites = null) {
   const remaining = (hids, isCaught, profile, now) =>
     [...bestHoles(hids, isCaught, profile, now).values()].filter((x) => x.why != null).sort(better);
 
-  /**
-   * Like count, over a set of fish rather than holes: a fish is in reach if
-   * it's caught or catchable at any of its holes (expansion on).
-   */
-  function countFish(fids, isCaught, profile) {
-    let caught = 0, reach = 0;
-    for (const fid of fids) {
-      if (isCaught(fid)) {
-        caught++;
-        reach++;
-      } else if (!profile || (fishHoles[fid] ?? []).some((hid) =>
-        !expOff(hid, profile) && !isLocked(hid, profile) && !blocked(fid, hid, profile))) {
-        reach++;
-      }
-    }
-    return { caught, total: fids.length, reach };
-  }
-
   // Each log's fish in the game's guide order, grouped by the expansion the
   // game files them under (exp, from its guide key; see build_data.py).
   const logFish = { rod: [], spear: [] };
@@ -220,7 +202,7 @@ export function createModel(data, sprites = null) {
   }
 
   /**
-   * The hole's expansion is filtered out. Ocean holes never are: they all sit
+   * The hole's expansion isn't one you've reached. Ocean holes never are: they all sit
    * in The Endeavor, which the game tags ARR whatever route they're on.
    */
   const expOff = (hid, profile) =>
@@ -407,7 +389,7 @@ export function createModel(data, sprites = null) {
   }
 
   return {
-    upSoon, search, isLocked, expOff, onlyHere, countFish, isOceanFish, sprite: (icon) => spriteAt.get(icon) ?? null, guideGroups, logFish: (log) => logFish[log] ?? [],
+    upSoon, search, isLocked, expOff, onlyHere, isOceanFish, sprite: (icon) => spriteAt.get(icon) ?? null, guideGroups, logFish: (log) => logFish[log] ?? [],
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
     isMooch, moochChain, moochTargets, chainBait, chainWindows, chainBlocks, whyNot, remaining, status, windows, weatherNow, gatheringShort, tomeMissing, blocked,

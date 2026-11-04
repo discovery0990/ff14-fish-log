@@ -471,10 +471,9 @@ Deno.test('guide: expansions collapse; uncaught fish are anonymous glowing tiles
   assertStringIncludes(html, `class="tile" href="#/fish/${black}?from=guide/rod"`);
   const latest = html.slice(html.indexOf('Latest catches'), html.indexOf('</section>', html.indexOf('Latest catches')));
   assert(latest.indexOf(malm) < latest.indexOf(black), 'newest first');
-  // Folklore fish are out of reach until you tick their tomes.
-  const c = m.countFish(m.logFish('rod'), store.isCaught, store.state.profile);
-  assert(c.reach < c.total);
-  assertStringIncludes(html, `3 / ${c.reach.toLocaleString()}<span class="out">(1,517)</span>`);
+  // The guide is log completion: caught out of every fish, nothing held back.
+  assertStringIncludes(html, '3 / 1,517</span>');
+  assert(!html.includes('class="out"'), 'no out-of-reach total or tail in the guide');
 });
 
 Deno.test('fish view: log entry and date only once caught', () => {
@@ -557,8 +556,7 @@ Deno.test('tomes: fish whose tome you lack are out of reach (none listed means n
   // In-reach counts.
   const reach = (p) => m.count([hid], () => false, p).reach;
   assert(reach(none) < reach(has));
-  assertEquals(m.countFish([fid], () => false, none).reach, 0);
-  assertEquals(m.countFish([fid], (f) => f === fid, none).reach, 1, 'caught fish are always in reach');
+  assertEquals(m.count([hid], (f) => f === fid, none).reach, reach(none) + 1, 'caught fish are always in reach');
   // Up soon leaves out missing-tome fish.
   const folkWindowed = Object.entries(DATA.fish).find(([f, x]) => x.folk && x.log === 'rod' && Object.keys(x.at).some((h) => m.status(f, h, T)));
   assert(folkWindowed, 'some folklore fish has a window');
@@ -646,14 +644,8 @@ Deno.test('a fish restricted at one hole but catchable at another counts as else
   assert(!m.onlyHere(Object.keys(DATA.fish).find((f) => DATA.fish[f].name === 'Abalathian Smelt')));
 });
 
-Deno.test('a switched-off expansion is out of reach in the guide and the Home header, as on Home', () => {
-  const p = profile({ lvl: 53, exp: [0, 1, 2, 3, 4] }); // Dawntrail (5) off
-  const dt = m.guideGroups('rod').find(([e]) => e === 5)[1];
-  const c = m.countFish(dt, () => false, p);
-  // Only Dawntrail-guide fish that also live in an expansion you have (or on ocean voyages) are in reach.
-  const elsewhere = dt.filter((f) => m.fishHoles(f).some((h) => !m.expOff(h, p) && !m.isLocked(h, p) && !m.blocked(f, h, p)));
-  assertEquals(c.reach, elsewhere.length);
-  assert(c.reach < c.total / 4, `${c.reach} of ${c.total}`);
+Deno.test('an expansion you haven\'t reached is out of reach in the Home header, as on Home', () => {
+  const p = profile({ lvl: 53, exp: [0, 1, 2, 3, 4] }); // Dawntrail (5) not reached
   const all = m.count(Object.keys(DATA.holes), () => false, p);
   assert(all.why.exp > 0 && all.reach < m.count(Object.keys(DATA.holes), () => false, profile({ lvl: 53 })).reach);
 });

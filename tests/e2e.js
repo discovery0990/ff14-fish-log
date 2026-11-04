@@ -98,7 +98,7 @@ try {
   await shot('soon');
 
   await go('#/rod');
-  check(await js(`document.body.textContent.includes('hidden by your level and expansion filters')`), 'home reports hidden regions');
+  check(await js(`document.body.textContent.includes("in expansions you haven't reached")`), 'home reports hidden regions');
   check(await js(`!document.body.textContent.includes('Yok Tural')`), 'Dawntrail off hides its regions');
   check(await js(`document.body.textContent.includes('Norvrandt')`), 'Lv 40 still shows higher regions (most holes are fishable at any level)');
   // --- Up soon rows open the fish; Back returns to where you came from

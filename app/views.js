@@ -189,7 +189,7 @@ export function homeView(ctx) {
       <a class="iconbtn" href="#/guide/${tab === 'spear' ? 'spear' : 'rod'}" aria-label="Fish guide">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.8C10 5.3 7 4.8 3.5 5.2v13c3.5-.4 6.5.1 8.5 1.6 2-1.5 5-2 8.5-1.6v-13C17 4.8 14 5.3 12 6.8zM12 6.8v13"/><path class="thin" d="M6 9.5h3.5M6 12.5h3.5M14.5 9.5h3.5M14.5 12.5h3.5"/></svg>
       </a>
-      <a class="iconbtn" href="#/profile" aria-label="Profile and filters">
+      <a class="iconbtn" href="#/profile" aria-label="Profile">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
       </a>
       <div class="overall stack-xs">
@@ -279,21 +279,18 @@ function whyIcons(why, href = null) {
 
 const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))
   .map(([k, svg, t]) => `<span class="${whyCls(k)}">${svg}</span> ${t}`).join(', ');
-/**
- * What the counts and icons mean. Counts and bars are progress: windows never
- * count against them. `now`: the rows also have open-now and window icons.
- */
-const reachLegend = (now) => `<span class="num">4 / 6</span>: 4 caught of the 6 you can catch at your level, Gathering and tomes.
+/** What Home's counts and icons mean. Counts and bars are progress: windows never count against them. */
+const reachLegend = () => `<span class="num">4 / 6</span>: 4 caught of the 6 you can catch at your level, Gathering and tomes.
   <span class="num">(N)</span> is everything.
-  ${now ? `<span class="w open-now">${OPEN_SVG}</span> open now. <b>Later</b>: ${legendIcons(['window'])}. ` : ''}<b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}. ${legendIcons(['away'])}.
+  <span class="w open-now">${OPEN_SVG}</span> open now. <b>Later</b>: ${legendIcons(['window'])}. <b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}. ${legendIcons(['away'])}.
   Tap the icons to see which fish.`;
 
 function regionsBlock(regionRows, hidden, gated) {
   return `
     <section><h2 class="sec">Regions</h2>
-      <div class="list">${regionRows || '<p class="empty">Nothing matches your filters.</p>'}</div>
-      ${gated ? `<p class="note legend">${reachLegend(true)}</p>` : ''}
-      ${hidden ? `<p class="note">${hidden} region${hidden > 1 ? 's' : ''} hidden by your level and expansion filters.</p>` : ''}
+      <div class="list">${regionRows || '<p class="empty">No regions in the expansions you\'ve reached.</p>'}</div>
+      ${gated ? `<p class="note legend">${reachLegend()}</p>` : ''}
+      ${hidden ? `<p class="note">${hidden} region${hidden > 1 ? 's' : ''} in expansions you haven't reached.</p>` : ''}
     </section>`;
 }
 
@@ -425,7 +422,7 @@ function openCount(ctx, hids) {
 function hiddenWhy(m, hid, profile) {
   const h = m.data.holes[hid];
   const z = m.data.zones[h.zone];
-  if (m.expOff(hid, profile)) return `${m.data.expansions[z.exp]} is off`;
+  if (m.expOff(hid, profile)) return `${m.data.expansions[z.exp]} not reached`;
   if (m.isLocked(hid, profile)) return `Restricted until Lv ${h.lvl}`;
   return null;
 }
@@ -569,12 +566,13 @@ export function profileView(ctx) {
 
   return `
     ${back(ctx, '#/rod', 'Home')}
-    <h1>Profile &amp; filters</h1>
+    <h1>Profile</h1>
     <section><h2 class="sec">My fisher</h2>
       <div class="list">${stepper('lvl', 'Fisher level', 1, 100)}${stepper('gath', 'Gathering', 0, 9999)}</div>
       <p class="note">Most holes can be fished at any level. A few are restricted until you reach their level: they're not on your map and you can't cast there, so the app greys them out until then. Fish needing more Gathering than you have are flagged at the hole and left out of Up soon. Leave blank to turn off.</p>
     </section>
-    <section><h2 class="sec">Expansions</h2><div class="chips">${exps}</div></section>
+    <section><h2 class="sec">Expansions you've reached</h2><div class="chips">${exps}</div>
+      <p class="note">Zones open up with the story, not your Fisher level. Regions in expansions you haven't reached are left off Home and out of Up soon and the in-reach counts.</p></section>
     ${tomesSection(m, p)}
     <section><h2 class="sec">Backup</h2>
       ${ctx.flash ? `<p class="note hi">${esc(ctx.flash)}</p>` : ''}
@@ -697,7 +695,7 @@ export function holeView(ctx, hid) {
     </header>
     ${why ? `<p class="banner">${m.isLocked(hid, profile)
       ? `${whyMark('lock')} Restricted until Lv ${h.lvl}: you can't cast here yet.`
-      : `Hidden while browsing: ${esc(why)}. Change it in <a class="link" href="#/profile">Profile</a>.`}</p>` : ''}
+      : `Left off Home: ${esc(why)}. Change it in <a class="link" href="#/profile">Profile</a>.`}</p>` : ''}
     ${main ? `<div class="fishes">${main}</div>` : ''}
     ${rows.some((r) => m.onlyHere(r.fid)) ? `<p class="note legend">${ONLY_HERE} only caught at this hole</p>` : ''}
     ${caughtGroup}
@@ -914,9 +912,11 @@ const grid = (m, store, fids, log, cls = '') => `<div class="grid${cls}">${fids.
 export function guideView(ctx, log) {
   const { m, store } = ctx;
   if (!GUIDE_LOGS[log]) return notFound();
-  const { profile } = store.state;
   const tab = log === 'spear' ? 'spear' : 'rod';
-  const all = m.countFish(m.logFish(log), store.isCaught, profile);
+  // The guide is the Fishing Log: how complete it is, caught out of every
+  // fish, whatever you can reach (Home shows that).
+  const logCount = (fids) => ({ caught: fids.filter(store.isCaught).length, total: fids.length });
+  const all = logCount(m.logFish(log));
   const tabs = Object.entries(GUIDE_LOGS).map(([k, l]) =>
     `<a role="tab" href="#/guide/${k}" class="tab${k === log ? ' on' : ''}" aria-selected="${k === log}">${l}</a>`).join('');
 
@@ -927,7 +927,7 @@ export function guideView(ctx, log) {
 
   const openExp = ctx.guideOpen?.[log] ?? null;
   const rows = m.guideGroups(log).map(([exp, fids]) => {
-    const c = m.countFish(fids, store.isCaught, profile);
+    const c = logCount(fids);
     const open = openExp === String(exp);
     const head = `
       <button class="item region${open ? ' open' : ''}" data-act="guide-exp" data-log="${log}" data-exp="${exp}" aria-expanded="${open}">
@@ -950,7 +950,6 @@ export function guideView(ctx, log) {
     <nav class="tabs two" role="tablist" aria-label="Log">${tabs}</nav>
     ${recentSec}
     <section><h2 class="sec">By expansion</h2><div class="list">${rows}</div>
-      ${all.reach < all.total ? `<p class="note legend">${reachLegend(false)}</p>` : ''}
       <p class="note legend"><span class="tile mystery inline" aria-hidden="true"></span> not caught yet · <span class="tile mystery folk inline" aria-hidden="true"></span> folklore fish (needs a tome) not caught yet. Tap a caught fish to read its log entry.</p></section>`;
 }
 

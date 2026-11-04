@@ -61,14 +61,16 @@ function condText(m, e) {
 
 /**
  * Why bait fish in a fish's mooch chain at a hole are out of reach, one line
- * each, e.g. "Mooch bait Fullmoon Sardine needs Gathering 500".
+ * each, e.g. {t: "Mooch bait Fullmoon Sardine needs Gathering 500", k: 'gath'}.
  */
 function baitBlockText(m, fid, hid, profile) {
   return m.chainBlocks(fid, hid, profile).map(({ id, entry }) => {
     const why = [];
     if (m.gatheringShort(entry, profile)) why.push(`Gathering ${entry.minG}`);
     if (m.tomeMissing(id, profile)) why.push(`the ${tomeShort(m, m.data.fish[id])} folklore tome`);
-    return `Mooch bait ${m.fishName(id)} needs ${why.join(' and ')}`;
+    // The icon of the first thing it needs, nearest to reach first.
+    const k = m.gatheringShort(entry, profile) ? 'gath' : 'tome';
+    return { t: `Mooch bait ${m.fishName(id)} needs ${why.join(' and ')}`, k };
   });
 }
 
@@ -222,7 +224,7 @@ export function homeBody(ctx) {
     const open = ctx.openRegion === r;
     const head = `
       <button class="item region${open ? ' open' : ''}" data-act="region" data-rid="${r}" aria-expanded="${open}">
-        <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span>${countNum(c)}${chevron}</div>
+        <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span>${countNum(c, true)}${chevron}</div>
         ${barRow(c, `#/${tab}/left/region/${r}`)}
       </button>`;
     return open ? branch(head + zoneRows(ctx, r)) : head;
@@ -236,14 +238,19 @@ export function homeBody(ctx) {
   return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden, gated)}`;
 }
 
-// Why fish can't be caught right now, in the order they're shown.
+// Why fish can't be caught right now, in the order they're shown. Two
+// families: Later (waiting on a window: come back) and Not yet (something
+// you lack: a locked hole, Gathering or a tome), coloured apart.
 const WHY = [
-  ['window', '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>', 'on a window', 'Waiting on a window'],
+  ['window', '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>', 'waiting on a window', 'Waiting on a window'],
   ['gath', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l9-9M6.5 6.5a13 13 0 0 1 11 11"/></svg>', 'need more Gathering', 'Need more Gathering'],
   ['tome', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6zM9.5 4v16"/></svg>', 'need a folklore tome', 'Need a folklore tome'],
-  ['lock', '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="11" width="12" height="9" rx="1.5"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></svg>', 'in a hole above your level', 'Hole above your level'],
+  ['lock', '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="11" width="12" height="9" rx="1.5"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></svg>', 'locked hole', 'Locked hole'],
 ];
 const whySvg = Object.fromEntries(WHY.map(([k, svg]) => [k, svg]));
+const whyCls = (k) => (k === 'window' ? 'w' : 'w gate');
+/** A why icon on its own, coloured by family, e.g. in front of a warning. */
+const whyMark = (k) => `<span class="${whyCls(k)}">${whySvg[k]}</span>`;
 
 /**
  * Icon counts of why a row's remaining fish can't be caught right now, or ''
@@ -253,31 +260,44 @@ function whyIcons(why, href = null) {
   const parts = WHY.filter(([k]) => why?.[k]);
   if (!parts.length) return '';
   const label = parts.map(([k, , t]) => `${why[k]} ${t}`).join(', ');
-  const inner = parts.map(([k, svg]) => `<span class="w">${svg}<span class="num">${why[k]}</span></span>`).join('');
+  const inner = parts.map(([k, svg]) => `<span class="${whyCls(k)}">${svg}<span class="num">${why[k]}</span></span>`).join('');
   return href
     ? `<span class="why tap" data-act="go" data-href="${href}" role="link" aria-label="Can't catch now: ${label}">${inner}</span>`
     : `<span class="why" aria-label="Can't catch now: ${label}">${inner}</span>`;
 }
 
-const REACH_LEGEND = `<span class="num">(N)</span> is the full total. The rest can't be caught right now:
-  ${WHY.map(([, svg, t]) => `<span class="w">${svg}</span> ${t}`).join(', ')}. Tap the icons to see which fish.`;
+const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))
+  .map(([k, svg, t]) => `<span class="${whyCls(k)}">${svg}</span> ${t}`).join(', ');
+/**
+ * What the counts and icons mean. `now`: the counts are what you can catch
+ * right now (rows), so windows count against them; otherwise they're what
+ * you can catch at all (the header and the guide).
+ */
+const reachLegend = (now) => `${now
+  ? '<span class="num">4 / 6 <span class="now">now</span></span> on a row: 4 caught of the 6 you could catch right now.'
+  : '<span class="num">4 / 6</span>: 4 caught of the 6 you can catch at your level, Gathering and tomes.'}
+  <span class="num">(N)</span> is everything.
+  ${now ? `<b>Later</b>: ${legendIcons(['window'])}. ` : ''}<b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}.
+  Tap the icons to see which fish.`;
 
 function regionsBlock(regionRows, hidden, gated) {
   return `
     <section><h2 class="sec">Regions</h2>
       <div class="list">${regionRows || '<p class="empty">Nothing matches your filters.</p>'}</div>
-      ${gated ? `<p class="note legend">${REACH_LEGEND}</p>` : ''}
+      ${gated ? `<p class="note legend">${reachLegend(true)}</p>` : ''}
       ${hidden ? `<p class="note">${hidden} region${hidden > 1 ? 's' : ''} hidden by your level and expansion filters.</p>` : ''}
     </section>`;
 }
 
 /**
  * Caught out of the fish in reach, then the full total, muted, when some
- * are beyond your Gathering or level (or, on region, zone and hole rows,
- * waiting on a window).
+ * are beyond your Gathering or level. With `now` (region, zone and hole
+ * rows, which also drop fish waiting on a window) the reach is labelled
+ * "now", so it isn't read as the header's overall progress.
  */
-const countText = ({ caught, total, reach = total }) =>
-  `${caught.toLocaleString()} / ${reach.toLocaleString()}${reach < total ? `<span class="out">(${total.toLocaleString()})</span>` : ''}`;
+const countText = ({ caught, total, reach = total }, now = false) =>
+  `${caught.toLocaleString()} / ${reach.toLocaleString()}${reach < total
+    ? `${now ? '<span class="now">now</span>' : ''}<span class="out">(${total.toLocaleString()})</span>` : ''}`;
 /** A region's progress bar, with the why-not icons beside it when there are any. */
 const barRow = (c, href) => {
   const icons = whyIcons(c.why, href);
@@ -286,7 +306,7 @@ const barRow = (c, href) => {
 
 /** Every fish caught: the row folds away. */
 const done = ({ caught, total }) => total > 0 && caught === total;
-const countNum = (c) => `<span class="num">${countText(c)}</span>`;
+const countNum = (c, now = false) => `<span class="num">${countText(c, now)}</span>`;
 
 /**
  * Rows with the completed ones folded under a "Completed (N)" row, which
@@ -326,8 +346,8 @@ function zoneRows(ctx, rid) {
     const expanded = ctx.openZone === z;
     const head = `
       <button class="item zone region${expanded ? ' open' : ''}" data-act="zone" data-zid="${z}" aria-expanded="${expanded}">
-        <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span>${countNum(c)}${chevron}</div>
-        <div class="row"><span class="sub grow">${plural(vis.length, 'hole')}${undisc ? ` · <span class="undisc-name">${undisc} new</span>` : ''}${locked ? ` · ${locked} locked` : ''} · ${lvText}</span>${open ? `<span class="tag open">${open} open now</span>` : ''}${whyIcons(c.why, `#/${tab}/left/zone/${z}`)}</div>
+        <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span>${countNum(c, true)}${chevron}</div>
+        <div class="row"><span class="sub grow">${plural(vis.length, 'hole')}${undisc ? ` · <span class="undisc-name">${undisc} undiscovered</span>` : ''}${locked ? ` · <span class="nw">${locked} locked</span>` : ''} · <span class="nw">${lvText}</span></span>${open ? `<span class="tag open">${open} open now</span>` : ''}${whyIcons(c.why, `#/${tab}/left/zone/${z}`)}</div>
       </button>`;
     return expanded ? branch(head + holeRows(ctx, z)) : head;
   });
@@ -360,7 +380,7 @@ function holeRows(ctx, zid) {
     }
     return `
       <a class="item hole${grey ? ' grey' : ''}" href="#/hole/${hid}">
-        <div class="row"><span class="title grow">${holeName(m, store, hid)}<span class="lv">Lv ${h.lvl}</span></span>${countNum(hc)}</div>
+        <div class="row"><span class="title grow">${holeName(m, store, hid)}<span class="lv">Lv ${h.lvl}</span></span>${countNum(hc, true)}</div>
         ${tagRow(tags, whyIcons(hc.why))}
       </a>`;
   });
@@ -404,8 +424,8 @@ const hiddenTag = (why) => (why ? ` <span class="tag">${esc(why)}</span>` : '');
 // hole's toggle, and hole names in lists. undiscLegend explains it.
 const holeName = (m, store, hid) => (store.isDiscovered(hid)
   ? esc(m.data.holes[hid].name)
-  : `<span class="undisc-name" title="Not discovered yet">${esc(m.data.holes[hid].name)}</span>`);
-const undiscLegend = '<p class="note legend"><span class="undisc-name">Hole</span> not discovered yet</p>';
+  : `<span class="undisc-name" title="Undiscovered">${esc(m.data.holes[hid].name)}</span>`);
+const undiscLegend = '<p class="note legend"><span class="undisc-name">Hole</span> undiscovered</p>';
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 export function daysAgo(ms, now) {
@@ -550,7 +570,7 @@ export function profileView(ctx) {
       <div class="list">${stepper('lvl', 'Fisher level', 1, 100)}${stepper('gath', 'Gathering', 0, 9999)}</div>
       <p class="note">Most holes can be fished at any level. A few (restricted holes) are locked until you reach their level: they're not on your map and you can't cast there, so the app greys them out until then. Fish needing more Gathering than you have are flagged at the hole and left out of Up soon. Leave blank to turn off.</p>
     </section>
-    <section><h2 class="sec">Expansions unlocked</h2><div class="chips">${exps}</div></section>
+    <section><h2 class="sec">Expansions</h2><div class="chips">${exps}</div></section>
     ${tomesSection(m, p)}
     <section><h2 class="sec">Backup</h2>
       ${ctx.flash ? `<p class="note hi">${esc(ctx.flash)}</p>` : ''}
@@ -628,14 +648,14 @@ export function holeView(ctx, hid) {
     const cond = r.st && !r.caught
       ? `<span class="cond"><span class="hi">${esc(fullCondText(m, r.fid, hid))}</span> ${statusPill(r.st, now)}</span>` : '';
     const warn = !r.caught && m.gatheringShort(e, profile)
-      ? `<span class="warn">Needs Gathering ${e.minG} — you have ${profile.gath}</span>` : '';
-    const baitWarn = r.caught ? '' : baitBlockText(m, r.fid, hid, profile).map((t) => `<span class="warn">${esc(t)}</span>`).join('');
+      ? `<span class="warn">${whyMark('gath')} Needs Gathering ${e.minG} — you have ${profile.gath}</span>` : '';
+    const baitWarn = r.caught ? '' : baitBlockText(m, r.fid, hid, profile).map(({ t, k }) => `<span class="warn">${whyMark(k)} ${esc(t)}</span>`).join('');
     const feeds = targets[r.fid] ? `<span class="feeds">Mooch bait for ${targets[r.fid].map(esc).join(', ')}</span>` : '';
     // Folklore: a warning when tracked tomes lack it, a plain note when tomes
     // aren't tracked, nothing once you have it.
     const folk = !f.folk || r.caught || (profile.tomes && !m.tomeMissing(r.fid, profile)) ? ''
       : m.tomeMissing(r.fid, profile)
-        ? `<span class="warn">Needs the ${esc(tomeShort(m, f))} folklore tome — not in your Profile</span>`
+        ? `<span class="warn">${whyMark('tome')} Needs the ${esc(tomeShort(m, f))} folklore tome — not in your Profile</span>`
         : `<span class="folk">Needs the ${esc(tomeShort(m, f))} folklore tome</span>`;
     return `
       <div class="fish${r.caught ? ' caught' : ''}${open ? ' open' : ''}">
@@ -678,13 +698,13 @@ export function holeView(ctx, hid) {
         <div class="grow">
           <div class="sub">Lv ${h.lvl}${m.isLocked(hid, profile) ? ` · <span class="hi">Locked until Lv ${h.lvl}</span>` : ''} · <span class="num hi">${xyText(h)}</span></div>
           <div class="sub">ET <span class="num hi">${fmtEtClock(now)}</span>${w != null ? ` · <span class="hi">${esc(m.data.weathers[w]?.name)}</span>` : ''}</div></div>
-        <button class="toggle${disc ? ' on' : ''}" data-act="disc" data-hid="${hid}" aria-pressed="${disc}">${disc ? 'Discovered' : 'Not discovered'}</button>
+        <button class="toggle${disc ? ' on' : ''}" data-act="disc" data-hid="${hid}" aria-pressed="${disc}">${disc ? 'Discovered' : 'Undiscovered'}</button>
       </div>
-      <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c)}</span></div>
+      <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c, true)}</span></div>
       ${c.why && whyIcons(c.why) ? `<div class="row why-line">${whyIcons(c.why)}</div>` : ''}
     </header>
     ${why ? `<p class="banner">${m.isLocked(hid, profile)
-      ? `Locked: you can't cast here until Fisher Lv ${h.lvl}.`
+      ? `${whyMark('lock')} Locked until Lv ${h.lvl}: you can't cast here yet.`
       : `Hidden while browsing: ${esc(why)}. Change it in <a class="link" href="#/profile">Profile</a>.`}</p>` : ''}
     ${main ? `<div class="fishes">${main}</div>` : ''}
     ${caughtGroup}
@@ -724,7 +744,7 @@ export function remainingView(ctx, tab, kind, id) {
     window: (x) => [statusPill(x.st, now), fullCondText(m, x.fid, x.hid)],
     gath: (x) => ['', `Needs Gathering ${gathNeed(x.fid, x.hid)}${profile.gath != null ? ` — you have ${profile.gath}` : ''}`],
     tome: (x) => ['', `Needs the ${tomesNeeded(x.fid, x.hid).join(' and ')} folklore tome`],
-    lock: (x) => ['', `Hole unlocks at Fisher Lv ${m.data.holes[x.hid].lvl}`],
+    lock: (x) => ['', `Locked until Lv ${m.data.holes[x.hid].lvl}`],
   };
   const sortKey = { gath: (x) => gathNeed(x.fid, x.hid) };
 
@@ -750,7 +770,7 @@ export function remainingView(ctx, tab, kind, id) {
     ${back(ctx, `#/${tab}/${kind}/${id}`, name, tab)}
     <header class="stack-s"><h1>${esc(name)}</h1>
       <div class="sub">Uncaught ${tab === 'spear' ? 'spearfishing ' : tab === 'ocean' ? 'ocean ' : ''}fish you can't catch right now</div>
-      <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c)}</span></div></header>
+      <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c, true)}</span></div></header>
     ${left.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : ''}
     ${sections || '<p class="empty">Nothing in the way: every uncaught fish here can be caught now.</p>'}`;
 }
@@ -811,7 +831,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
           return `<li><span class="dot${i === steps.length - 1 ? ' last' : ''}">${i + 1}</span>
             <span class="grow"><span class="sub">${verb}</span><span class="title">${what}</span>${how}${when}</span></li>`;
         }).join('')}</ol>
-        ${baitBlockText(m, fid, hid, store.state.profile).map((t) => `<p class="note warn">${esc(t)}</p>`).join('')}
+        ${baitBlockText(m, fid, hid, store.state.profile).map(({ t, k }) => `<p class="note warn">${whyMark(k)} ${esc(t)}</p>`).join('')}
         ${holes.length > 1 ? '<p class="note">Chains can differ per hole — this one is for the hole you came from.</p>' : ''}
       </section>`;
   }
@@ -936,7 +956,7 @@ export function guideView(ctx, log) {
     <nav class="tabs two" role="tablist" aria-label="Log">${tabs}</nav>
     ${recentSec}
     <section><h2 class="sec">By expansion</h2><div class="list">${rows}</div>
-      ${all.reach < all.total ? `<p class="note legend">${REACH_LEGEND}</p>` : ''}
+      ${all.reach < all.total ? `<p class="note legend">${reachLegend(false)}</p>` : ''}
       <p class="note legend"><span class="tile mystery inline" aria-hidden="true"></span> not caught yet · <span class="tile mystery folk inline" aria-hidden="true"></span> folklore fish (needs a tome) not caught yet. Tap a caught fish to read its log entry.</p></section>`;
 }
 

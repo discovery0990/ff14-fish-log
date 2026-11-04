@@ -164,7 +164,7 @@ try {
   check(await js(`!document.querySelector('.item.zone')`), 'tapping an open region collapses it');
   await js(`document.querySelector('[data-act=region][data-rid="22"]').click()`);
   check(await js(`!!document.querySelector('[data-act=zone][data-zid="32"]')`), 'tapping La Noscea lists its zones on Home');
-  check(await js(`/^\\d+ new$/.test(document.querySelector('[data-act=zone][data-zid="32"] .sub .undisc-name')?.textContent)`), 'a zone row counts its undiscovered holes as new, dashed');
+  check(await js(`/^\\d+ undiscovered$/.test(document.querySelector('[data-act=zone][data-zid="32"] .sub .undisc-name')?.textContent)`), 'a zone row counts its undiscovered holes, dashed');
   await js(`window.scrollTo(0, 300)`);
   await js(`document.querySelector('[data-act=zone][data-zid="32"]').click()`);
   check(await js(`Math.abs(window.scrollY - 300) < 5`), 'opening a zone keeps the scroll position (no jump)');
@@ -218,7 +218,7 @@ try {
   check(await js(`document.getElementById('home-body').textContent.includes('Locked until Lv 45')`), 'search labels locked holes');
   await js(`document.querySelector('[data-act="clear-search"]').click()`);
   await go('#/hole/r58');
-  check(await js(`document.body.textContent.includes("can't cast here until Fisher Lv 45")`), 'locked hole explains why');
+  check(await js(`document.body.textContent.includes("Locked until Lv 45: you can't cast here yet")`), 'locked hole explains why');
   check(await js(`document.querySelector('header').textContent.includes('Locked until Lv 45')`), 'locked hole header says until when');
   // Middle Hathoeva River (r12) is a restricted Lv 30 hole: open at Lv 40.
   await go('#/hole/r12');

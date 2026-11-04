@@ -182,6 +182,11 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .why .num { font-size: 12px; }
 .w { display: inline-flex; align-items: center; gap: 2px; }
 .w svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* Not yet (locked hole, Gathering, tome) stands apart from Later (a window). */
+.w.gate { color: var(--warn); }
+.warn .w svg, .banner .w svg { vertical-align: -2px; }
+/* Labels a row's count as what's catchable now, unlike the header's progress. */
+.num .now { margin-left: 3px; font-family: var(--sans); font-size: 11px; color: var(--muted); }
 /* A comfortable tap target on a phone, without making the row taller. */
 .why.tap { min-height: 32px; margin: -8px -8px -8px 0; padding: 0 8px; border-radius: 8px; }
 .why.tap:active { background: var(--track); }
@@ -264,6 +269,7 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .search .clear svg { width: 20px; height: 20px; stroke: var(--muted); stroke-width: 2.2; }
 .search input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.item.zone .sub .undisc-name, .item.zone .sub .nw { white-space: nowrap; }
 .undisc-name { padding: 0 5px; border-radius: 5px; outline: 1px dashed var(--undisc); outline-offset: -1px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .legend { font-size: 12px; }
 .item .title, .item .sub { display: block; }

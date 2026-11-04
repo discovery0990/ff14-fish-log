@@ -190,6 +190,9 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 /* Not yet (locked hole, Gathering, tome) stands apart from Later (a window). */
 .w.gate { color: var(--warn); }
 .w.open-now { color: var(--open); }
+.only-here { display: inline-flex; flex: none; color: var(--accent); }
+.only-here svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.legend .only-here svg { vertical-align: -2px; }
 .w.open-now svg { fill: currentColor; stroke: none; }
 .warn .w svg, .banner .w svg { vertical-align: -2px; }
 /* A comfortable tap target on a phone, without making the row taller. */

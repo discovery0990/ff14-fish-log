@@ -249,13 +249,17 @@ const WHY = [
   ['gath', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l9-9M6.5 6.5a13 13 0 0 1 11 11"/></svg>', 'need more Gathering', 'Need more Gathering'],
   ['tome', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6zM9.5 4v16"/></svg>', 'need a folklore tome', 'Need a folklore tome'],
   ['lock', '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="11" width="12" height="9" rx="1.5"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></svg>', 'restricted hole', 'Restricted hole'],
+  ['away', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5v5a5 5 0 0 0 5 5h9"/><path d="M15 11l4 4-4 4"/></svg>', 'catchable at another hole', 'Catchable at another hole'],
 ];
 // Fish open now: an amber dot and count, sized like the why icons beside it.
 const OPEN_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/></svg>';
 const openIcon = (n) => (n
   ? `<span class="why" aria-label="${n} open now" title="${n} open now"><span class="w open-now">${OPEN_SVG}<span class="num">${n}</span></span></span>` : '');
+// A fish caught at no other hole: a map pin beside its name on the hole screen.
+const ONLY_HERE = '<span class="only-here" title="Only caught here" aria-label="Only caught here"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></svg></span>';
 const whySvg = Object.fromEntries(WHY.map(([k, svg]) => [k, svg]));
-const whyCls = (k) => (k === 'window' ? 'w' : 'w gate');
+// Not yet (a gate) is coloured; Later (a window) and elsewhere stay muted.
+const whyCls = (k) => (k === 'window' || k === 'away' ? 'w' : 'w gate');
 /** A why icon on its own, coloured by family, e.g. in front of a warning. */
 const whyMark = (k) => `<span class="${whyCls(k)}">${whySvg[k]}</span>`;
 
@@ -281,7 +285,7 @@ const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))
  */
 const reachLegend = (now) => `<span class="num">4 / 6</span>: 4 caught of the 6 you can catch at your level, Gathering and tomes.
   <span class="num">(N)</span> is everything.
-  ${now ? `<span class="w open-now">${OPEN_SVG}</span> open now. <b>Later</b>: ${legendIcons(['window'])}. ` : ''}<b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}.
+  ${now ? `<span class="w open-now">${OPEN_SVG}</span> open now. <b>Later</b>: ${legendIcons(['window'])}. ` : ''}<b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}. ${legendIcons(['away'])}.
   Tap the icons to see which fish.`;
 
 function regionsBlock(regionRows, hidden, gated) {
@@ -643,8 +647,9 @@ export function holeView(ctx, hid) {
   const row = (r) => {
     const f = m.data.fish[r.fid];
     const e = r.entry;
-    // Out of Gathering reach: still listed with its window, but not lit up as open.
-    const open = r.st?.state === 'open' && !r.caught && !m.blocked(r.fid, hid, profile);
+    // Out of reach (Gathering, tome, or a restricted hole): still listed with
+    // its window, but not lit up as open.
+    const open = r.st?.state === 'open' && !r.caught && !m.isLocked(hid, profile) && !m.blocked(r.fid, hid, profile);
     const cond = r.st && !r.caught
       ? `<span class="cond"><span class="hi">${esc(fullCondText(m, r.fid, hid))}</span> ${statusPill(r.st, now)}</span>` : '';
     const warn = !r.caught && m.gatheringShort(e, profile)
@@ -662,7 +667,7 @@ export function holeView(ctx, hid) {
         <button class="check" data-act="caught" data-fid="${r.fid}" data-hid="${hid}" aria-pressed="${r.caught}"
           aria-label="${r.caught ? 'Unmark' : 'Mark caught:'} ${esc(f.name)}">${r.caught ? checkSvg : ''}</button>
         <a class="body" href="#/fish/${r.fid}?h=${hid}">
-          <span class="row">${icon(f.icon, 'icon sm')}<span class="title">${esc(f.name)}</span></span>
+          <span class="row">${icon(f.icon, 'icon sm')}<span class="title">${esc(f.name)}</span>${m.onlyHere(r.fid) ? ONLY_HERE : ''}</span>
           ${baitLine(m, r.fid, hid, e)}${extrasLine(m, e)}${cond}${warn}${folk}${baitWarn}${feeds}
         </a>
       </div>`;
@@ -707,6 +712,7 @@ export function holeView(ctx, hid) {
       ? `${whyMark('lock')} Restricted until Lv ${h.lvl}: you can't cast here yet.`
       : `Hidden while browsing: ${esc(why)}. Change it in <a class="link" href="#/profile">Profile</a>.`}</p>` : ''}
     ${main ? `<div class="fishes">${main}</div>` : ''}
+    ${rows.some((r) => m.onlyHere(r.fid)) ? `<p class="note legend">${ONLY_HERE} only caught at this hole</p>` : ''}
     ${caughtGroup}
     ${extras.length ? `<section><h2 class="sec">Also caught here</h2><p class="note">Reported by players; not in the in-game guide for this hole.</p>
       <div class="fishes">${extras.map(row).join('')}</div></section>` : ''}`;
@@ -745,6 +751,7 @@ export function remainingView(ctx, tab, kind, id) {
     gath: (x) => ['', `Needs Gathering ${gathNeed(x.fid, x.hid)}${profile.gath != null ? ` — you have ${profile.gath}` : ''}`],
     tome: (x) => ['', `Needs the ${tomesNeeded(x.fid, x.hid).join(' and ')} folklore tome`],
     lock: (x) => ['', `Restricted until Lv ${m.data.holes[x.hid].lvl}`],
+    away: (x) => ['', `Catchable at ${m.data.holes[x.at].name}`],
   };
   const sortKey = { gath: (x) => gathNeed(x.fid, x.hid) };
 

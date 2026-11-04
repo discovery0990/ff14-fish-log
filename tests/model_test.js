@@ -34,15 +34,15 @@ Deno.test('every fish is in exactly one log', () => {
 Deno.test('Central Shroud: 5 holes, 28 distinct fish (27 listed + Copperfish reported at The Vein)', () => {
   const z = zoneByName('Central Shroud');
   assertEquals(m.zoneHolesAll('rod', z).length, 5);
-  assertEquals(m.count(m.zoneHolesAll('rod', z), () => false), { caught: 0, total: 28, reach: 28, why: { window: 0, gath: 0, tome: 0, lock: 0 } });
+  assertEquals(m.count(m.zoneHolesAll('rod', z), () => false), { caught: 0, total: 28, reach: 28, why: { window: 0, gath: 0, tome: 0, lock: 0, away: 0 } });
 });
 
 Deno.test('a fish needing more Gathering is out of reach, until caught', () => {
   const matriarch = byName('The Matriarch'); // needs 349 Gathering at Exploratory Ice Hole
-  assertEquals(m.count(['r32'], () => false, profile({ gath: 348 })), { caught: 0, total: 5, reach: 4, why: { window: 0, gath: 1, tome: 0, lock: 0 } });
+  assertEquals(m.count(['r32'], () => false, profile({ gath: 348 })), { caught: 0, total: 5, reach: 4, why: { window: 0, gath: 1, tome: 0, lock: 0, away: 0 } });
   assertEquals(m.count(['r32'], () => false, profile({ gath: 349 })).reach, 5);
   assertEquals(m.count(['r32'], () => false, profile()).reach, 5);
-  assertEquals(m.count(['r32'], (f) => f === matriarch, profile({ gath: 0 })), { caught: 1, total: 5, reach: 5, why: { window: 0, gath: 0, tome: 0, lock: 0 } });
+  assertEquals(m.count(['r32'], (f) => f === matriarch, profile({ gath: 0 })), { caught: 1, total: 5, reach: 5, why: { window: 0, gath: 0, tome: 0, lock: 0, away: 0 } });
 });
 
 Deno.test('fish at a locked hole are out of reach', () => {
@@ -596,13 +596,13 @@ Deno.test('why-not counts add up to the gap between total and reach, and match R
   const kinds = new Set();
   for (const hids of sets) {
     const c = m.count(hids, () => false, p, T);
-    const { window, gath, tome, lock } = c.why;
-    assertEquals(c.total - c.reach, window + gath + tome + lock, hids.join(','));
+    const { window, gath, tome, lock, away } = c.why;
+    assertEquals(c.total - c.reach, window + gath + tome + lock + away, hids.join(','));
     const left = m.remaining(hids, () => false, p, T);
     assertEquals(left.length, c.total - c.reach);
     for (const x of left) kinds.add(x.why);
   }
-  assertEquals([...kinds].sort(), ['gath', 'lock', 'tome', 'window'], 'the profile exercises every reason');
+  assertEquals([...kinds].sort(), ['away', 'gath', 'lock', 'tome', 'window'], 'the profile exercises every reason');
 });
 
 Deno.test('Remaining: lists the fish, links them with their hole, and Back from the fish returns there', () => {
@@ -629,4 +629,20 @@ Deno.test('hole view: the count is progress, the same whether windows are open o
   const text = `${c.caught} / ${c.reach}${c.reach < c.total ? `<span class="out">(${c.total})</span>` : ''}`;
   assertStringIncludes(holeView(ctxFor(store), hid), `<span class="num hi">${text}</span>`);
   assertStringIncludes(holeView(ctxFor(store), hid), 'aria-label="Can\'t catch now: ');
+});
+
+Deno.test('a fish restricted at one hole but catchable at another counts as elsewhere, so holes add up to their zone', () => {
+  const p = profile({ lvl: 53, gath: 211 });
+  const z = Object.keys(DATA.zones).find((k) => DATA.zones[k].name === 'Coerthas Western Highlands');
+  const hids = m.zoneHolesAll('rod', z);
+  const byName = (n) => hids.find((h) => DATA.holes[h].name === n);
+  const clear = m.count([byName('Clearpool')], () => false, p, T).why;
+  assertEquals([clear.lock, clear.away], [6, 3]); // Abalathian Smelt, Ice Faerie, Coerthan Crab are elsewhere
+  const zone = m.count(hids, () => false, p, T).why;
+  const sum = hids.reduce((n, h) => n + m.count([h], () => false, p, T).why.lock, 0);
+  assertEquals(zone.lock, sum);
+  const left = m.remaining([byName('Clearpool')], () => false, p, T).filter((x) => x.why === 'away');
+  assert(left.every((x) => x.at && !m.isLocked(x.at, p)), 'elsewhere names a hole you can fish');
+  assert(m.onlyHere(DATA.fish && Object.keys(DATA.fish).find((f) => DATA.fish[f].name === 'Hotrod')));
+  assert(!m.onlyHere(Object.keys(DATA.fish).find((f) => DATA.fish[f].name === 'Abalathian Smelt')));
 });

@@ -116,14 +116,14 @@ Deno.test('gathering shortfall is a warning, not a filter', () => {
   assert(!m.gatheringShort(jester, profile())); // not set → no warning
 });
 
-Deno.test('gathering guesses show a "?", and an unknown requirement never blocks', () => {
+Deno.test('gathering guesses show a "?" and still block', () => {
   const ctx = ctxFor(createStore(memStorage()));
   const facts = (name, hid) => fishView(ctx, byName(name), hid);
   assertStringIncludes(facts('Floating Boulder', 'r13'), '<dt>Min. Gathering</dt><dd>349</dd>');
   assertStringIncludes(facts('Riddle', 'r123'), '<dt>Min. Gathering</dt><dd>751?</dd>');
-  assertStringIncludes(facts('Sweetnewt', 'r105'), '<dt>Min. Gathering</dt><dd>?</dd>');
-  const newt = DATA.fish[byName('Sweetnewt')].at.r105;
-  assert(!m.gatheringShort(newt, profile({ gath: 0 })));
+  assertStringIncludes(facts('Sweetnewt', 'r105'), '<dt>Min. Gathering</dt><dd>380?</dd>');
+  const riddle = DATA.fish[byName('Riddle')].at.r123;
+  assert(m.gatheringShort(riddle, profile({ gath: 720 })));
 });
 
 // ------------------------------------------------------------ mooching

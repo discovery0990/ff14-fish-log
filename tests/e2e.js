@@ -354,6 +354,13 @@ try {
   await shot('profile-tomes');
   await js(`document.querySelector('[data-act=tome][data-tome="12701"]').click()`);
   check(JSON.stringify((await stored()).profile.tomes) === '[]', 'tapping it again unticks it');
+  // Prototype-key routes show Not found instead of crashing.
+  for (const r of ['#/hole/constructor', '#/fish/__proto__', '#/guide/toString', '#/rod/zone/constructor']) {
+    await go(r);
+    check(await js(`document.querySelector('h1')?.textContent`) !== null && !(await js(`document.body.textContent.includes('Couldn')`)), `${r} does not crash`);
+  }
+  await go('#/hole/constructor');
+  check(await js(`document.querySelector('h1')?.textContent === 'Not found'`), '#/hole/constructor shows Not found');
 } catch (err) {
   failures++;
   console.log(`FAIL ${err.message}`);

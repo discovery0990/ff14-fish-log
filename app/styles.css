@@ -198,6 +198,7 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 /* A comfortable tap target on a phone, without making the row taller. */
 .why.tap { min-height: 32px; margin: -8px -8px -8px 0; padding: 0 8px; border-radius: 8px; }
 .why.tap:active { background: var(--track); }
+.why.tap:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
 .row > .bar { flex: 1; }
 .why-line { justify-content: flex-end; }
 .legend .w svg { vertical-align: -2px; }

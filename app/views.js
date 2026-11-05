@@ -111,8 +111,8 @@ function screenName(m, hash) {
   if (!a || (TABS.includes(a) && !b)) return 'Home';
   if (TABS.includes(a) && b === 'soon') return 'Up soon';
   if (TABS.includes(a) && b === 'left') return placeName(m, c, d);
-  if (a === 'hole') return m.data.holes[b]?.name ?? null;
-  if (a === 'fish') return m.data.fish[b]?.name ?? null;
+  if (a === 'hole') return Object.hasOwn(m.data.holes, b) ? m.data.holes[b].name : null;
+  if (a === 'fish') return Object.hasOwn(m.data.fish, b) ? m.data.fish[b].name : null;
   if (a === 'profile') return 'Profile';
   if (a === 'guide') return 'Fish guide';
   return null;
@@ -260,9 +260,9 @@ const WHY = [
 // Fish open now: an amber dot and count, sized like the why icons beside it.
 const OPEN_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/></svg>';
 const openIcon = (n) => (n
-  ? `<span class="why" aria-label="${n} open now" title="${n} open now"><span class="w open-now">${OPEN_SVG}<span class="num">${n}</span></span></span>` : '');
+  ? `<span class="why" role="img" aria-label="${n} open now" title="${n} open now"><span class="w open-now">${OPEN_SVG}<span class="num">${n}</span></span></span>` : '');
 // A fish caught at no other hole: a map pin beside its name on the hole screen.
-const ONLY_HERE = '<span class="only-here" title="Only caught here" aria-label="Only caught here"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></svg></span>';
+const ONLY_HERE = '<span class="only-here" role="img" title="Only caught here" aria-label="Only caught here"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></svg></span>';
 const whySvg = Object.fromEntries(WHY.map(([k, svg]) => [k, svg]));
 // Not yet (a gate) is coloured; Later (a window) and elsewhere stay muted.
 const whyCls = (k) => (k === 'window' || k === 'away' ? 'w' : 'w gate');
@@ -279,8 +279,8 @@ function whyIcons(why, href = null) {
   const label = parts.map(([k, , t]) => `${why[k]} ${t}`).join(', ');
   const inner = parts.map(([k, svg]) => `<span class="${whyCls(k)}">${svg}<span class="num">${why[k]}</span></span>`).join('');
   return href
-    ? `<span class="why tap" data-act="go" data-href="${href}" role="link" aria-label="Can't catch now: ${label}">${inner}</span>`
-    : `<span class="why" aria-label="Can't catch now: ${label}">${inner}</span>`;
+    ? `<span class="why tap" data-act="go" data-href="${href}" role="link" tabindex="0" aria-label="Can't catch now: ${label}">${inner}</span>`
+    : `<span class="why" role="img" aria-label="Can't catch now: ${label}">${inner}</span>`;
 }
 
 const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))
@@ -626,7 +626,7 @@ function tomesSection(m, p) {
 export function holeView(ctx, hid) {
   const { m, store, now } = ctx;
   const { profile } = store.state;
-  const h = m.data.holes[hid];
+  const h = Object.hasOwn(m.data.holes, hid) ? m.data.holes[hid] : null;
   if (!h) return notFound();
   const tab = holeTab(h);
   const zone = m.data.zones[h.zone];
@@ -656,7 +656,7 @@ export function holeView(ctx, hid) {
     return `
       <div class="fish${r.caught ? ' caught' : ''}${open ? ' open' : ''}">
         <button class="check" data-act="caught" data-fid="${r.fid}" data-hid="${hid}" aria-pressed="${r.caught}"
-          aria-label="${r.caught ? 'Unmark' : 'Mark caught:'} ${esc(f.name)}">${r.caught ? checkSvg : ''}</button>
+          aria-label="Caught: ${esc(f.name)}">${r.caught ? checkSvg : ''}</button>
         <a class="body" href="#/fish/${r.fid}?h=${hid}">
           <span class="row">${icon(f.icon, 'icon sm')}<span class="title">${esc(f.name)}</span>${m.onlyHere(r.fid) ? ONLY_HERE : ''}</span>
           ${baitLine(m, r.fid, hid, e)}${extrasLine(m, e)}${cond}${warn}${folk}${baitWarn}${feeds}
@@ -711,8 +711,8 @@ export function holeView(ctx, hid) {
 
 /** A region's or zone's name, for the Remaining screen; null if unknown. */
 function placeName(m, kind, id) {
-  if (kind === 'region') return m.data.regions[id]?.name ?? null;
-  if (kind === 'zone') return m.data.zones[id]?.name ?? null;
+  if (kind === 'region') return Object.hasOwn(m.data.regions, id) ? m.data.regions[id].name : null;
+  if (kind === 'zone') return Object.hasOwn(m.data.zones, id) ? m.data.zones[id].name : null;
   return null;
 }
 
@@ -786,7 +786,7 @@ const availability = (h, st) => (h.ocean ? ' · Ocean fishing' : st ? '' : ' · 
 
 export function fishView(ctx, fid, fromHole, from = null) {
   const { m, store, now } = ctx;
-  const f = m.data.fish[fid];
+  const f = Object.hasOwn(m.data.fish, fid) ? m.data.fish[fid] : null;
   if (!f) return notFound();
   const holes = m.fishHoles(fid);
   const hid = holes.includes(fromHole) ? fromHole : holes[0];
@@ -920,7 +920,7 @@ const grid = (m, store, fids, log, cls = '') => `<div class="grid${cls}">${fids.
  */
 export function guideView(ctx, log) {
   const { m, store } = ctx;
-  if (!GUIDE_LOGS[log]) return notFound();
+  if (!Object.hasOwn(GUIDE_LOGS, log)) return notFound();
   const tab = log === 'spear' ? 'spear' : 'rod';
   // The guide is the Fishing Log: how complete it is, caught out of every
   // fish, whatever you can reach (Home shows that).

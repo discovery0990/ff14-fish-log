@@ -41,11 +41,11 @@ function makeCtx(parts) {
 function enterRoute() {
   const [a, b, c] = parseRoute().parts;
   if (TABS.includes(a) && (b === 'zone' || b === 'region')) {
-    if (b === 'zone' && model.data.zones[c]) openZone(c, true, a);
-    if (b === 'region' && model.data.regions[c]) openRegion(c, a);
+    if (b === 'zone' && Object.hasOwn(model.data.zones, c)) openZone(c, true, a);
+    if (b === 'region' && Object.hasOwn(model.data.regions, c)) openRegion(c, a);
     ui.query = '';
     history.replaceState(null, '', `#/${a}`);
-  } else if (a === 'hole' && model.data.holes[b]) {
+  } else if (a === 'hole' && Object.hasOwn(model.data.holes, b)) {
     openZone(String(model.data.holes[b].zone), false);
   }
 }
@@ -152,7 +152,15 @@ addEventListener('resize', trimRows);
 function render({ keepScroll = false } = {}) {
   const y = window.scrollY;
   const active = document.activeElement;
-  const focusId = active?.id && root.contains(active) ? active.id : null;
+  const inRoot = active && root.contains(active);
+  const focusId = inRoot && active.id ? active.id : null;
+  // No id: find it again by its action and whatever data attributes identify it.
+  let focusSel = null;
+  if (inRoot && !focusId && active.dataset?.act) {
+    const ids = ['act', 'fid', 'hid', 'key', 'zid', 'rid', 'exp', 'tome', 'd', 'h', 'log', 'href'];
+    focusSel = ids.filter((k) => active.dataset[k] != null)
+      .map((k) => `[data-${k}="${CSS.escape(active.dataset[k])}"]`).join('');
+  }
   let sel = null;
   try {
     sel = focusId ? [active.selectionStart, active.selectionEnd] : null;
@@ -164,7 +172,12 @@ function render({ keepScroll = false } = {}) {
   for (const img of root.querySelectorAll('img')) {
     if (img.complete && img.naturalWidth) (loaded.get(img.src) ?? loaded.set(img.src, []).get(img.src)).push(img);
   }
-  root.innerHTML = view();
+  try {
+    root.innerHTML = view();
+  } catch (err) {
+    console.error(err);
+    root.innerHTML = notFound();
+  }
   for (const img of root.querySelectorAll('img')) {
     const old = loaded.get(img.src)?.pop();
     if (old) {
@@ -181,6 +194,11 @@ function render({ keepScroll = false } = {}) {
         if (sel && sel[0] != null) el.setSelectionRange(sel[0], sel[1]);
       } catch { /* ignore */ }
     }
+  }
+  if (focusSel) {
+    try {
+      root.querySelector(focusSel)?.focus({ preventScroll: true });
+    } catch { /* ignore */ }
   }
   measureStuck();
   trimRows();
@@ -344,6 +362,14 @@ root.addEventListener('change', (ev) => {
 });
 
 root.addEventListener('keydown', (ev) => {
+  // The why-not icons sit inside a row button, so they can't be a real link:
+  // make them keyboard-activatable.
+  if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches?.('.why.tap[data-act="go"]')) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    location.hash = ev.target.dataset.href;
+    return;
+  }
   if (ev.key === 'Enter' && ev.target.dataset?.profile) ev.target.blur(); // commits via change
   if (ev.key === 'Escape' && ev.target.id === 'search') {
     ev.target.value = '';

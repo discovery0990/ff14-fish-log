@@ -240,9 +240,9 @@ export function homeBody(ctx) {
     const head = `
       <button class="item region${open ? ' open' : ''}" data-act="region" data-rid="${r}" aria-expanded="${open}">
         <div class="row"><span class="title grow">${esc(m.data.regions[r].name)}</span>${countNum(c)}${chevron}</div>
-        ${barRow(c, `#/${tab}/left/region/${r}`, openCount(ctx, m.visibleZones(tab, r, profile).flatMap((z) => m.visibleHoles(tab, z, profile))))}
+        ${barRow(c, openCount(ctx, m.visibleZones(tab, r, profile).flatMap((z) => m.visibleHoles(tab, z, profile))))}
       </button>`;
-    return open ? branch(head + zoneRows(ctx, r)) : head;
+    return open ? branch(head + leftLink(c, `#/${tab}/left/region/${r}`, 'in-region') + zoneRows(ctx, r)) : head;
   };
   // Regions, zones and holes count progress; their icons say what's open or waiting now.
   const counts = regions.map((r) => [r, rowCount(m.count(m.regionHolesAll(tab, r), store.isCaught, profile, now))]);
@@ -276,16 +276,28 @@ const whyMark = (k) => `<span class="${whyCls(k)}">${whySvg[k]}</span>`;
 
 /**
  * Icon counts of why a row's remaining fish can't be caught right now, or ''
- * when nothing's in the way. With `href`, tapping them goes there.
+ * when nothing's in the way. Display only: the list behind them is reached
+ * from the "Can't catch right now" row inside an open region or zone.
  */
-function whyIcons(why, href = null) {
+function whyIcons(why, prefix = "Can't catch now: ") {
   const parts = WHY.filter(([k]) => why?.[k]);
   if (!parts.length) return '';
   const label = parts.map(([k, , t]) => `${why[k]} ${t}`).join(', ');
   const inner = parts.map(([k, svg]) => `<span class="${whyCls(k)}">${svg}<span class="num">${why[k]}</span></span>`).join('');
-  return href
-    ? `<span class="why tap" data-act="go" data-href="${href}" role="link" tabindex="0" aria-label="Can't catch now: ${label}">${inner}</span>`
-    : `<span class="why" role="img" aria-label="Can't catch now: ${label}">${inner}</span>`;
+  return `<span class="why" role="img" aria-label="${prefix}${label}">${inner}</span>`;
+}
+
+/**
+ * The first row inside an open region or zone: a link to its Remaining
+ * list, with the same icons as the row above. Always there, even at 0, so
+ * every open region and zone looks the same.
+ */
+function leftLink(c, href, level) {
+  const n = WHY.reduce((sum, [k]) => sum + (c.why?.[k] ?? 0), 0);
+  return `
+      <a class="item left-link ${level}" href="${href}">
+        <div class="row"><span class="grow">Can't catch right now · <span class="num">${n}</span></span>${chevron}</div>
+        ${n ? `<div class="row why-line">${whyIcons(c.why, '')}</div>` : ''}</a>`;
 }
 
 const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))
@@ -294,7 +306,7 @@ const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))
 const reachLegend = () => `<span class="num">4 / 6</span>: 4 caught of the 6 you can catch at your level, Gathering and tomes.
   <span class="num">(N)</span> is everything.
   <span class="w open-now">${OPEN_SVG}</span> open now. <b>Later</b>: ${legendIcons(['window'])}. <b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}. ${legendIcons(['away'])}.
-  Tap the icons to see which fish.`;
+  Open a region or zone to see which fish.`;
 
 function regionsBlock(regionRows, hidden, gated) {
   return `
@@ -314,8 +326,8 @@ const countText = ({ caught, total, reach = total }) =>
 /** A region's progress bar, with the open-now and why-not icons beside it when there are any. */
 // The bar gets the full width, so every region's bar measures the same 100%;
 // the icons sit on their own line under it.
-const barRow = (c, href, open = 0) => {
-  const icons = openIcon(open) + whyIcons(c.why, href);
+const barRow = (c, open = 0) => {
+  const icons = openIcon(open) + whyIcons(c.why);
   return `${progress(c, 'thin')}${icons ? `<div class="row why-line">${icons}</div>` : ''}`;
 };
 
@@ -367,9 +379,9 @@ function zoneRows(ctx, rid) {
     const head = `
       <button class="item zone region${expanded ? ' open' : ''}" data-act="zone" data-zid="${z}" aria-expanded="${expanded}">
         <div class="row"><span class="title grow">${esc(m.data.zones[z].name)}</span>${countNum(c)}${chevron}</div>
-        <div class="row"><span class="sub grow"><span class="nw">${disc} / ${vis.length} discovered</span>${locked ? ` · <span class="nw">${locked} restricted</span>` : ''}</span>${openIcon(open)}${whyIcons(c.why, `#/${tab}/left/zone/${z}`)}</div>
+        <div class="row"><span class="sub grow"><span class="nw">${disc} / ${vis.length} discovered</span>${locked ? ` · <span class="nw">${locked} restricted</span>` : ''}</span>${openIcon(open)}${whyIcons(c.why)}</div>
       </button>`;
-    return expanded ? branch(head + holeRows(ctx, z)) : head;
+    return expanded ? branch(head + leftLink(c, `#/${tab}/left/zone/${z}`, 'in-zone') + holeRows(ctx, z)) : head;
   });
 }
 

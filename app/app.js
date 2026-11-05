@@ -289,8 +289,6 @@ root.addEventListener('click', (ev) => {
   const d = el.dataset;
   switch (d.act) {
     case 'back': history.back(); break;
-    // A link inside a row that's itself a button or link (the why-not icons).
-    case 'go': location.hash = d.href; break;
     case 'caught': store.toggleCaught(d.fid, d.hid); break;
     case 'disc': store.toggleDiscovered(d.hid); break;
     case 'dismiss-reminder': store.setPrefs({ reminderDismissedAt: Date.now() }); break;
@@ -362,14 +360,6 @@ root.addEventListener('change', (ev) => {
 });
 
 root.addEventListener('keydown', (ev) => {
-  // The why-not icons sit inside a row button, so they can't be a real link:
-  // make them keyboard-activatable.
-  if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches?.('.why.tap[data-act="go"]')) {
-    ev.preventDefault();
-    ev.stopPropagation();
-    location.hash = ev.target.dataset.href;
-    return;
-  }
   if (ev.key === 'Enter' && ev.target.dataset?.profile) ev.target.blur(); // commits via change
   if (ev.key === 'Escape' && ev.target.id === 'search') {
     ev.target.value = '';

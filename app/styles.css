@@ -158,14 +158,16 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .item.zone { scroll-margin-top: var(--region-h, 0px); }
 .item.region.open { background: var(--raised); }
 .item.region > .row .title { font-size: 17px; font-weight: 700; }
-.item.zone { padding-left: 32px; gap: 4px;
+.item.zone, .item.left-link.in-region { padding-left: 32px; gap: 4px;
   background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat, rgba(0, 0, 0, .14); }
 .item.zone > .row .title { font-size: 15px; font-weight: 600; }
 .item.zone.open { background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat, var(--raised); }
-.item.hole { padding-left: 50px; gap: 4px;
+.item.hole, .item.left-link.in-zone { padding-left: 50px; gap: 4px;
   background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat,
     linear-gradient(var(--muted), var(--muted)) 32px 0 / 2px 100% no-repeat, rgba(0, 0, 0, .28); }
 .item.hole .title { font-size: 14px; font-weight: 500; }
+/* An open region's or zone's "Can't catch right now" link, at its children's level. */
+.item.left-link { font-size: 14px; color: var(--muted); }
 .item.hole.grey { opacity: .55; }
 .item.hole .lv { margin-left: 6px; font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; }
 .card { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--surface); }
@@ -187,10 +189,6 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .legend .only-here svg { vertical-align: -2px; }
 .w.open-now svg { fill: currentColor; stroke: none; }
 .warn .w svg, .banner .w svg { vertical-align: -2px; }
-/* A comfortable tap target on a phone, without making the row taller. */
-.why.tap { min-height: 32px; margin: -8px -8px -8px 0; padding: 0 8px; border-radius: 8px; }
-.why.tap:active { background: var(--track); }
-.why.tap:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
 .row > .bar { flex: 1; }
 .why-line { justify-content: flex-end; }
 .legend .w svg { vertical-align: -2px; }

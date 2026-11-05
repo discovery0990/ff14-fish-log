@@ -228,6 +228,14 @@ try {
   check(await js(`${holeRow('Privateer Sterncastle')}?.classList.contains('grey')`), 'Lv 40: restricted Sterncastle is greyed');
   check(await js(`!${holeRow('Privateer Forecastle')}?.classList.contains('grey')`), 'Lv 40: Forecastle is not greyed');
   check(await js(`document.querySelectorAll('a.item.hole.grey').length === 2 && document.body.textContent.includes('Restricted until Lv 45')`), 'restricted holes stay listed, greyed (Red Mantis Falls, Privateer Sterncastle)');
+  // An open region and zone each start with a link to what can't be caught now.
+  check(await js(`[...document.querySelectorAll('a.left-link')].map((a) => a.getAttribute('href')).join(' ')`) === '#/rod/left/region/22 #/rod/left/zone/32', 'open region and zone link to their Remaining lists');
+  check(await js(`!document.querySelector('button .why [data-act], button a, .why.tap')`), 'row buttons hold no links');
+  await js(`document.querySelector('a.left-link.in-zone').click()`);
+  await sleep(250);
+  check(await js(`location.hash === '#/rod/left/zone/32' && document.querySelector('h1').textContent === 'Eastern La Noscea'`), "the zone's link opens its Remaining list");
+  await js(`history.back()`);
+  await sleep(250);
   await js(`document.querySelector('[data-act=region][data-rid="22"]').click()`); // collapse
   check(await js(`document.body.textContent.includes('next 3h')`), 'Up soon uses the new horizon');
   await shot('home');

@@ -623,8 +623,9 @@ Deno.test('Remaining: lists the fish, links them with their hole, and Back from 
   const back = fishView(ctxFor(store), m2[1], m2[2], decodeURIComponent(m2[3]));
   assertStringIncludes(back, `href="#/rod/left/region/${r}"`);
   assertStringIncludes(back, '<span>La Noscea</span>');
-  // The why-not icons on the region row link to the same screen.
-  assertStringIncludes(homeView(ctxFor(store)), `data-href="#/rod/left/region/${r}"`);
+  // An open region's first row links to the same screen; closed, it has no link.
+  assertStringIncludes(homeView(ctxFor(store, { openRegion: r, folds: new Set() })), `<a class="item left-link in-region" href="#/rod/left/region/${r}">`);
+  assert(!homeView(ctxFor(store, { folds: new Set() })).includes('left-link'), 'closed regions have no link row');
 });
 
 Deno.test('hole view: the count is progress, the same whether windows are open or not', () => {

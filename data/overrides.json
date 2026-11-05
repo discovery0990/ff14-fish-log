@@ -13,14 +13,19 @@
     "8764": {"name": "Pirate's Bane", "minGathering": 370, "source": "ffxiv.consolegameswiki.com/wiki/Pirate's_Bane (370+ Gathering required); lowest live catch 362 (stated requirement kept over a live catch)"},
     "8773": {"name": "Magicked Mushroom", "minGathering": 383, "source": "ffxiv.consolegameswiki.com/wiki/Magicked_Mushroom (383+ Gathering required); lowest live catch also 383"},
     "15630": {"name": "The Dreamweaver", "minGathering": 680, "source": "ffxiv.consolegameswiki.com/wiki/The_Dreamweaver (Minimum 680+ Gathering); lowest live catch 702"},
-    "15635": {"name": "Inkfish", "minGathering": 702, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold"},
-    "15636": {"name": "The Second One", "minGathering": 751, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold"},
-    "16750": {"name": "Cirrostratus", "minGathering": 729, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold"},
-    "17581": {"name": "Crystal Pigeon", "minGathering": 751, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold; wiki: 'somewhere above 702, exact number currently unknown'"},
-    "17583": {"name": "Riddle", "minGathering": 751, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold"},
-    "17584": {"name": "The Lord of Lords", "minGathering": 732, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold"},
-    "17585": {"name": "The Speaker", "minGathering": 751, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold"},
-    "17586": {"name": "Thousand Fin", "minGathering": 751, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold"},
-    "17587": {"name": "Bloodchaser", "minGathering": 744, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold"}
+    "15635": {"name": "Inkfish", "minGathering": 702, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold", "guess": true},
+    "15636": {"name": "The Second One", "minGathering": 751, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold", "guess": true},
+    "16750": {"name": "Cirrostratus", "minGathering": 729, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold", "guess": true},
+    "17581": {"name": "Crystal Pigeon", "minGathering": 751, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold; wiki: 'somewhere above 702, exact number currently unknown'", "guess": true},
+    "17583": {"name": "Riddle", "minGathering": 751, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold", "guess": true},
+    "17584": {"name": "The Lord of Lords", "minGathering": 732, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold", "guess": true},
+    "17585": {"name": "The Speaker", "minGathering": 751, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold", "guess": true},
+    "17586": {"name": "Thousand Fin", "minGathering": 751, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold", "guess": true},
+    "17587": {"name": "Bloodchaser", "minGathering": 744, "source": "Teamcraft live catch stats (gubal fish_stats min_gathering), snapshot 2026-11-04; lowest Gathering seen catching it. Likely above the true threshold", "guess": true},
+    "7923": {"name": "Sweetnewt", "minGathering": null, "guess": true, "source": "Unknown: no number on the wiki, Teamcraft or its live stats (checked 2026-11-04)"},
+    "16745": {"name": "Hailfinder", "minGathering": null, "guess": true, "source": "Unknown: no number on the wiki, Teamcraft or its live stats (checked 2026-11-04)"},
+    "17577": {"name": "Bishopfish", "minGathering": null, "guess": true, "source": "Unknown: no number on the wiki, Teamcraft or its live stats (checked 2026-11-04)"},
+    "17580": {"name": "Ceti", "minGathering": null, "guess": true, "source": "Unknown: no number on the wiki, Teamcraft or its live stats (checked 2026-11-04)"},
+    "23057": {"name": "Hookstealer", "minGathering": null, "guess": true, "source": "Unknown: only number is a live catch at 490, far below Stormblood's 1050-1300 range, so treated as a bad reading (checked 2026-11-04)"}
   }
 }

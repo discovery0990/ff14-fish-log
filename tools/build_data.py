@@ -319,7 +319,12 @@ def build(fetch, skip_icons):
         check(fid in fish, f'override for unknown fish {fid}')
         for entry in fish.get(fid, {}).get('at', {}).values():
             if not entry.get('minG'):
-                entry['minG'] = g['minGathering']
+                # null = requirement unknown; guess = shown with a "?" so it
+                # reads as low confidence (research it in game).
+                if g['minGathering']:
+                    entry['minG'] = g['minGathering']
+                if g.get('guess'):
+                    entry['minGq'] = True
 
     # Drop holes that ended up with no log fish at all.
     holes = {hid: h for hid, h in holes.items() if h['fish'] or h['extra']}

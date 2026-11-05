@@ -60,13 +60,19 @@ function condText(m, e) {
 }
 
 /**
+ * A Gathering requirement as shown: "349", "751?" when it's a low-confidence
+ * guess (research it in game), "?" when it's unknown.
+ */
+const gathText = (e) => e.minG ? `${e.minG}${e.minGq ? '?' : ''}` : '?';
+
+/**
  * Why bait fish in a fish's mooch chain at a hole are out of reach, one line
  * each, e.g. {t: "Mooch bait Fullmoon Sardine needs Gathering 500", k: 'gath'}.
  */
 function baitBlockText(m, fid, hid, profile) {
   return m.chainBlocks(fid, hid, profile).map(({ id, entry }) => {
     const why = [];
-    if (m.gatheringShort(entry, profile)) why.push(`Gathering ${entry.minG}`);
+    if (m.gatheringShort(entry, profile)) why.push(`Gathering ${gathText(entry)}`);
     if (m.tomeMissing(id, profile)) why.push(`the ${tomeShort(m, m.data.fish[id])} folklore tome`);
     // The icon of the first thing it needs, nearest to reach first.
     const k = m.gatheringShort(entry, profile) ? 'gath' : 'tome';
@@ -641,7 +647,7 @@ export function holeView(ctx, hid) {
     const cond = r.st && !r.caught
       ? `<span class="cond"><span class="hi">${esc(fullCondText(m, r.fid, hid))}</span> ${statusPill(r.st, now)}</span>` : '';
     const warn = !r.caught && m.gatheringShort(e, profile)
-      ? `<span class="warn">${whyMark('gath')} Needs Gathering ${e.minG} — you have ${profile.gath}</span>` : '';
+      ? `<span class="warn">${whyMark('gath')} Needs Gathering ${gathText(e)} — you have ${profile.gath}</span>` : '';
     const baitWarn = r.caught ? '' : baitBlockText(m, r.fid, hid, profile).map(({ t, k }) => `<span class="warn">${whyMark(k)} ${esc(t)}</span>`).join('');
     const feeds = targets[r.fid] ? `<span class="feeds">Mooch bait for ${targets[r.fid].map(esc).join(', ')}</span>` : '';
     // Folklore: a warning until you have the tome, then nothing.
@@ -727,13 +733,16 @@ export function remainingView(ctx, tab, kind, id) {
 
   // What the fish (or a bait fish in its mooch chain) needs at that hole.
   const chainAt = (fid, hid) => [{ id: fid, entry: m.data.fish[fid].at[hid] ?? {} }, ...m.chainBait(fid, hid)];
-  const gathNeed = (fid, hid) => Math.max(...chainAt(fid, hid).map(({ entry }) => entry.minG ?? 0));
+  // The highest requirement in the chain: the one to reach.
+  const gathEntry = (fid, hid) => chainAt(fid, hid).map(({ entry }) => entry)
+    .reduce((a, b) => ((b.minG ?? 0) > (a.minG ?? 0) ? b : a));
+  const gathNeed = (fid, hid) => gathEntry(fid, hid).minG ?? 0;
   const tomesNeeded = (fid, hid) => [...new Set(chainAt(fid, hid)
     .filter(({ id: f }) => m.tomeMissing(f, profile)).map(({ id: f }) => tomeShort(m, m.data.fish[f])))];
 
   const detail = {
     window: (x) => [statusPill(x.st, now), fullCondText(m, x.fid, x.hid)],
-    gath: (x) => ['', `Needs Gathering ${gathNeed(x.fid, x.hid)}${profile.gath != null ? ` — you have ${profile.gath}` : ''}`],
+    gath: (x) => ['', `Needs Gathering ${gathText(gathEntry(x.fid, x.hid))}${profile.gath != null ? ` — you have ${profile.gath}` : ''}`],
     tome: (x) => ['', `Needs the ${tomesNeeded(x.fid, x.hid).join(' and ')} folklore tome`],
     lock: (x) => ['', `Restricted until Lv ${m.data.holes[x.hid].lvl}`],
     away: (x) => ['', `Catchable at ${m.data.holes[x.at].name}`],
@@ -800,7 +809,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
     facts.push(['Bait', e.bait ? m.fishName(e.bait) + (e.alts?.length ? ` (or ${altNames(m, e).join(', ')})` : '') : 'Unknown'],
       ['Tug', tugText(e.tug, 'Unknown')], ['Hookset', hookText(e.hook, 'Unknown')]);
   }
-  if (e.minG) facts.push(['Min. Gathering', e.minG]);
+  if (e.minG || e.minGq) facts.push(['Min. Gathering', gathText(e)]);
   if (e.w?.length) facts.push(['Weather', e.w.map((w) => m.data.weathers[w]?.name).join(' / ')]);
   if (e.pw?.length) facts.push(['Previous weather', e.pw.map((w) => m.data.weathers[w]?.name).join(' / ')]);
   if (e.spawn != null) facts.push(['Time', `ET ${etHM(e.spawn)}–${etHM(e.spawn + e.dur)}`]);

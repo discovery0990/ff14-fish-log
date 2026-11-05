@@ -314,6 +314,12 @@ def build(fetch, skip_icons):
         for entry in fish.get(fid, {}).get('at', {}).values():
             if entry.get('spawn') is None:
                 entry['spawn'], entry['dur'] = w['spawn'], w['duration']
+    for fid_s, g in overrides.get('minGathering', {}).items():
+        fid = int(fid_s)
+        check(fid in fish, f'override for unknown fish {fid}')
+        for entry in fish.get(fid, {}).get('at', {}).values():
+            if not entry.get('minG'):
+                entry['minG'] = g['minGathering']
 
     # Drop holes that ended up with no log fish at all.
     holes = {hid: h for hid, h in holes.items() if h['fish'] or h['extra']}

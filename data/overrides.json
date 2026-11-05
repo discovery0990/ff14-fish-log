@@ -7,5 +7,8 @@
     "23055": {"name": "White Goldfish", "spawn": 4, "duration": 4, "source": "icykoneko/ff14-fish-tracker-app fishData.yaml (ET 04-08)"},
     "23056": {"name": "Firelight Goldfish", "spawn": 4, "duration": 4, "source": "icykoneko/ff14-fish-tracker-app fishData.yaml (ET 04-08)"},
     "24203": {"name": "Indigo Prismfish", "spawn": 0, "duration": 4, "source": "icykoneko/ff14-fish-tracker-app fishData.yaml (ET 00-04)"}
+  },
+  "minGathering": {
+    "7913": {"name": "Floating Boulder", "minGathering": 349, "source": "ffxiv.consolegameswiki.com/wiki/Floating_Boulder (349+ Gathering required); Teamcraft has 0"}
   }
 }

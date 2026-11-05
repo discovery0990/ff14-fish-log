@@ -307,17 +307,30 @@ def build(fetch, skip_icons):
             fish[fid]['at'][hid] = dict(entry)
 
     # --- Overrides -----------------------------------------------------------
+    # Each override fills a gap in Teamcraft. Once Teamcraft has its own
+    # value, fail so the override is reviewed (removed, or the two
+    # reconciled) instead of going quietly stale.
     overrides = json.loads(OVERRIDES.read_text())
+
+    def override_target(section, fid_s, o):
+        f = fish.get(int(fid_s))
+        check(f is not None, f'{section} override {fid_s} ({o["name"]}): unknown fish')
+        return f['at'].values() if f is not None else []
+
     for fid_s, w in overrides.get('windows', {}).items():
-        fid = int(fid_s)
-        check(fid in fish, f'override for unknown fish {fid}')
-        for entry in fish.get(fid, {}).get('at', {}).values():
+        entries = override_target('windows', fid_s, w)
+        upstream = sorted({(e['spawn'], e['dur']) for e in entries if e.get('spawn') is not None})
+        check(not upstream, f'windows override {fid_s} ({w["name"]}): Teamcraft now has spawn/duration '
+              f'{upstream} (override {w["spawn"]}/{w["duration"]}); remove or reconcile it')
+        for entry in entries:
             if entry.get('spawn') is None:
                 entry['spawn'], entry['dur'] = w['spawn'], w['duration']
     for fid_s, g in overrides.get('minGathering', {}).items():
-        fid = int(fid_s)
-        check(fid in fish, f'override for unknown fish {fid}')
-        for entry in fish.get(fid, {}).get('at', {}).values():
+        entries = override_target('minGathering', fid_s, g)
+        upstream = sorted({e['minG'] for e in entries if e.get('minG')})
+        check(not upstream, f'minGathering override {fid_s} ({g["name"]}): Teamcraft now has {upstream} '
+              f'(override {g["minGathering"]}{", a guess" if g.get("guess") else ""}); remove or reconcile it')
+        for entry in entries:
             if not entry.get('minG'):
                 # null = requirement unknown; guess = shown with a "?" so it
                 # reads as low confidence (research it in game).
@@ -362,7 +375,7 @@ def build(fetch, skip_icons):
         del h['place']
 
     # Housing districts are all tagged ARR in the game data, whatever patch added them.
-    for zid_s, o in json.loads(OVERRIDES.read_text()).get('zoneExp', {}).items():
+    for zid_s, o in overrides.get('zoneExp', {}).items():
         zid = int(zid_s)
         check(zid in zones and zones[zid]['name'] == o['name'], f'zoneExp override for unknown zone {zid}')
         if zid in zones:
@@ -405,7 +418,13 @@ def build(fetch, skip_icons):
     for fid, f in fish.items():
         f['name'] = items[fid]['Name']
         f['icon'] = items[fid]['Icon']['id']
-    baits = {bid: {'name': items[bid]['Name'], 'icon': items[bid]['Icon']['id']} for bid in sorted(bait_ids)}
+    # A mistyped id that happens to be another fish would pass the checks above.
+    for section in ('windows', 'minGathering'):
+        for fid_s, o in overrides.get(section, {}).items():
+            f = fish.get(int(fid_s))
+            check(f is None or f['name'] == o['name'],
+                  f'{section} override {fid_s} says {o["name"]}, but that id is {f and f["name"]}')
+    baits ={bid: {'name': items[bid]['Name'], 'icon': items[bid]['Icon']['id']} for bid in sorted(bait_ids)}
     extra_names = {pid: items[pid]['Name'] for pid in pred_ids - set(fish)}
 
     # Big fish: green rarity on overworld holes. Green ocean fish are ocean

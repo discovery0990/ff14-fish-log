@@ -158,6 +158,13 @@ export function createModel(data, sprites = null) {
   const remaining = (hids, isCaught, profile, now) =>
     [...bestHoles(hids, isCaught, profile, now).values()].filter((x) => x.why != null).sort(better);
 
+  /**
+   * Every uncaught fish across holes, each at its best hole: [{fid, hid,
+   * why, st}], catchable ones first (why null), then as remaining().
+   */
+  const uncaught = (hids, isCaught, profile, now) =>
+    [...bestHoles(hids, isCaught, profile, now).values()].sort(better);
+
   // Each log's fish in the game's guide order, grouped by the expansion the
   // game files them under (exp, from its guide key; see build_data.py).
   const logFish = { rod: [], spear: [] };
@@ -392,6 +399,6 @@ export function createModel(data, sprites = null) {
     upSoon, search, isLocked, expOff, onlyHere, isOceanFish, sprite: (icon) => spriteAt.get(icon) ?? null, guideGroups, logFish: (log) => logFish[log] ?? [],
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
-    isMooch, moochChain, moochTargets, chainBait, chainWindows, chainBlocks, whyNot, remaining, status, windows, weatherNow, gatheringShort, tomeMissing, blocked,
+    isMooch, moochChain, moochTargets, chainBait, chainWindows, chainBlocks, whyNot, remaining, uncaught, status, windows, weatherNow, gatheringShort, tomeMissing, blocked,
   };
 }

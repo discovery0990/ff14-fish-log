@@ -276,8 +276,8 @@ const whyMark = (k) => `<span class="${whyCls(k)}">${whySvg[k]}</span>`;
 
 /**
  * Icon counts of why a row's remaining fish can't be caught right now, or ''
- * when nothing's in the way. Display only: the list behind them is reached
- * from the "Can't catch right now" row inside an open region or zone.
+ * when nothing's in the way. Display only: the fish behind them are listed
+ * from the "Uncaught fish" row inside an open region or zone.
  */
 function whyIcons(why, prefix = "Can't catch now: ") {
   const parts = WHY.filter(([k]) => why?.[k]);
@@ -288,16 +288,15 @@ function whyIcons(why, prefix = "Can't catch now: ") {
 }
 
 /**
- * The first row inside an open region or zone: a link to its Remaining
- * list, with the same icons as the row above. Always there, even at 0, so
- * every open region and zone looks the same.
+ * The first row inside an open region or zone: a link to its uncaught fish
+ * (those in expansions you haven't reached aside, as on Home). Always there,
+ * even at 0, so every open region and zone looks the same.
  */
 function leftLink(c, href, level) {
-  const n = WHY.reduce((sum, [k]) => sum + (c.why?.[k] ?? 0), 0);
+  const n = c.total - c.caught - (c.why?.exp ?? 0);
   return `
-      <a class="item left-link ${level}" href="${href}">
-        <div class="row"><span class="grow">Can't catch right now · <span class="num">${n}</span></span>${chevron}</div>
-        ${n ? `<div class="row why-line">${whyIcons(c.why, '')}</div>` : ''}</a>`;
+      <a class="item row left-link ${level}" href="${href}">
+        <span class="grow">Uncaught fish · <span class="num">${n}</span></span>${chevron}</a>`;
 }
 
 const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))
@@ -306,7 +305,7 @@ const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))
 const reachLegend = () => `<span class="num">4 / 6</span>: 4 caught of the 6 you can catch at your level, Gathering and tomes.
   <span class="num">(N)</span> is everything.
   <span class="w open-now">${OPEN_SVG}</span> open now. <b>Later</b>: ${legendIcons(['window'])}. <b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}. ${legendIcons(['away'])}.
-  Open a region or zone to see which fish.`;
+  Open a region or zone to list its uncaught fish.`;
 
 function regionsBlock(regionRows, hidden, gated) {
   return `
@@ -729,9 +728,10 @@ function placeName(m, kind, id) {
 }
 
 /**
- * The fish in a region or zone you can't catch right now, grouped by why:
- * waiting on a window (soonest first), Gathering (least needed first), a
- * folklore tome, or a hole above your level. Each at its best hole.
+ * The uncaught fish in a region or zone, each at its best hole: open now
+ * (closing soonest first), then grouped by why: waiting on a window
+ * (soonest first), Gathering (least needed first), a folklore tome, a hole
+ * above your level, or catchable at another hole; then those always available.
  */
 export function remainingView(ctx, tab, kind, id) {
   const { m, store, now } = ctx;
@@ -740,7 +740,7 @@ export function remainingView(ctx, tab, kind, id) {
   const hids = !name ? [] : kind === 'region' ? m.regionHolesAll(tab, id) : m.zoneHolesAll(tab, id);
   if (!hids.length) return notFound();
   const c = rowCount(m.count(hids, store.isCaught, profile, now));
-  const left = m.remaining(hids, store.isCaught, profile, now);
+  const left = m.uncaught(hids, store.isCaught, profile, now).filter((x) => x.why !== 'exp');
   const from = encodeURIComponent(`${tab}/left/${kind}/${id}`);
 
   // What the fish (or a bait fish in its mooch chain) needs at that hole.
@@ -753,16 +753,27 @@ export function remainingView(ctx, tab, kind, id) {
     .filter(({ id: f }) => m.tomeMissing(f, profile)).map(({ id: f }) => tomeShort(m, m.data.fish[f])))];
 
   const detail = {
+    open: (x) => [statusPill(x.st, now), fullCondText(m, x.fid, x.hid)],
+    any: () => ['', ''],
     window: (x) => [statusPill(x.st, now), fullCondText(m, x.fid, x.hid)],
     gath: (x) => ['', `Needs Gathering ${gathText(gathEntry(x.fid, x.hid))}${profile.gath != null ? ` — you have ${profile.gath}` : ''}`],
     tome: (x) => ['', `Needs the ${tomesNeeded(x.fid, x.hid).join(' and ')} folklore tome`],
     lock: (x) => ['', `Restricted until Lv ${m.data.holes[x.hid].lvl}`],
     away: (x) => ['', `Catchable at ${m.data.holes[x.at].name}`],
   };
-  const sortKey = { gath: (x) => gathNeed(x.fid, x.hid) };
+  // Open windows closing soonest first; Later opening soonest first.
+  const sortKey = { open: (x) => x.st.end, gath: (x) => gathNeed(x.fid, x.hid) };
+  // As Home's icons: open now, Later, Not yet, elsewhere; then the fish
+  // with no window, last since they're often many and never in a hurry.
+  const kindOf = (x) => (x.why ?? (x.st?.state === 'open' ? 'open' : 'any'));
+  const kinds = [
+    ['open', `<span class="w open-now">${OPEN_SVG}</span>`, , 'Open now'],
+    ...WHY,
+    ['any', '', , tab === 'ocean' ? 'Catchable on voyages' : 'Always available'],
+  ];
 
-  const sections = WHY.map(([k, svg, , title]) => {
-    let xs = left.filter((x) => x.why === k);
+  const sections = kinds.map(([k, svg, , title]) => {
+    let xs = left.filter((x) => kindOf(x) === k);
     if (!xs.length) return '';
     if (sortKey[k]) xs = [...xs].sort((a, b) => sortKey[k](a) - sortKey[k](b));
     const rows = xs.map((x) => {
@@ -782,10 +793,10 @@ export function remainingView(ctx, tab, kind, id) {
   return `
     ${back(ctx, `#/${tab}/${kind}/${id}`, name, tab)}
     <header class="stack-s"><h1>${esc(name)}</h1>
-      <div class="sub">Uncaught ${tab === 'spear' ? 'spearfishing ' : tab === 'ocean' ? 'ocean ' : ''}fish you can't catch right now</div>
+      <div class="sub">Uncaught ${tab === 'spear' ? 'spearfishing ' : tab === 'ocean' ? 'ocean ' : ''}fish</div>
       <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c)}</span></div></header>
     ${left.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : ''}
-    ${sections || '<p class="empty">Nothing in the way: every uncaught fish here can be caught now.</p>'}`;
+    ${sections || '<p class="empty">Every fish here is caught.</p>'}`;
 }
 
 // Where a fish screen's Back goes when it was opened from Home, Up soon or

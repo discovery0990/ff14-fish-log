@@ -618,13 +618,17 @@ Deno.test('Remaining: lists the fish, links them with their hole, and Back from 
   const r = regionByName('La Noscea');
   const html = remainingView(ctxFor(store), 'rod', 'region', r);
   assertStringIncludes(html, 'Need more Gathering');
+  // Every uncaught fish is listed, those with no window last.
+  const c = m.count(m.regionHolesAll('rod', r), store.isCaught, store.state.profile, T);
+  assertEquals((html.match(/href="#\/fish\//g) ?? []).length, c.total - c.caught - c.why.exp, 'one row per uncaught fish');
+  assert(html.indexOf('Always available') > html.indexOf('Need more Gathering'), 'always-available fish come last');
   const m2 = html.match(/#\/fish\/(\d+)\?h=(\w+)&from=([^"]+)"/);
   assert(m2, 'fish rows link with ?h= and from=');
   const back = fishView(ctxFor(store), m2[1], m2[2], decodeURIComponent(m2[3]));
   assertStringIncludes(back, `href="#/rod/left/region/${r}"`);
   assertStringIncludes(back, '<span>La Noscea</span>');
   // An open region's first row links to the same screen; closed, it has no link.
-  assertStringIncludes(homeView(ctxFor(store, { openRegion: r, folds: new Set() })), `<a class="item left-link in-region" href="#/rod/left/region/${r}">`);
+  assertStringIncludes(homeView(ctxFor(store, { openRegion: r, folds: new Set() })), `<a class="item row left-link in-region" href="#/rod/left/region/${r}">`);
   assert(!homeView(ctxFor(store, { folds: new Set() })).includes('left-link'), 'closed regions have no link row');
 });
 

@@ -167,7 +167,7 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
     linear-gradient(var(--muted), var(--muted)) 32px 0 / 2px 100% no-repeat, rgba(0, 0, 0, .28); }
 .item.hole .title { font-size: 14px; font-weight: 500; }
 /* An open region's or zone's "Can't catch right now" link, at its children's level. */
-.item.left-link { font-size: 14px; color: var(--muted); }
+.item.left-link { font-size: 14px; }
 .item.hole.grey { opacity: .55; }
 .item.hole .lv { margin-left: 6px; font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; }
 .card { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--surface); }

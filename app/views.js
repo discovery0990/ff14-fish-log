@@ -36,13 +36,16 @@ export function fmtWhen(ms, now) {
   const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   const day = (t) => new Date(t).toDateString();
   if (day(ms) === day(now)) return `Today ${hm}`;
-  if (day(ms) === day(now + 864e5)) return `Tomorrow ${hm}`;
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1); // not now + 24h: days aren't 24h across a DST change
+  if (day(ms) === day(tomorrow)) return `Tomorrow ${hm}`;
   return `${d.toLocaleDateString(undefined, { weekday: 'short' })} ${hm}`;
 }
 
 const etHM = (h) => {
-  const hh = Math.floor(h) % 24, mm = Math.round((h % 1) * 60);
-  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  // Round to whole minutes first, so 10.999 reads 11:00, not 10:60.
+  const t = Math.round(h * 60) % (24 * 60);
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
 };
 
 export function fmtEtClock(now) {
@@ -156,7 +159,9 @@ function baitLine(m, fid, hid, e) {
 }
 
 /** "Coerthas" from "Tome of Ichthyological Folklore - Coerthas". */
-const tomeShort = (m, f) => m.data.tomes[f.folk].replace(/^Tome of Ichthyological Folklore - /, '');
+const tomeName = (m, id) => m.data.tomes[id].replace(/^Tome of Ichthyological Folklore - /, '');
+/** The short name of a folklore fish's tome. */
+const tomeShort = (m, f) => tomeName(m, f.folk);
 
 function extrasLine(m, e) {
   const bits = [];
@@ -552,11 +557,6 @@ export function profileView(ctx) {
     return `<button class="chip${on ? ' on' : ''}" data-act="exp" data-exp="${id}" aria-pressed="${on}">${esc(m.data.expansions[id])}</button>`;
   }).join('');
 
-  const sw = (act, label, on) => `
-    <button class="item row switch-row" data-act="${act}" role="switch" aria-checked="${on}">
-      <span class="grow">${label}</span><span class="switch${on ? ' on' : ''}" aria-hidden="true"><span></span></span>
-    </button>`;
-
   const pending = ctx.pendingImport;
   const importPanel = pending ? `
     <div class="banner stack-s">
@@ -613,7 +613,7 @@ function tomesSection(m, p) {
   const chips = [...groups].map(([exp, tids]) => `
     <div class="stack-xs"><span class="sub">${esc(m.data.expansions[exp])}</span><div class="chips">${tids.map((id) => {
       const on = owned.includes(id);
-      const name = m.data.tomes[id].replace(/^Tome of Ichthyological Folklore - /, '');
+      const name = tomeName(m, id);
       return `<button class="chip${on ? ' on' : ''}" data-act="tome" data-tome="${id}" aria-pressed="${on}">${esc(name)}</button>`;
     }).join('')}</div></div>`).join('');
   return `

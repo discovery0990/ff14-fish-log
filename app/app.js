@@ -3,7 +3,7 @@
 import { TABS, createModel } from './model.js';
 import { createStore, makeBackup, parseBackup, shouldRemind } from './store.js';
 import {
-  fishView, guideView, holeView, homeBody, homeView, notFound, profileView, remainingView, soonView,
+  esc, fishView, guideView, holeView, homeBody, homeView, notFound, profileView, remainingView, soonView,
 } from './views.js';
 
 const LIVE_REFRESH_MS = 15_000;
@@ -387,7 +387,7 @@ async function main() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     model = createModel(await res.json(), await sprites);
   } catch (err) {
-    root.innerHTML = `<h1>Couldn't load fish data</h1><p class="note">${String(err)}</p>`;
+    root.innerHTML = `<h1>Couldn't load fish data</h1><p class="note">${esc(err)}</p>`;
     return;
   }
   store.subscribe(() => render({ keepScroll: true }));

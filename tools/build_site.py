@@ -28,7 +28,9 @@ def main():
     files = sorted(p.relative_to(DIST).as_posix() for p in DIST.rglob('*') if p.is_file())
     precache = [f for f in files if not f.startswith(ON_DEMAND) and f not in SKIP]
     h = hashlib.sha256()
-    for f in precache:
+    # The worker's own (unstamped) source counts too: a change to caching
+    # alone must still give a new version and a fresh shell cache.
+    for f in [*precache, *SKIP]:
         h.update(f.encode())
         h.update((DIST / f).read_bytes())
     version = h.hexdigest()[:12]
@@ -49,7 +51,7 @@ def main():
         print('app.js is missing __APP_VERSION__', file=sys.stderr)
         return 1
     app_js.write_text(a.replace("'__APP_VERSION__'", json.dumps(version)))
-    # Lets a deploy be checked against a commit.
+    # Lets a deploy be checked against the version shown in Profile.
     (DIST / 'version.txt').write_text(version + '\n')
 
     size = sum((DIST / f).stat().st_size for f in precache)

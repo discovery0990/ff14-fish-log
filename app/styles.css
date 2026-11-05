@@ -89,14 +89,12 @@ section { display: flex; flex-direction: column; gap: 10px; }
 .dim { color: var(--muted); }
 .num { font-family: var(--mono); font-size: 13px; }
 .note { margin: 0; font-size: 13px; color: var(--muted); }
-.note.center { text-align: center; }
 .empty { margin: 0; padding: 14px; color: var(--muted); }
 /* Teal is never text color (it reads soft on navy): links are underlined. */
 .link { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
 
 /* Layout */
 .row { display: flex; align-items: center; gap: 10px; }
-.row.top-align { align-items: flex-start; }
 .grow { flex: 1; min-width: 0; }
 .stack-s { display: flex; flex-direction: column; gap: 8px; }
 .top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
@@ -147,7 +145,6 @@ button.item { width: 100%; text-align: left; background: none; border: 0; border
 .item.region.open .chev { transform: rotate(90deg); stroke: var(--text); }
 button.fold { color: var(--muted); }
 button.fold .title { font-weight: 500; }
-button.fold-card { border: 0; text-align: left; color: var(--muted); }
 button.caught-group { border: 0; border-radius: 14px; background: var(--surface); }
 /* Home tree: each level steps down in type size, and rails at the parents'
    text edge tie zones to their region and holes to their zone. Accent stays
@@ -171,16 +168,11 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .item.hole .title { font-size: 14px; font-weight: 500; }
 .item.hole.grey { opacity: .55; }
 .item.hole .lv { margin-left: 6px; font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; }
-.cards { display: flex; flex-direction: column; gap: 10px; }
 .card { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--surface); }
-.card.row { flex-direction: row; }
-.card.dashed { outline: 1px dashed var(--undisc); outline-offset: -1px; }
-.card.grey { opacity: .55; }
 
 /* Tags and pills */
 .tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .tag { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--track); color: var(--text); }
-.tag.done { background: var(--accent-bg); color: var(--text); }
 .tag.open { background: var(--open); color: var(--open-text); }
 /* Why-not icons: counts of fish you can't catch right now, by reason. */
 .why { display: inline-flex; flex: none; align-items: center; gap: 8px; color: var(--muted); }
@@ -293,13 +285,7 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .step { flex: none; width: 44px; height: 44px; border-radius: 10px; border: 0; background: var(--track); font-size: 20px; }
 .numin { width: 76px; height: 44px; border-radius: 10px; border: 1px solid var(--edge); background: var(--bg); color: var(--text); font: 17px var(--mono); text-align: center; -moz-appearance: textfield; }
 .numin::-webkit-inner-spin-button, .numin::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.switch-row { width: 100%; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; font-size: 15px; }
-.switch { flex: none; width: 46px; height: 28px; border-radius: 14px; padding: 3px; display: flex; background: var(--edge); }
-.switch.on { background: var(--accent); justify-content: flex-end; }
-.switch span { width: 22px; height: 22px; border-radius: 11px; background: var(--text); }
 button.chip { background: none; }
-/* A setting that's off: its options stay visible and tappable, just quieter. */
-.dimmed { opacity: .55; }
 button.chip.on { background: var(--accent-bg); }
 
 /* Update toast */

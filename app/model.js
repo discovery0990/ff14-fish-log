@@ -231,6 +231,7 @@ export function createModel(data, sprites = null) {
   }
 
   const zoneHolesAll = (tab, zone) => zoneHoles[tab][zone] ?? [];
+  const tabHolesAll = (tab) => Object.values(zoneHoles[tab] ?? {}).flat();
   const regionHolesAll = (tab, region) => (regionZones[tab][region] ?? []).flatMap((z) => zoneHolesAll(tab, z));
 
   const isMooch = (entry) => entry.bait != null && data.fish[entry.bait] != null;
@@ -398,7 +399,7 @@ export function createModel(data, sprites = null) {
   return {
     upSoon, search, isLocked, expOff, onlyHere, isOceanFish, sprite: (icon) => spriteAt.get(icon) ?? null, guideGroups, logFish: (log) => logFish[log] ?? [],
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
-    visibleRegions, zoneHolesAll, regionHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
+    visibleRegions, zoneHolesAll, regionHolesAll, tabHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
     isMooch, moochChain, moochTargets, chainBait, chainWindows, chainBlocks, whyNot, remaining, uncaught, status, windows, weatherNow, gatheringShort, tomeMissing, blocked,
   };
 }

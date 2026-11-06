@@ -84,36 +84,43 @@ try {
   check(JSON.stringify((await stored()).profile.exp) === '[0,1,2,3,4]', 'toggling Dawntrail off saves the expansion list');
   await shot('profile');
 
-  // --- Up soon: Home shows 5; its own screen shows all and sets the horizon
+  // --- Up soon: Home shows 5, sets the horizon, and links to the whole-tab Uncaught list
   await go('#/rod');
   check(await js(`document.querySelector('.list').querySelectorAll('.item').length`) === 5, 'Home shows 5 Up soon fish');
-  check(await js(`document.querySelector('a.more')?.getAttribute('href')`) === '#/rod/soon', 'See all opens the Up soon screen');
-  await go('#/rod/soon');
-  check(await js(`document.querySelectorAll('.list .item').length > 5`), 'Up soon screen lists more than 5');
-  check(await js(`document.querySelector('.back')?.getAttribute('href')`) === '#/rod', 'Up soon screen goes back Home in one tap');
-  await js(`document.querySelector('[data-act=horizon][data-h="3"]').click()`);
+  check(await js(`document.querySelector('a.more')?.getAttribute('href')`) === '#/rod/left', 'Up soon card links to the Uncaught list');
+  check(await js(`document.querySelector('a.more')?.textContent.trim().startsWith('All uncaught fish')`), 'Up soon link reads "All uncaught fish"');
+  await js(`document.querySelector('.chips.sm [data-act=horizon][data-h="3"]').click()`);
   check((await stored()).upSoonHours === 3, 'Up soon horizon saves');
-  check(await js(`document.querySelector('[data-act=horizon][data-h="3"]').classList.contains('on')`), 'horizon chip shows as selected');
+  check(await js(`document.querySelector('[data-act=horizon][data-h="3"]').classList.contains('on')`), 'horizon chip shows as selected on Home');
   check(await js(`!document.querySelector('[data-act=soon-holes]')`), 'Up soon has no discovered/undiscovered filter');
   await shot('soon');
+  await go('#/rod/soon');
+  check(await js(`location.hash`) === '#/rod/left', 'the old Up soon route redirects to the Uncaught list');
+  check(await js(`document.querySelectorAll('.list .item').length > 5`), 'whole-tab Uncaught list lists more than 5');
+  check(await js(`document.querySelector('.back')?.getAttribute('href')`) === '#/rod', 'Uncaught list goes back Home in one tap');
+  check(await js(`document.querySelector('.back')?.textContent.includes('Home')`), 'Uncaught list Back is labelled Home');
+  check(await js(`document.querySelector('button.sec-toggle[data-act=fold]')?.getAttribute('aria-expanded')`) === 'true', 'Open now group starts expanded');
+  check(await js(`[...document.querySelectorAll('button.sec-toggle[data-act=fold]')].find((b) => b.textContent.includes('Always available'))?.getAttribute('aria-expanded')`) === 'false', 'Always available group starts collapsed on the whole-tab list');
 
   await go('#/rod');
   check(await js(`document.body.textContent.includes("in expansions you haven't reached")`), 'home reports hidden regions');
   check(await js(`!document.body.textContent.includes('Yok Tural')`), 'Dawntrail off hides its regions');
   check(await js(`document.body.textContent.includes('Norvrandt')`), 'Lv 40 still shows higher regions (most holes are fishable at any level)');
   // --- Up soon rows open the fish; Back returns to where you came from
+  await go('#/rod');
   const soonHref = await js(`document.querySelector('.list .item').getAttribute('href')`);
   check(/^#\/fish\/\d+\?h=r\d+&from=rod$/.test(soonHref), `Home Up soon row opens the fish (${soonHref})`);
   await go(soonHref);
   check(await js(`document.querySelector('.back').getAttribute('href')`) === '#/rod', 'fish from Home: Back goes Home');
-  await go('#/rod/soon');
+  await go('#/rod/left');
   const soonHref2 = await js(`document.querySelector('.list .item').getAttribute('href')`);
+  check(/^#\/fish\/\d+\?h=r\d+&from=rod%2Fleft$/.test(soonHref2), `Uncaught row opens the fish with an encoded from (${soonHref2})`);
   await js(`window.scrollTo(0, 600)`);
   await go(soonHref2);
-  check(await js(`document.querySelector('.back').getAttribute('href') === '#/rod/soon' && document.querySelector('.back').textContent.includes('Up soon')`), 'fish from the Up soon screen: Back goes to Up soon');
+  check(await js(`document.querySelector('.back').getAttribute('href') === '#/rod/left' && document.querySelector('.back').textContent.includes('Uncaught fish')`), 'fish from the Uncaught list: Back goes to Uncaught fish');
   await js(`history.back()`);
   await sleep(300);
-  check(await js(`Math.abs(window.scrollY - 600) < 5`), 'Up soon restores its scroll position after Back');
+  check(await js(`Math.abs(window.scrollY - 600) < 5`), 'Uncaught list restores its scroll position after Back');
   await go('#/fish/4911'); // Rock Lobster: 4 holes, none discovered
   check(await js(`document.querySelectorAll('.list .item .undisc-name').length === 4 && !!document.querySelector('.legend')`), 'Found at outlines undiscovered holes, with the legend');
   await go('#/fish/4950'); // Mudcrab, caught at Hopeseed Pond (discovered)
@@ -225,6 +232,8 @@ try {
   await go('#/rod/zone/32'); // Eastern La Noscea, expanded on Home
   const holeRow = (n) => `[...document.querySelectorAll('a.item.hole')].find((c) => c.textContent.includes('${n}'))`;
   check(await js(`!!${holeRow('North Isle of Endless Summer')}`), 'unmarked hole is listed in its zone');
+  check(await js(`[...document.querySelectorAll('a.item.hole')].every((a) => !/ open · |more open/.test(a.textContent))`), 'hole rows carry no open-fish tags');
+  check(await js(`${holeRow('Privateer Sterncastle')}?.querySelector('.tag')?.textContent.includes('Restricted until Lv')`), 'restricted hole rows keep their Restricted tag');
   check(await js(`${holeRow('Privateer Sterncastle')}?.classList.contains('grey')`), 'Lv 40: restricted Sterncastle is greyed');
   check(await js(`!${holeRow('Privateer Forecastle')}?.classList.contains('grey')`), 'Lv 40: Forecastle is not greyed');
   check(await js(`document.querySelectorAll('a.item.hole.grey').length === 2 && document.body.textContent.includes('Restricted until Lv 45')`), 'restricted holes stay listed, greyed (Red Mantis Falls, Privateer Sterncastle)');
@@ -251,7 +260,7 @@ try {
   await js(`history.back()`);
   await sleep(250);
   await js(`document.querySelector('[data-act=region][data-rid="22"]').click()`); // collapse
-  check(await js(`document.body.textContent.includes('next 3h')`), 'Up soon uses the new horizon');
+  check(await js(`document.querySelector('[data-act=horizon][data-h="3"]')?.classList.contains('on')`), 'Up soon uses the new horizon');
   await shot('home');
 
   // --- Hole: gathering warning appears with Gathering 339

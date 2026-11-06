@@ -1,7 +1,7 @@
 import { assert, assertEquals, assertStringIncludes } from 'jsr:@std/assert@1.0.13';
 import { createModel } from '../app/model.js';
 import { createStore, makeBackup, parseBackup, shouldRemind } from '../app/store.js';
-import { esc, fishView, fmtDuration, guideView, holeView, homeView, profileView, remainingView, soonView } from '../app/views.js';
+import { esc, fishView, fmtDuration, guideView, holeView, homeView, profileView, remainingView } from '../app/views.js';
 import { toEtHours } from '../app/engine.js';
 
 const DATA = JSON.parse(await Deno.readTextFile(new URL('../app/data/fish.json', import.meta.url)));
@@ -224,7 +224,7 @@ Deno.test('every view renders for every region, zone, hole and fish', () => {
   for (const tab of ['rod', 'spear', 'ocean']) {
     homeView({ ...ctx, tab });
     for (const r of Object.keys(DATA.regions)) if (m.regionHolesAll(tab, r).length) homeView({ ...ctx, tab, openRegion: r });
-    soonView({ ...ctx, tab }, tab);
+    remainingView({ ...ctx, tab }, tab);
     for (const z of Object.keys(DATA.zones)) if (m.zoneHolesAll(tab, z).length) homeView({ ...ctx, tab, openRegion: String(DATA.zones[z].region), openZone: z, folds: new Set([`holes:${tab}:${z}`]) });
     for (const r of Object.keys(DATA.regions)) if (m.regionHolesAll(tab, r).length) remainingView(ctx, tab, 'region', r);
     for (const z of Object.keys(DATA.zones)) if (m.zoneHolesAll(tab, z).length) remainingView(ctx, tab, 'zone', z);

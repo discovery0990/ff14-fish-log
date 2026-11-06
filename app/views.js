@@ -112,8 +112,7 @@ const progress = ({ caught, total, reach = total }, cls = '') => {
 function screenName(m, hash) {
   const [a, b, c, d] = hash.replace(/^#\/?/, '').split('?')[0].split('/');
   if (!a || (TABS.includes(a) && !b)) return 'Home';
-  if (TABS.includes(a) && b === 'soon') return 'Up soon';
-  if (TABS.includes(a) && b === 'left') return placeName(m, c, d);
+  if (TABS.includes(a) && b === 'left') return c ? placeName(m, c, d) : 'Uncaught fish';
   if (a === 'hole') return Object.hasOwn(m.data.holes, b) ? m.data.holes[b].name : null;
   if (a === 'fish') return Object.hasOwn(m.data.fish, b) ? m.data.fish[b].name : null;
   if (a === 'profile') return 'Profile';
@@ -396,23 +395,12 @@ function holeRows(ctx, zid) {
     const h = m.data.holes[hid];
     const grey = m.holeVisibility(hid, profile) === 'grey';
     // Only what's actionable: fish open now, or why the hole is restricted.
-    const tags = [];
-    if (grey) {
-      tags.push(`<span class="tag">Restricted until Lv ${h.lvl}</span>`);
-    } else {
-      const open = m.holeFish(hid)
-        .filter(({ fid }) => !store.isCaught(fid) && !m.blocked(fid, hid, profile))
-        .map(({ fid }) => [fid, m.status(fid, hid, now)])
-        .filter(([, st]) => st?.state === 'open');
-      for (const [fid, st] of open.slice(0, 2)) {
-        tags.push(`<span class="tag open">${esc(m.data.fish[fid].name)} open · ${fmtDuration(st.end - now)}</span>`);
-      }
-      if (open.length > 2) tags.push(`<span class="tag open">+${open.length - 2} more open</span>`);
-    }
+    // Words for the hole (why it's restricted), icons counting its fish, as on zones.
+    const tags = grey ? [`<span class="tag">Restricted until Lv ${h.lvl}</span>`] : [];
     return `
       <a class="item hole${grey ? ' grey' : ''}" href="#/hole/${hid}">
         <div class="row"><span class="title grow">${holeName(m, store, hid)}<span class="lv">Lv ${h.lvl}</span></span>${countNum(hc)}</div>
-        ${tagRow(tags, whyIcons(hc.why))}
+        ${tagRow(tags, openIcon(openCount(ctx, [hid])) + whyIcons(hc.why))}
       </a>`;
   });
 }
@@ -493,33 +481,21 @@ function upSoonSection(ctx) {
   const all = upSoonList(ctx);
   const shown = all.slice(0, UP_SOON_SHOWN);
   const legend = shown.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : '';
-  const more = all.length > UP_SOON_SHOWN
-    ? `<a class="more" href="#/${tab}/soon">See all ${all.length}</a>` : '';
-  return `
-    <section>
-      <div class="row"><h2 class="sec grow">Up soon · uncaught</h2><a class="note" href="#/${tab}/soon">next ${store.state.upSoonHours}h</a></div>
-      ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: tab }, shown)}</div>${legend}${more}` : `<p class="note">Nothing opens in that time. <a href="#/${tab}/soon">Look further ahead</a>.</p>`}
-    </section>`;
-}
-
-const HORIZONS = [1, 2, 3, 6];
-
-/** Every Up soon fish, with the look-ahead setting. */
-export function soonView(ctx, tab) {
-  const { store } = ctx;
-  if (tab === 'ocean') return notFound();
-  const all = upSoonList(ctx);
+  // The full list is the tab's Uncaught fish: every window, not just these hours.
+  const c = ctx.m.count(ctx.m.tabHolesAll(tab), store.isCaught, store.state.profile);
+  const more = `<a class="more" href="#/${tab}/left">All uncaught fish · ${(c.total - c.caught - c.why.exp).toLocaleString()}</a>`;
   const hours = store.state.upSoonHours;
   const chips = HORIZONS.map((h) =>
     `<button class="chip${hours === h ? ' on' : ''}" data-act="horizon" data-h="${h}" aria-pressed="${hours === h}">${h}h</button>`).join('');
   return `
-    ${back(ctx, `#/${tab}`, 'Home', tab)}
-    <header class="stack-s"><h1>Up soon</h1>
-      <div class="sub">Uncaught ${tab === 'spear' ? 'spearfishing ' : ''}fish with a window open now or within ${hours}h</div></header>
-    <div class="chips" role="group" aria-label="Look ahead">${chips}</div>
-    ${all.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : ''}
-    ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: `${tab}/soon` }, all)}</div>` : `<p class="empty">Nothing opens in that time. Try looking further ahead.</p>`}`;
+    <section>
+      <div class="row"><h2 class="sec grow">Up soon · uncaught</h2><div class="chips sm" role="group" aria-label="Look ahead">${chips}</div></div>
+      ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: tab }, shown)}</div>${legend}` : `<p class="note">Nothing opens in the next ${hours}h.</p>`}
+      ${more}
+    </section>`;
 }
+
+const HORIZONS = [1, 2, 3, 6];
 
 function searchResults(ctx) {
   const { m, store } = ctx;
@@ -733,15 +709,17 @@ function placeName(m, kind, id) {
  * on a window (soonest first), Gathering (least needed first), a folklore
  * tome, a hole above your level, or catchable at another hole.
  */
-export function remainingView(ctx, tab, kind, id) {
+export function remainingView(ctx, tab, kind = null, id = null) {
   const { m, store, now } = ctx;
   const { profile } = store.state;
-  const name = placeName(m, kind, id);
-  const hids = !name ? [] : kind === 'region' ? m.regionHolesAll(tab, id) : m.zoneHolesAll(tab, id);
+  // No kind: the whole tab (Home's "All uncaught fish").
+  const name = kind ? placeName(m, kind, id) : 'Uncaught fish';
+  const hids = !name ? [] : !kind ? m.tabHolesAll(tab) : kind === 'region' ? m.regionHolesAll(tab, id) : m.zoneHolesAll(tab, id);
   if (!hids.length) return notFound();
   const c = rowCount(m.count(hids, store.isCaught, profile, now));
   const left = m.uncaught(hids, store.isCaught, profile, now).filter((x) => x.why !== 'exp');
-  const from = encodeURIComponent(`${tab}/left/${kind}/${id}`);
+  const here = kind ? `${tab}/left/${kind}/${id}` : `${tab}/left`;
+  const from = encodeURIComponent(here);
 
   // What the fish (or a bait fish in its mooch chain) needs at that hole.
   const chainAt = (fid, hid) => [{ id: fid, entry: m.data.fish[fid].at[hid] ?? {} }, ...m.chainBait(fid, hid)];
@@ -790,23 +768,25 @@ export function remainingView(ctx, tab, kind, id) {
     }).join('');
     // Open by default; a group you collapse stays collapsed on this list
     // (coming back from a fish, say) for the session, not on others.
-    const key = `shut:left:${tab}:${kind}:${id}:${k}`;
-    const open = !ctx.folds?.has(key);
+    // Across a whole tab, Always available runs to hundreds: it starts collapsed there.
+    const startShut = !kind && k === 'any';
+    const key = `${startShut ? 'open' : 'shut'}:${here}:${k}`;
+    const open = startShut ? !!ctx.folds?.has(key) : !ctx.folds?.has(key);
     return `<section><h2 class="sec"><button class="why-sec sec-toggle${open ? ' open' : ''}" data-act="fold" data-key="${key}" aria-expanded="${open}">${svg}${title} · ${xs.length}${chevron}</button></h2>${open ? `<div class="list">${rows}</div>` : ''}</section>`;
   }).join('');
 
   return `
-    ${back(ctx, `#/${tab}/${kind}/${id}`, name, tab)}
+    ${kind ? back(ctx, `#/${tab}/${kind}/${id}`, name, tab) : back(ctx, `#/${tab}`, 'Home', tab)}
     <header class="stack-s"><h1>${esc(name)}</h1>
-      <div class="sub">Uncaught ${tab === 'spear' ? 'spearfishing ' : tab === 'ocean' ? 'ocean ' : ''}fish</div>
+      <div class="sub">${kind ? `Uncaught ${tab === 'spear' ? 'spearfishing ' : tab === 'ocean' ? 'ocean ' : ''}fish` : `${TAB_LABELS[tab]} · every region`}</div>
       <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c)}</span></div></header>
     ${left.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : ''}
     ${sections || '<p class="empty">Every fish here is caught.</p>'}`;
 }
 
-// Where a fish screen's Back goes when it was opened from Home, Up soon or
-// a Remaining list.
-const FROM = /^(rod|spear|ocean)(\/soon|\/left\/(region|zone)\/\d+)?$|^guide\/(rod|spear)$/;
+// Where a fish screen's Back goes when it was opened from Home, an Uncaught
+// list or the guide.
+const FROM = /^(rod|spear|ocean)(\/left(\/(region|zone)\/\d+)?)?$|^guide\/(rod|spear)$/;
 
 // Ocean holes get no window status (their weather follows the voyage), so
 // no status there doesn't mean the fish is always up.

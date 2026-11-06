@@ -130,6 +130,9 @@ section { display: flex; flex-direction: column; gap: 10px; }
 .tab.on { background: var(--edge); color: var(--text); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { display: flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid var(--edge); color: var(--muted); font-size: 14px; }
+/* Compact chips beside a section heading (Up soon's look-ahead). */
+.chips.sm { gap: 4px; flex-wrap: nowrap; }
+.chips.sm .chip { height: 32px; padding: 0 10px; font-size: 12px; }
 .chip.on { border-color: var(--accent); background: var(--accent-bg); color: var(--text); }
 
 /* Lists and cards */

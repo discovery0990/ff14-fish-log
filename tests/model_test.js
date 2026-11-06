@@ -620,7 +620,10 @@ Deno.test('Remaining: lists the fish, links them with their hole, and Back from 
   assertStringIncludes(html, 'Need more Gathering');
   // Every uncaught fish is listed, catchable ones first.
   const c = m.count(m.regionHolesAll('rod', r), store.isCaught, store.state.profile, T);
-  assertEquals((html.match(/href="#\/fish\//g) ?? []).length, c.total - c.caught - c.why.exp, 'one row per uncaught fish');
+  const groups = [...html.matchAll(/aria-expanded="(true|false)">.*? · (\d+)<svg/g)];
+  assertEquals(groups.reduce((n, g) => n + Number(g[2]), 0), c.total - c.caught - c.why.exp, 'the groups count every uncaught fish');
+  assertEquals(groups.map((g) => g[1]).join(), ['true', ...groups.slice(1).map(() => 'false')].join(), 'only the first group starts open');
+  assertEquals((html.match(/href="#\/fish\//g) ?? []).length, Number(groups[0][2]), 'an open group lists its fish; collapsed ones none');
   assert(html.indexOf('Always available') < html.indexOf('Need more Gathering'), 'catchable fish come first');
   const m2 = html.match(/#\/fish\/(\d+)\?h=(\w+)&from=([^"]+)"/);
   assert(m2, 'fish rows link with ?h= and from=');

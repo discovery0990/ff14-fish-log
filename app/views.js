@@ -747,6 +747,9 @@ export function remainingView(ctx, tab, kind = null, id = null) {
     ...WHY,
   ];
 
+  // Only the first group with fish in it starts open; the rest start
+  // collapsed, their headings a summary.
+  const topKind = kinds.find(([k]) => left.some((x) => kindOf(x) === k))?.[0];
   const sections = kinds.map(([k, svg, , title]) => {
     let xs = left.filter((x) => kindOf(x) === k);
     if (!xs.length) return '';
@@ -762,12 +765,11 @@ export function remainingView(ctx, tab, kind = null, id = null) {
             <span class="sub">${holeName(m, store, x.hid)}${note ? ` · ${esc(note)}` : ''}</span></span>
         </a>`;
     }).join('');
-    // Open by default; a group you collapse stays collapsed on this list
-    // (coming back from a fish, say) for the session, not on others.
-    // Across a whole tab, Always available runs to hundreds: it starts collapsed there.
-    const startShut = !kind && k === 'any';
-    const key = `${startShut ? 'open' : 'shut'}:${here}:${k}`;
-    const open = startShut ? !!ctx.folds?.has(key) : !ctx.folds?.has(key);
+    // A group you open or collapse stays that way on this list (coming
+    // back from a fish, say) for the session, not on others.
+    const startOpen = k === topKind;
+    const key = `${startOpen ? 'shut' : 'open'}:${here}:${k}`;
+    const open = startOpen ? !ctx.folds?.has(key) : !!ctx.folds?.has(key);
     return `<section><h2 class="sec"><button class="why-sec sec-toggle${open ? ' open' : ''}" data-act="fold" data-key="${key}" aria-expanded="${open}">${svg}${title} · ${xs.length}${chevron}</button></h2>${open ? `<div class="list">${rows}</div>` : ''}</section>`;
   }).join('');
 

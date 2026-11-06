@@ -98,7 +98,7 @@ try {
   check(await js(`document.querySelector('.back')?.getAttribute('href')`) === '#/rod', 'Uncaught list goes back Home in one tap');
   check(await js(`document.querySelector('.back')?.textContent.includes('Home')`), 'Uncaught list Back is labelled Home');
   check(await js(`document.querySelector('button.sec-toggle[data-act=fold]')?.getAttribute('aria-expanded')`) === 'true', 'Open now group starts expanded');
-  check(await js(`[...document.querySelectorAll('button.sec-toggle[data-act=fold]')].find((b) => b.textContent.includes('Always available'))?.getAttribute('aria-expanded')`) === 'false', 'Always available group starts collapsed on the whole-tab list');
+  check(await js(`[...document.querySelectorAll('button.sec-toggle[data-act=fold]')].map((b) => b.getAttribute('aria-expanded')).join()`) === 'true' + ',false'.repeat(await js(`document.querySelectorAll('button.sec-toggle').length - 1`)), 'only the first group starts open; the rest start collapsed');
 
   await go('#/rod');
   check(await js(`document.body.textContent.includes("in expansions you haven't reached")`), 'home reports hidden regions');

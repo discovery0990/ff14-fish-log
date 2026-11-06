@@ -13,7 +13,6 @@ export const defaultState = () => ({
     exp: null,         // unlocked expansion ids; null = all
     tomes: [],         // folklore tome item ids owned (older saves may have null: none)
   },
-  upSoonHours: 2,      // "Up soon" horizon
   createdAt: null,     // ms, first save
   lastExport: null,    // ms
   caughtAtLastExport: 0,
@@ -144,7 +143,7 @@ export function createStore(storage = globalThis.localStorage) {
       state = { ...state, profile: { ...state.profile, ...patch } };
       commit();
     },
-    /** Top-level settings such as upSoonHours or reminderDismissedAt. */
+    /** Top-level settings such as reminderDismissedAt. */
     setPrefs(patch) {
       state = { ...state, ...patch };
       commit();

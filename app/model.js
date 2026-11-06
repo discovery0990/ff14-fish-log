@@ -358,7 +358,7 @@ export function createModel(data, sprites = null) {
    * the profile shows (discovered or not), skipping fish needing more
    * Gathering. One entry per fish (its soonest hole); open windows first.
    */
-  function upSoon(tab, { now, horizonMs, isCaught, profile }) {
+  function upSoon(tab, { now, horizonMs = Infinity, isCaught, profile }) {
     const best = new Map();
     for (const [fid, hid] of windowed[tab] ?? []) {
       if (isCaught(fid) || holeVisibility(hid, profile) !== 'show') continue;

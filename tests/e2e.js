@@ -84,14 +84,12 @@ try {
   check(JSON.stringify((await stored()).profile.exp) === '[0,1,2,3,4]', 'toggling Dawntrail off saves the expansion list');
   await shot('profile');
 
-  // --- Up soon: Home shows 5, sets the horizon, and links to the whole-tab Uncaught list
+  // --- Up soon: Home shows 5 and links to the whole-tab Uncaught list
   await go('#/rod');
   check(await js(`document.querySelector('.list').querySelectorAll('.item').length`) === 5, 'Home shows 5 Up soon fish');
   check(await js(`document.querySelector('a.more')?.getAttribute('href')`) === '#/rod/left', 'Up soon card links to the Uncaught list');
   check(await js(`document.querySelector('a.more')?.textContent.trim().startsWith('All uncaught fish')`), 'Up soon link reads "All uncaught fish"');
-  await js(`document.querySelector('.chips.sm [data-act=horizon][data-h="3"]').click()`);
-  check((await stored()).upSoonHours === 3, 'Up soon horizon saves');
-  check(await js(`document.querySelector('[data-act=horizon][data-h="3"]').classList.contains('on')`), 'horizon chip shows as selected on Home');
+  check(await js(`!document.querySelector('[data-act=horizon]')`), 'Up soon has no look-ahead setting');
   check(await js(`!document.querySelector('[data-act=soon-holes]')`), 'Up soon has no discovered/undiscovered filter');
   await shot('soon');
   await go('#/rod/soon');
@@ -260,7 +258,6 @@ try {
   await js(`history.back()`);
   await sleep(250);
   await js(`document.querySelector('[data-act=region][data-rid="22"]').click()`); // collapse
-  check(await js(`document.querySelector('[data-act=horizon][data-h="3"]')?.classList.contains('on')`), 'Up soon uses the new horizon');
   await shot('home');
 
   // --- Hole: gathering warning appears with Gathering 339

@@ -457,7 +457,7 @@ const UP_SOON_SHOWN = 5;
 
 function upSoonList(ctx) {
   const { m, store, tab, now } = ctx;
-  return m.upSoon(tab, { now, horizonMs: store.state.upSoonHours * 36e5, isCaught: store.isCaught, profile: store.state.profile });
+  return m.upSoon(tab, { now, isCaught: store.isCaught, profile: store.state.profile });
 }
 
 /** Two lines: fish and status, then hole and condition. */
@@ -484,18 +484,14 @@ function upSoonSection(ctx) {
   // The full list is the tab's Uncaught fish: every window, not just these hours.
   const c = ctx.m.count(ctx.m.tabHolesAll(tab), store.isCaught, store.state.profile);
   const more = `<a class="more" href="#/${tab}/left">All uncaught fish · ${(c.total - c.caught - c.why.exp).toLocaleString()}</a>`;
-  const hours = store.state.upSoonHours;
-  const chips = HORIZONS.map((h) =>
-    `<button class="chip${hours === h ? ' on' : ''}" data-act="horizon" data-h="${h}" aria-pressed="${hours === h}">${h}h</button>`).join('');
   return `
     <section>
-      <div class="row"><h2 class="sec grow">Up soon · uncaught</h2><div class="chips sm" role="group" aria-label="Look ahead">${chips}</div></div>
-      ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: tab }, shown)}</div>${legend}` : `<p class="note">Nothing opens in the next ${hours}h.</p>`}
+      <h2 class="sec">Up soon · uncaught</h2>
+      ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: tab }, shown)}</div>${legend}` : '<p class="note">No uncaught fish with a window left here.</p>'}
       ${more}
     </section>`;
 }
 
-const HORIZONS = [1, 2, 3, 6];
 
 function searchResults(ctx) {
   const { m, store } = ctx;

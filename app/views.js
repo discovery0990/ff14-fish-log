@@ -729,9 +729,9 @@ function placeName(m, kind, id) {
 
 /**
  * The uncaught fish in a region or zone, each at its best hole: open now
- * (closing soonest first), then grouped by why: waiting on a window
- * (soonest first), Gathering (least needed first), a folklore tome, a hole
- * above your level, or catchable at another hole; then those always available.
+ * (closing soonest first), always available, then grouped by why: waiting
+ * on a window (soonest first), Gathering (least needed first), a folklore
+ * tome, a hole above your level, or catchable at another hole.
  */
 export function remainingView(ctx, tab, kind, id) {
   const { m, store, now } = ctx;
@@ -763,13 +763,14 @@ export function remainingView(ctx, tab, kind, id) {
   };
   // Open windows closing soonest first; Later opening soonest first.
   const sortKey = { open: (x) => x.st.end, gath: (x) => gathNeed(x.fid, x.hid) };
-  // As Home's icons: open now, Later, Not yet, elsewhere; then the fish
-  // with no window, last since they're often many and never in a hurry.
+  // Catchable now first: open windows (limited, so targeted first), then
+  // the fish with no window (caught along the way); then as Home's icons:
+  // Later, Not yet, elsewhere.
   const kindOf = (x) => (x.why ?? (x.st?.state === 'open' ? 'open' : 'any'));
   const kinds = [
     ['open', `<span class="w open-now">${OPEN_SVG}</span>`, , 'Open now'],
-    ...WHY,
     ['any', '', , tab === 'ocean' ? 'Catchable on voyages' : 'Always available'],
+    ...WHY,
   ];
 
   const sections = kinds.map(([k, svg, , title]) => {

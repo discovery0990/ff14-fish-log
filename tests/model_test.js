@@ -618,10 +618,10 @@ Deno.test('Remaining: lists the fish, links them with their hole, and Back from 
   const r = regionByName('La Noscea');
   const html = remainingView(ctxFor(store), 'rod', 'region', r);
   assertStringIncludes(html, 'Need more Gathering');
-  // Every uncaught fish is listed, those with no window last.
+  // Every uncaught fish is listed, catchable ones first.
   const c = m.count(m.regionHolesAll('rod', r), store.isCaught, store.state.profile, T);
   assertEquals((html.match(/href="#\/fish\//g) ?? []).length, c.total - c.caught - c.why.exp, 'one row per uncaught fish');
-  assert(html.indexOf('Always available') > html.indexOf('Need more Gathering'), 'always-available fish come last');
+  assert(html.indexOf('Always available') < html.indexOf('Need more Gathering'), 'catchable fish come first');
   const m2 = html.match(/#\/fish\/(\d+)\?h=(\w+)&from=([^"]+)"/);
   assert(m2, 'fish rows link with ?h= and from=');
   const back = fishView(ctxFor(store), m2[1], m2[2], decodeURIComponent(m2[3]));

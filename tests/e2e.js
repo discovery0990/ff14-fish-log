@@ -120,7 +120,7 @@ try {
   await sleep(300);
   check(await js(`Math.abs(window.scrollY - 600) < 5`), 'Uncaught list restores its scroll position after Back');
   await go('#/fish/4911'); // Rock Lobster: 4 holes, none discovered
-  check(await js(`document.querySelectorAll('.list .item .undisc-name').length === 4 && !!document.querySelector('.legend')`), 'Found at outlines undiscovered holes, with the legend');
+  check(await js(`document.querySelectorAll('.list .item .undisc-name').length === 4 && !document.querySelector('.legend .undisc-name')`), 'Found at outlines undiscovered holes; the legend is only on Home');
   await go('#/fish/4950'); // Mudcrab, caught at Hopeseed Pond (discovered)
   check(await js(`![...document.querySelectorAll('.list .item')].find((i) => i.getAttribute('href') === '#/hole/r5').querySelector('.undisc-name')`), 'Found at leaves discovered holes plain');
   // With no path behind it (a deep link), Back goes up from the screen itself.

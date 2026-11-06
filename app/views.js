@@ -450,11 +450,11 @@ const xyText = (h) => (h.xy ? `X ${h.xy[0].toFixed(1)} Y ${h.xy[1].toFixed(1)}` 
 
 const hiddenTag = (why) => (why ? ` <span class="tag">${esc(why)}</span>` : '');
 // A dashed outline means "not discovered yet" everywhere: hole cards, the
-// hole's toggle, and hole names in lists. undiscLegend explains it.
+// hole's toggle, and hole names in lists. undiscLegend, on Home only, explains it.
 const holeName = (m, store, hid) => (store.isDiscovered(hid)
   ? esc(m.data.holes[hid].name)
   : `<span class="undisc-name" title="Undiscovered">${esc(m.data.holes[hid].name)}</span>`);
-// A sample of the outline, at the foot of the screen.
+// A sample of the outline, at the foot of Home.
 const undiscLegend = '<p class="note legend"><span class="undisc-name">Undiscovered hole</span></p>';
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -787,8 +787,7 @@ export function remainingView(ctx, tab, kind = null, id = null) {
     <header class="stack-s"><h1>${esc(name)}</h1>
       <div class="sub">${kind ? `Uncaught${tab === 'rod' ? '' : ` · ${TAB_LABELS[tab]}`}` : `${TAB_LABELS[tab]} · every region`}</div>
       <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c)}</span></div></header>
-    ${sections || '<p class="empty">Every fish here is caught.</p>'}
-    ${left.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : ''}`;
+    ${sections || '<p class="empty">Every fish here is caught.</p>'}`;
 }
 
 // Where a fish screen's Back goes when it was opened from Home, an Uncaught
@@ -882,8 +881,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
       <dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>` : ''}
     ${chain}${windows}
     <section><h2 class="sec">Found at</h2><div class="list">${found}</div></section>
-    ${caught ? '' : '<section><h2 class="sec">Log entry</h2><p class="note">Catch it to read its log entry.</p></section>'}
-    ${holes.some((x) => !store.isDiscovered(x)) ? undiscLegend : ''}`;
+    ${caught ? '' : '<section><h2 class="sec">Log entry</h2><p class="note">Catch it to read its log entry.</p></section>'}`;
 }
 
 /** The game's log text for a caught fish, and (withDate) when you marked it. */

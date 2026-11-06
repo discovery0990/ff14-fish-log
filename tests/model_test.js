@@ -631,7 +631,7 @@ Deno.test('Remaining: lists the fish, links them with their hole, and Back from 
   assertStringIncludes(back, `href="#/rod/left/region/${r}"`);
   assertStringIncludes(back, '<span>La Noscea</span>');
   // An open region's first row links to the same screen; closed, it has no link.
-  assertStringIncludes(homeView(ctxFor(store, { openRegion: r, folds: new Set() })), `<a class="item row left-link in-region" href="#/rod/left/region/${r}">`);
+  assertStringIncludes(homeView(ctxFor(store, { openRegion: r, folds: new Set() })), `<a class="more left-link in-region" href="#/rod/left/region/${r}">`);
   assert(!homeView(ctxFor(store, { folds: new Set() })).includes('left-link'), 'closed regions have no link row');
 });
 

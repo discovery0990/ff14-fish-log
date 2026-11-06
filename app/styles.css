@@ -158,16 +158,17 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .item.zone { scroll-margin-top: var(--region-h, 0px); }
 .item.region.open { background: var(--raised); }
 .item.region > .row .title { font-size: 17px; font-weight: 700; }
-.item.zone, .item.left-link.in-region { padding-left: 32px; gap: 4px;
+.item.zone { padding-left: 32px; gap: 4px;
   background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat, rgba(0, 0, 0, .14); }
 .item.zone > .row .title { font-size: 15px; font-weight: 600; }
 .item.zone.open { background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat, var(--raised); }
-.item.hole, .item.left-link.in-zone { padding-left: 50px; gap: 4px;
+.item.hole { padding-left: 50px; gap: 4px;
   background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat,
     linear-gradient(var(--muted), var(--muted)) 32px 0 / 2px 100% no-repeat, rgba(0, 0, 0, .28); }
 .item.hole .title { font-size: 14px; font-weight: 500; }
-/* An open region's or zone's "Can't catch right now" link, at its children's level. */
-.item.left-link { font-size: 14px; }
+/* An open region's or zone's "Uncaught fish" button, part of its header block. */
+.more-row { padding: 2px 14px 12px; background: var(--raised); border-bottom: 1px solid var(--line); }
+.more-row.in-zone { padding-left: 32px; background: linear-gradient(var(--edge), var(--edge)) 14px 0 / 2px 100% no-repeat, var(--raised); }
 .item.hole.grey { opacity: .55; }
 .item.hole .lv { margin-left: 6px; font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; }
 .card { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: var(--surface); }

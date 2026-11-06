@@ -287,15 +287,15 @@ function whyIcons(why, prefix = "Can't catch now: ") {
 }
 
 /**
- * The first row inside an open region or zone: a link to its uncaught fish
- * (those in expansions you haven't reached aside, as on Home). Always there,
- * even at 0, so every open region and zone looks the same.
+ * Just under an open region's or zone's header, at its level: a link to its
+ * uncaught fish (those in expansions you haven't reached aside, as on Home),
+ * the same button as Home's "All uncaught fish". Always there, even at 0, so
+ * every open region and zone looks the same.
  */
 function leftLink(c, href, level) {
   const n = c.total - c.caught - (c.why?.exp ?? 0);
   return `
-      <a class="item row left-link ${level}" href="${href}">
-        <span class="grow">Uncaught fish · <span class="num">${n}</span></span>${chevron}</a>`;
+      <div class="more-row ${level}"><a class="more left-link ${level}" href="${href}">Uncaught fish · ${n.toLocaleString()}</a></div>`;
 }
 
 const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))

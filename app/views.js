@@ -308,9 +308,9 @@ function leftLink(c, href, level) {
 // (in the data, it's always a restricted hole here with an open one elsewhere).
 const KEY_TEXT = { away: 'restricted here, catchable at another hole' };
 const reachLegend = () => `<dl class="key">
-  <div><dt><span class="num">4 / 6</span></dt><dd>caught / in reach (your level, Gathering, tomes)</dd></div>
-  <div><dt><span class="num out">(8)</span></dt><dd>every fish, in reach or not</dd></div>
-  <div><dt><span class="w open-now">${OPEN_SVG}</span></dt><dd>open now</dd></div>
+  <div><dt><span class="num">4 / 6</span></dt><dd>caught / catchable (your level, Gathering, tomes)</dd></div>
+  <div><dt><span class="num out">(8)</span></dt><dd>every fish, catchable or not</dd></div>
+  <div><dt><span class="w open-now">${OPEN_SVG}</span></dt><dd>window open now (fish with time or weather conditions)</dd></div>
   ${WHY.map(([k, svg, t]) => `<div><dt><span class="${whyCls(k)}">${svg}</span></dt><dd>${KEY_TEXT[k] ?? t}</dd></div>`).join('')}
 </dl>`;
 
@@ -570,7 +570,7 @@ export function profileView(ctx) {
       <p class="note">Most holes can be fished at any level. A few are restricted until you reach their level: they're not on your map and you can't cast there, so the app greys them out until then. Fish needing more Gathering than you have are flagged at the hole and left out of Up soon. Leave blank to turn off.</p>
     </section>
     <section><h2 class="sec">Expansions you've reached</h2><div class="chips">${exps}</div>
-      <p class="note">Zones open up with the story, not your Fisher level. Regions in expansions you haven't reached are left off Home and out of Up soon and the in-reach counts.</p></section>
+      <p class="note">Zones open up with the story, not your Fisher level. Regions in expansions you haven't reached are left off Home and out of Up soon and the catchable counts.</p></section>
     ${tomesSection(m, p)}
     <section><h2 class="sec">Backup</h2>
       ${ctx.flash ? `<p class="note hi">${esc(ctx.flash)}</p>` : ''}
@@ -611,7 +611,7 @@ function tomesSection(m, p) {
   return `
     <section><h2 class="sec">Folklore tomes <span class="dim">· ${owned.length} of ${ids.length}</span></h2>
       <div class="stack-s">${chips}</div>
-      <p class="note">Tick the tomes you have. Folklore fish can't be caught without their tome, so fish needing one you haven't ticked are flagged at the hole and left out of Up soon and the in-reach counts.</p>
+      <p class="note">Tick the tomes you have. Folklore fish can't be caught without their tome, so fish needing one you haven't ticked are flagged at the hole and left out of Up soon and the catchable counts.</p>
     </section>`;
 }
 

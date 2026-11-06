@@ -33,7 +33,7 @@ export async function launch({ port = 9333, width = 390, height = 1200 } = {}) {
   const target = await waitFor(async () => {
     const r = await fetch(`http://127.0.0.1:${port}/json/list`);
     return (await r.json()).find((t) => t.type === 'page');
-  }, 'browser');
+  }, 'browser', 45000); // a cold Chrome on a CI runner can take a while
 
   const ws = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((r) => (ws.onopen = r));

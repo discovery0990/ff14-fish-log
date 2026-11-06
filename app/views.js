@@ -300,19 +300,23 @@ function leftLink(c, href, level) {
       <div class="more-row ${level}"><a class="more left-link ${level}" href="${href}">Uncaught · ${n.toLocaleString()}</a></div>`;
 }
 
-const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))
-  .map(([k, svg, t]) => `<span class="${whyCls(k)}">${svg}</span> ${t}`).join(', ');
-/** What Home's counts and icons mean. Counts and bars are progress: windows never count against them. */
-const reachLegend = () => `<span class="num">4 / 6</span>: 4 caught of the 6 you can catch at your level, Gathering and tomes.
-  <span class="num">(N)</span> is everything.
-  <span class="w open-now">${OPEN_SVG}</span> open now. <b>Later</b>: ${legendIcons(['window'])}. <b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}. ${legendIcons(['away'])}.
-  Open a region or zone to list what's uncaught.`;
+/**
+ * What Home's counts and icons mean, one line each: a key, not a paragraph.
+ * Counts and bars are progress: windows never count against them.
+ */
+const FAMILY = { window: 'Later', gath: 'Not yet', tome: 'Not yet', lock: 'Not yet' };
+const reachLegend = () => `<dl class="key">
+  <div><dt><span class="num">4 / 6</span></dt><dd>caught / in reach (your level, Gathering, tomes)</dd></div>
+  <div><dt><span class="num out">(8)</span></dt><dd>every fish, in reach or not</dd></div>
+  <div><dt><span class="w open-now">${OPEN_SVG}</span></dt><dd>open now</dd></div>
+  ${WHY.map(([k, svg, t]) => `<div><dt><span class="${whyCls(k)}">${svg}</span></dt><dd>${FAMILY[k] ? `<b>${FAMILY[k]}</b> · ` : ''}${t}</dd></div>`).join('')}
+</dl>`;
 
 function regionsBlock(regionRows, hidden, gated, undisc) {
   return `
     <section><h2 class="sec">Regions</h2>
       <div class="list">${regionRows || '<p class="empty">No regions in the expansions you\'ve reached.</p>'}</div>
-      ${gated ? `<p class="note legend">${reachLegend()}</p>` : ''}
+      ${gated ? `<div class="note legend">${reachLegend()}</div>` : ''}
       ${undisc ? undiscLegend : ''}
       ${hidden ? `<p class="note">${hidden} region${hidden > 1 ? 's' : ''} in expansions you haven't reached.</p>` : ''}
     </section>`;

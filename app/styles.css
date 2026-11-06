@@ -281,7 +281,6 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .key > div { display: contents; }
 .key dt { display: flex; align-items: center; gap: 4px; }
 .key dd { margin: 0; }
-.key b { color: var(--text); font-weight: 600; }
 .item .title, .item .sub { display: block; }
 
 /* Buttons and controls */

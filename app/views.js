@@ -305,11 +305,14 @@ function leftLink(c, href, level) {
  * Counts and bars are progress: windows never count against them.
  */
 const FAMILY = { window: 'Later', gath: 'Not yet', tome: 'Not yet', lock: 'Not yet' };
+// On its own, "catchable at another hole" doesn't say why it's counted apart
+// (in the data, it's always a restricted hole here with an open one elsewhere).
+const KEY_TEXT = { away: 'restricted here, catchable at another hole' };
 const reachLegend = () => `<dl class="key">
   <div><dt><span class="num">4 / 6</span></dt><dd>caught / in reach (your level, Gathering, tomes)</dd></div>
   <div><dt><span class="num out">(8)</span></dt><dd>every fish, in reach or not</dd></div>
   <div><dt><span class="w open-now">${OPEN_SVG}</span></dt><dd>open now</dd></div>
-  ${WHY.map(([k, svg, t]) => `<div><dt><span class="${whyCls(k)}">${svg}</span></dt><dd>${FAMILY[k] ? `<b>${FAMILY[k]}</b> · ` : ''}${t}</dd></div>`).join('')}
+  ${WHY.map(([k, svg, t]) => `<div><dt><span class="${whyCls(k)}">${svg}</span></dt><dd>${FAMILY[k] ? `<b>${FAMILY[k]}</b> · ` : ''}${KEY_TEXT[k] ?? t}</dd></div>`).join('')}
 </dl>`;
 
 function regionsBlock(regionRows, hidden, gated, undisc) {

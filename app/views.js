@@ -248,7 +248,9 @@ export function homeBody(ctx) {
   const regionRows = folded(ctx, `regions:${tab}`, 'Completed regions', 'item region',
     counts, ([, c]) => done(c), row);
   const gated = counts.some(([, c]) => Object.values(c.why).some(Boolean));
-  return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden, gated)}`;
+  // Dashed names can show up anywhere on Home (Up soon, open zones) while any hole here is undiscovered.
+  const undisc = m.tabHolesAll(tab).some((h) => m.holeVisibility(h, profile) !== 'hide' && !store.isDiscovered(h));
+  return `${upSoonSection(ctx)}${regionsBlock(regionRows, hidden, gated, undisc)}`;
 }
 
 // Why fish can't be caught right now, in the order they're shown. Two
@@ -306,11 +308,12 @@ const reachLegend = () => `<span class="num">4 / 6</span>: 4 caught of the 6 you
   <span class="w open-now">${OPEN_SVG}</span> open now. <b>Later</b>: ${legendIcons(['window'])}. <b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}. ${legendIcons(['away'])}.
   Open a region or zone to list what's uncaught.`;
 
-function regionsBlock(regionRows, hidden, gated) {
+function regionsBlock(regionRows, hidden, gated, undisc) {
   return `
     <section><h2 class="sec">Regions</h2>
       <div class="list">${regionRows || '<p class="empty">No regions in the expansions you\'ve reached.</p>'}</div>
       ${gated ? `<p class="note legend">${reachLegend()}</p>` : ''}
+      ${undisc ? undiscLegend : ''}
       ${hidden ? `<p class="note">${hidden} region${hidden > 1 ? 's' : ''} in expansions you haven't reached.</p>` : ''}
     </section>`;
 }
@@ -445,7 +448,8 @@ const hiddenTag = (why) => (why ? ` <span class="tag">${esc(why)}</span>` : '');
 const holeName = (m, store, hid) => (store.isDiscovered(hid)
   ? esc(m.data.holes[hid].name)
   : `<span class="undisc-name" title="Undiscovered">${esc(m.data.holes[hid].name)}</span>`);
-const undiscLegend = '<p class="note legend"><span class="undisc-name">Hole</span> undiscovered</p>';
+// A sample of the outline, at the foot of the screen.
+const undiscLegend = '<p class="note legend"><span class="undisc-name">Undiscovered hole</span></p>';
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 export function daysAgo(ms, now) {
@@ -480,14 +484,13 @@ function upSoonSection(ctx) {
   if (tab === 'ocean') return '';
   const all = upSoonList(ctx);
   const shown = all.slice(0, UP_SOON_SHOWN);
-  const legend = shown.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : '';
   // The full list is the tab's Uncaught fish: every window, not just these hours.
   const c = ctx.m.count(ctx.m.tabHolesAll(tab), store.isCaught, store.state.profile);
   const more = `<a class="more" href="#/${tab}/left">All uncaught · ${(c.total - c.caught - c.why.exp).toLocaleString()}</a>`;
   return `
     <section>
       <h2 class="sec">Up soon · uncaught</h2>
-      ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: tab }, shown)}</div>${legend}` : '<p class="note">Nothing uncaught has a window left.</p>'}
+      ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: tab }, shown)}</div>` : '<p class="note">Nothing uncaught has a window left.</p>'}
       ${more}
     </section>`;
 }
@@ -778,8 +781,8 @@ export function remainingView(ctx, tab, kind = null, id = null) {
     <header class="stack-s"><h1>${esc(name)}</h1>
       <div class="sub">${kind ? `Uncaught${tab === 'rod' ? '' : ` · ${TAB_LABELS[tab]}`}` : `${TAB_LABELS[tab]} · every region`}</div>
       <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c)}</span></div></header>
-    ${left.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : ''}
-    ${sections || '<p class="empty">Every fish here is caught.</p>'}`;
+    ${sections || '<p class="empty">Every fish here is caught.</p>'}
+    ${left.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : ''}`;
 }
 
 // Where a fish screen's Back goes when it was opened from Home, an Uncaught
@@ -872,9 +875,9 @@ export function fishView(ctx, fid, fromHole, from = null) {
     ${facts.length ? `<section><h2 class="sec">How to catch${holes.length > 1 ? ` · ${esc(h.name)}` : ''}</h2>
       <dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>` : ''}
     ${chain}${windows}
-    <section><h2 class="sec">Found at</h2><div class="list">${found}</div>
-      ${holes.some((x) => !store.isDiscovered(x)) ? undiscLegend : ''}</section>
-    ${caught ? '' : '<section><h2 class="sec">Log entry</h2><p class="note">Catch it to read its log entry.</p></section>'}`;
+    <section><h2 class="sec">Found at</h2><div class="list">${found}</div></section>
+    ${caught ? '' : '<section><h2 class="sec">Log entry</h2><p class="note">Catch it to read its log entry.</p></section>'}
+    ${holes.some((x) => !store.isDiscovered(x)) ? undiscLegend : ''}`;
 }
 
 /** The game's log text for a caught fish, and (withDate) when you marked it. */

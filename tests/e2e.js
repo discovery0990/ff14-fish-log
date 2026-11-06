@@ -152,7 +152,7 @@ try {
   check(await js(`!document.querySelector('.top').__mark`), 'becoming visible redraws immediately');
 
   // --- Undiscovered holes: dashed hole names with a legend
-  check(await js(`[...document.querySelectorAll('.list .item .undisc-name')].length > 0 && !!document.querySelector('.legend .undisc-name')`), 'Up soon outlines undiscovered hole names and explains the outline');
+  check(await js(`[...document.querySelectorAll('.list .item .undisc-name')].length > 0 && document.querySelector('#home-body > section:last-child > .legend .undisc-name')?.textContent === 'Undiscovered hole'`), 'Up soon outlines undiscovered hole names; a sample in the legend at the foot of Home explains the outline');
   await js(`(() => { const i = document.getElementById('search'); i.value = 'costa del sol'; i.dispatchEvent(new Event('input', {bubbles: true})); })()`);
   check(await js(`!!document.querySelector('#home-body .title .undisc-name')`), 'search outlines an undiscovered hole');
   await js(`document.querySelector('[data-act="clear-search"]').click()`);

@@ -88,7 +88,7 @@ try {
   await go('#/rod');
   check(await js(`document.querySelector('.list').querySelectorAll('.item').length`) === 5, 'Home shows 5 Up soon fish');
   check(await js(`document.querySelector('a.more')?.getAttribute('href')`) === '#/rod/left', 'Up soon card links to the Uncaught list');
-  check(await js(`document.querySelector('a.more')?.textContent.trim().startsWith('All uncaught fish')`), 'Up soon link reads "All uncaught fish"');
+  check(await js(`document.querySelector('a.more')?.textContent.trim().startsWith('All uncaught')`), 'Up soon link reads "All uncaught"');
   check(await js(`!document.querySelector('[data-act=horizon]')`), 'Up soon has no look-ahead setting');
   check(await js(`!document.querySelector('[data-act=soon-holes]')`), 'Up soon has no discovered/undiscovered filter');
   await shot('soon');
@@ -115,7 +115,7 @@ try {
   check(/^#\/fish\/\d+\?h=r\d+&from=rod%2Fleft$/.test(soonHref2), `Uncaught row opens the fish with an encoded from (${soonHref2})`);
   await js(`window.scrollTo(0, 600)`);
   await go(soonHref2);
-  check(await js(`document.querySelector('.back').getAttribute('href') === '#/rod/left' && document.querySelector('.back').textContent.includes('Uncaught fish')`), 'fish from the Uncaught list: Back goes to Uncaught fish');
+  check(await js(`document.querySelector('.back').getAttribute('href') === '#/rod/left' && document.querySelector('.back').textContent.includes('Uncaught')`), 'fish from the Uncaught list: Back goes to Uncaught');
   await js(`history.back()`);
   await sleep(300);
   check(await js(`Math.abs(window.scrollY - 600) < 5`), 'Uncaught list restores its scroll position after Back');

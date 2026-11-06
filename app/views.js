@@ -112,7 +112,7 @@ const progress = ({ caught, total, reach = total }, cls = '') => {
 function screenName(m, hash) {
   const [a, b, c, d] = hash.replace(/^#\/?/, '').split('?')[0].split('/');
   if (!a || (TABS.includes(a) && !b)) return 'Home';
-  if (TABS.includes(a) && b === 'left') return c ? placeName(m, c, d) : 'Uncaught fish';
+  if (TABS.includes(a) && b === 'left') return c ? placeName(m, c, d) : 'Uncaught';
   if (a === 'hole') return Object.hasOwn(m.data.holes, b) ? m.data.holes[b].name : null;
   if (a === 'fish') return Object.hasOwn(m.data.fish, b) ? m.data.fish[b].name : null;
   if (a === 'profile') return 'Profile';
@@ -295,7 +295,7 @@ function whyIcons(why, prefix = "Can't catch now: ") {
 function leftLink(c, href, level) {
   const n = c.total - c.caught - (c.why?.exp ?? 0);
   return `
-      <div class="more-row ${level}"><a class="more left-link ${level}" href="${href}">Uncaught fish · ${n.toLocaleString()}</a></div>`;
+      <div class="more-row ${level}"><a class="more left-link ${level}" href="${href}">Uncaught · ${n.toLocaleString()}</a></div>`;
 }
 
 const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))
@@ -304,7 +304,7 @@ const legendIcons = (keys) => WHY.filter(([k]) => keys.includes(k))
 const reachLegend = () => `<span class="num">4 / 6</span>: 4 caught of the 6 you can catch at your level, Gathering and tomes.
   <span class="num">(N)</span> is everything.
   <span class="w open-now">${OPEN_SVG}</span> open now. <b>Later</b>: ${legendIcons(['window'])}. <b>Not yet</b>: ${legendIcons(['lock', 'gath', 'tome'])}. ${legendIcons(['away'])}.
-  Open a region or zone to list its uncaught fish.`;
+  Open a region or zone to list what's uncaught.`;
 
 function regionsBlock(regionRows, hidden, gated) {
   return `
@@ -483,11 +483,11 @@ function upSoonSection(ctx) {
   const legend = shown.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : '';
   // The full list is the tab's Uncaught fish: every window, not just these hours.
   const c = ctx.m.count(ctx.m.tabHolesAll(tab), store.isCaught, store.state.profile);
-  const more = `<a class="more" href="#/${tab}/left">All uncaught fish · ${(c.total - c.caught - c.why.exp).toLocaleString()}</a>`;
+  const more = `<a class="more" href="#/${tab}/left">All uncaught · ${(c.total - c.caught - c.why.exp).toLocaleString()}</a>`;
   return `
     <section>
       <h2 class="sec">Up soon · uncaught</h2>
-      ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: tab }, shown)}</div>${legend}` : '<p class="note">No uncaught fish with a window left here.</p>'}
+      ${all.length ? `<div class="list">${upSoonRows({ ...ctx, from: tab }, shown)}</div>${legend}` : '<p class="note">Nothing uncaught has a window left.</p>'}
       ${more}
     </section>`;
 }
@@ -709,7 +709,7 @@ export function remainingView(ctx, tab, kind = null, id = null) {
   const { m, store, now } = ctx;
   const { profile } = store.state;
   // No kind: the whole tab (Home's "All uncaught fish").
-  const name = kind ? placeName(m, kind, id) : 'Uncaught fish';
+  const name = kind ? placeName(m, kind, id) : 'Uncaught';
   const hids = !name ? [] : !kind ? m.tabHolesAll(tab) : kind === 'region' ? m.regionHolesAll(tab, id) : m.zoneHolesAll(tab, id);
   if (!hids.length) return notFound();
   const c = rowCount(m.count(hids, store.isCaught, profile, now));
@@ -776,7 +776,7 @@ export function remainingView(ctx, tab, kind = null, id = null) {
   return `
     ${kind ? back(ctx, `#/${tab}/${kind}/${id}`, name, tab) : back(ctx, `#/${tab}`, 'Home', tab)}
     <header class="stack-s"><h1>${esc(name)}</h1>
-      <div class="sub">${kind ? `Uncaught ${tab === 'spear' ? 'spearfishing ' : tab === 'ocean' ? 'ocean ' : ''}fish` : `${TAB_LABELS[tab]} · every region`}</div>
+      <div class="sub">${kind ? `Uncaught${tab === 'rod' ? '' : ` · ${TAB_LABELS[tab]}`}` : `${TAB_LABELS[tab]} · every region`}</div>
       <div class="row"><span class="grow">${progress(c)}</span><span class="num hi">${countText(c)}</span></div></header>
     ${left.some((x) => !store.isDiscovered(x.hid)) ? undiscLegend : ''}
     ${sections || '<p class="empty">Every fish here is caught.</p>'}`;

@@ -234,6 +234,17 @@ try {
   await js(`document.querySelector('a.left-link.in-zone').click()`);
   await sleep(250);
   check(await js(`location.hash === '#/rod/left/zone/32' && document.querySelector('h1').textContent === 'Eastern La Noscea'`), "the zone's link opens its Remaining list");
+  // Its groups collapse, and stay collapsed on other lists this session.
+  const firstGroup = `document.querySelector('.sec-toggle')`;
+  const groupName = await js(`${firstGroup}.textContent.split(' · ')[0]`);
+  await js(`${firstGroup}.click()`);
+  await sleep(150);
+  check(await js(`${firstGroup}.getAttribute('aria-expanded') === 'false' && !${firstGroup}.closest('section').querySelector('.list')`), 'tapping a group heading collapses it');
+  await go('#/rod/left/region/22');
+  check(await js(`[...document.querySelectorAll('.sec-toggle')].find((b) => b.textContent.startsWith(${JSON.stringify(groupName)}))?.getAttribute('aria-expanded')`) === 'false', 'a collapsed group stays collapsed on another list');
+  await js(`[...document.querySelectorAll('.sec-toggle[aria-expanded=false]')].forEach((b) => b.click())`);
+  await js(`history.back()`); // to the zone's list, so the Back below returns Home
+  await sleep(250);
   await js(`history.back()`);
   await sleep(250);
   await js(`document.querySelector('[data-act=region][data-rid="22"]').click()`); // collapse

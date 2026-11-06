@@ -788,7 +788,11 @@ export function remainingView(ctx, tab, kind, id) {
             <span class="sub">${holeName(m, store, x.hid)}${note ? ` · ${esc(note)}` : ''}</span></span>
         </a>`;
     }).join('');
-    return `<section><h2 class="sec why-sec">${svg}${title} · ${xs.length}</h2><div class="list">${rows}</div></section>`;
+    // Open by default; a group you collapse stays collapsed for the session,
+    // on every region's and zone's list.
+    const key = `shut:left:${k}`;
+    const open = !ctx.folds?.has(key);
+    return `<section><h2 class="sec"><button class="why-sec sec-toggle${open ? ' open' : ''}" data-act="fold" data-key="${key}" aria-expanded="${open}">${svg}${title} · ${xs.length}${chevron}</button></h2>${open ? `<div class="list">${rows}</div>` : ''}</section>`;
   }).join('');
 
   return `

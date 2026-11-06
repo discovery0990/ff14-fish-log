@@ -193,6 +193,10 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .why-line { justify-content: flex-end; }
 .legend .w svg { vertical-align: -2px; }
 .why-sec { display: flex; align-items: center; gap: 6px; }
+/* A collapsible group heading on the Uncaught list: the whole line is the target. */
+.sec-toggle { width: 100%; min-height: 44px; margin: -12px 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; cursor: pointer; }
+.sec-toggle .chev { margin-left: auto; transition: transform .15s; }
+.sec-toggle.open .chev { transform: rotate(90deg); }
 .why-sec svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .arrow { color: var(--mooch); font-weight: 700; }
 .pill { font-family: var(--mono); font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--track); white-space: nowrap; }

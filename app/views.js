@@ -875,9 +875,8 @@ export function fishView(ctx, fid, fromHole, from = null) {
     <header class="row">${icon(f.icon, 'icon lg')}
       <div class="grow"><h1>${esc(f.name)}</h1><div class="sub">No. ${f.no} · Lv ${f.lvl}${stars}${rec ? ` · ${esc(rec)}` : ''}${f.big ? ' · Big fish' : ''}${availability(h, st)}</div></div>
     </header>
-    ${fromGuide ? '' : `<button class="big${caught ? ' done' : ''}" data-act="caught" data-fid="${fid}" data-hid="${discoverHid}" aria-pressed="${caught}">${caught ? 'Caught — tap to undo' : 'Mark caught'}</button>`}
+    ${fromGuide && !banner ? '' : `<div class="row catch-row">${fromGuide ? '' : `<button class="big${caught ? ' done' : ''}" data-act="caught" data-fid="${fid}" data-hid="${discoverHid}" aria-pressed="${caught}">${caught ? 'Caught — tap to undo' : 'Mark caught'}</button>`}${banner}</div>`}
     ${caught ? logEntry(store, fid, f, !fromGuide) : ''}
-    ${banner}
     ${facts.length ? `<section><h2 class="sec">How to catch${holes.length > 1 ? ` · ${esc(h.name)}` : ''}</h2>
       <dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>` : ''}
     ${chain}${windows}

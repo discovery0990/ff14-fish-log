@@ -30,7 +30,7 @@ export function otherWays(m, hid, e) {
   if (m.data.holes[hid].ocean) return [];
   return (e.alts ?? []).map((b) => (m.data.fish[b]
     ? `Or mooch it from ${m.fishName(b)}`
-    : `Or cast ${m.fishName(b)} for it directly, no mooch`));
+    : `Or cast ${m.fishName(b)} directly, no mooch`));
 }
 const otherWaysLines = (m, hid, e) => otherWays(m, hid, e).map((t) => `<span class="alt-way">${esc(t)}</span>`).join('');
 

@@ -166,8 +166,8 @@ Deno.test('alternative baits: only other methods (bait vs mooch), flagged', () =
   // Flagged on its own line on the hole and fish screens.
   const store = createStore(memStorage());
   assertStringIncludes(holeView(ctxFor(store), st.hid), '<span class="alt-way">Or mooch it from Rudderfish</span>');
-  assertStringIncludes(holeView(ctxFor(store), fv.hid), 'Or cast Grey Worm for it directly, no mooch');
-  assertStringIncludes(fishView(ctxFor(store), fv.fid, fv.hid), '<p class="note alt-way">Or cast Grey Worm for it directly, no mooch</p>');
+  assertStringIncludes(holeView(ctxFor(store), fv.hid), 'Or cast Grey Worm directly, no mooch');
+  assertStringIncludes(fishView(ctxFor(store), fv.fid, fv.hid), '<p class="note alt-way">Or cast Grey Worm directly, no mooch</p>');
   assertStringIncludes(fishView(ctxFor(store), st.fid, st.hid), '<p class="note alt-way">Or mooch it from Rudderfish</p>');
   assert(!fishView(ctxFor(store), st.fid, st.hid).includes('(or '), 'not inline in the Bait fact');
 });

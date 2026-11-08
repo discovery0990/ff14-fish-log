@@ -178,7 +178,7 @@ The file is 858 KB (258 KB gzipped); the log entries (`text`, newlines kept for 
 - Catch info is stored per hole (`at`), because bait and chains differ by hole.
 - **A mooch** is a `bait` that is itself a fish ID. The chain is followed through that fish's `at[sameHole]`.
 - **Optional `at` fields on rod fish:**
-  - `alts`: ocean fishing, other baits that also work (Teamcraft), shown dim as "(or X)". Elsewhere, another way that changes the method: a bait item to cast directly, or a fish to mooch (at the same hole). Flagged on its own purple line, "Or mooch it from Rudderfish" / "Or cast Grey Worm for it directly, no mooch", on the hole screen and the fish screen (under the bait or the mooch chain)
+  - `alts`: ocean fishing, other baits that also work (Teamcraft), shown dim as "(or X)". Elsewhere, another way that changes the method: a bait item to cast directly, or a fish to mooch (at the same hole). Flagged on its own purple line, "Or mooch it from Rudderfish" / "Or cast Grey Worm directly, no mooch", on the hole screen and the fish screen (under the bait or the mooch chain)
   - `minG`: minimum Gathering
   - `spawn` / `dur`: Eorzea-hour time window
   - `w`: weathers

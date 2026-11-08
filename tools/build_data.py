@@ -465,15 +465,17 @@ def build(fetch, skip_icons):
             n, b = n + 1, fish[b]['at'][hid].get('bait')
         return n
 
-    def add_alt(fid, hid, alt):
-        """Whether `alt` was added for the fish at the hole: new, and a different method."""
+    def add_alt(fid, hid, alt, checked=False):
+        """Whether `alt` was added for the fish at the hole: new, and a different
+        method, unless `checked` by hand (an override: another fish to mooch
+        at the same step is worth knowing, since you may hook either)."""
         e = fish[fid]['at'][hid]
         if alt is None or alt == fid or alt == e.get('bait') or alt in e.get('alts', []):
             return False
         # A fish to mooch has to be caught at the same hole.
         if alt in fish and hid not in fish[alt]['at']:
             return False
-        if mooches(alt, hid) == mooches(e.get('bait'), hid):
+        if not checked and mooches(alt, hid) == mooches(e.get('bait'), hid):
             return False
         e.setdefault('alts', []).append(alt)
         return True
@@ -514,9 +516,9 @@ def build(fetch, skip_icons):
         if o['hole'] not in f['at']:
             continue
         for alt in o['alts']:
-            check(add_alt(int(fid_s), o['hole'], resolve(alt, f'baitAlts override {o["name"]}')),
+            check(add_alt(int(fid_s), o['hole'], resolve(alt, f'baitAlts override {o["name"]}'), checked=True),
                   f'baitAlts override {fid_s} ({o["name"]}): {alt} is already its bait or an alternative '
-                  '(remove it), is a fish not caught at that hole, or is the same method as its bait')
+                  '(remove it), or is a fish not caught at that hole')
     extra_names = {pid: items[pid]['Name'] for pid in pred_ids - set(fish)}
 
     # Big fish: green rarity on overworld holes. Green ocean fish are ocean

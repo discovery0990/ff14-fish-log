@@ -28,9 +28,13 @@ const orAlts = (m, hid, e) => (m.data.holes[hid].ocean && e.alts?.length
  */
 export function otherWays(m, hid, e) {
   if (m.data.holes[hid].ocean) return [];
-  return (e.alts ?? []).map((b) => (m.data.fish[b]
-    ? `Or mooch it from ${m.fishName(b)}`
-    : `Or cast ${m.fishName(b)} directly, no mooch`));
+  const alts = e.alts ?? [];
+  const fish = alts.filter((b) => m.data.fish[b]).map((b) => m.fishName(b));
+  const baits = alts.filter((b) => !m.data.fish[b]).map((b) => m.fishName(b));
+  return [
+    ...(fish.length ? [`Or mooch it from ${fish.join(' or ')}`] : []),
+    ...(baits.length ? [`Or cast ${baits.join(' or ')} directly, no mooch`] : []),
+  ];
 }
 const otherWaysLines = (m, hid, e) => otherWays(m, hid, e).map((t) => `<span class="alt-way">${esc(t)}</span>`).join('');
 

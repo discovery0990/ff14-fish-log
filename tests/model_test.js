@@ -135,7 +135,7 @@ Deno.test('mooch chains: Black Ghost and Junkmonger', () => {
   assertEquals(m.moochTargets('r5')[byName('Ala Mhigan Fighting Fish')], ['Black Ghost']);
 });
 
-Deno.test('alternative baits: only other methods (bait vs mooch), flagged', () => {
+Deno.test('alternative baits: only other methods (bait vs mooch), flagged', async () => {
   const at = (name, hole) => {
     const fid = byName(name);
     const hid = Object.keys(DATA.fish[fid].at).find((h) => DATA.holes[h].name === hole);
@@ -166,8 +166,22 @@ Deno.test('alternative baits: only other methods (bait vs mooch), flagged', () =
   };
   const alts = Object.values(DATA.fish).flatMap((f) => Object.entries(f.at)
     .filter(([h, e]) => !DATA.holes[h].ocean && e.alts).flatMap(([h, e]) => e.alts.map((a) => [h, e, a])));
-  assertEquals(alts.length, 11);
-  for (const [h, e, a] of alts) assert(mooches(a, h) !== mooches(e.bait, h), `${m.fishName(a)} at ${h}`);
+  assertEquals(alts.length, 16);
+  // Hand-checked overrides may add another fish at the same step (you may
+  // hook either); everything else changes the method.
+  const OV = JSON.parse(await Deno.readTextFile(new URL('../data/overrides.json', import.meta.url))).baitAlts;
+  const checked = new Set(Object.values(OV).flatMap((o) => o.alts.map((a) => `${o.hole}:${a}`)));
+  for (const [h, e, a] of alts) {
+    if (checked.has(`${h}:${m.fishName(a)}`)) continue;
+    assert(mooches(a, h) !== mooches(e.bait, h), `${m.fishName(a)} at ${h}`);
+  }
+  // Player-checked: Kuno's step 3 can be Goldfish; Ndendecki can be mooched
+  // straight from Silverfish; Gigantshark from any of three.
+  assertEquals(at('Kuno the Killer', 'The North Shards').e.alts, [Number(byName('Goldfish'))]);
+  assertEquals(at('Ndendecki', 'Moondrip').e.alts, [Number(byName('Silverfish'))]);
+  assertEquals(at('Gigantshark', 'Summerford').e.alts.map((b) => m.fishName(b)), ['Merlthor Goby', 'Ogre Barracuda']);
+  const gs = at('Gigantshark', 'Summerford');
+  assertStringIncludes(fishView(ctxFor(createStore(memStorage())), gs.fid, gs.hid), 'Or mooch it from Merlthor Goby or Ogre Barracuda');
   // Flagged on its own line on the hole and fish screens.
   const store = createStore(memStorage());
   assertStringIncludes(holeView(ctxFor(store), st.hid), '<span class="alt-way">Or mooch it from Rudderfish</span>');

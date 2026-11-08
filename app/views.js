@@ -710,7 +710,7 @@ function placeName(m, kind, id) {
 
 /**
  * The uncaught fish in a region or zone, each at its best hole: open now
- * (closing soonest first), always available, then grouped by why: waiting
+ * (most time left first), always available, then grouped by why: waiting
  * on a window (soonest first), Gathering (least needed first), a folklore
  * tome, a hole above your level, or catchable at another hole.
  */
@@ -744,8 +744,9 @@ export function remainingView(ctx, tab, kind = null, id = null) {
     lock: (x) => ['', `Restricted until Lv ${m.data.holes[x.hid].lvl}`],
     away: (x) => ['', `Catchable at ${m.data.holes[x.at].name}`],
   };
-  // Open windows closing soonest first; Later opening soonest first.
-  const sortKey = { open: (x) => x.st.end, gath: (x) => gathNeed(x.fid, x.hid) };
+  // Open windows with the most time left first (one about to close is too
+  // late for a hard fish); Later opening soonest first.
+  const sortKey = { open: (x) => -x.st.end, gath: (x) => gathNeed(x.fid, x.hid) };
   // Catchable now first: open windows (limited, so targeted first), then
   // the fish with no window (caught along the way); then as Home's icons:
   // Later, Not yet, elsewhere.

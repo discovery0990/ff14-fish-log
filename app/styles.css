@@ -209,8 +209,9 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .iconbtn svg .thin { stroke-width: 1.4; }
 .toggle { flex: none; height: 36px; padding: 0 12px; border-radius: 18px; font-size: 13px; background: none; border: 1px dashed var(--muted); }
 .toggle.on { background: var(--accent-bg); color: var(--text); border: 1px solid var(--accent); }
-.big { height: 52px; border-radius: 12px; border: 0; background: var(--accent); color: var(--bg); font-size: 16px; font-weight: 600; }
-.big.done { background: var(--accent-bg); color: var(--text); border: 1px solid var(--accent); }
+/* Mark caught: compact and outlined, so a thumb starting a scroll rarely lands on it. */
+.big { align-self: flex-start; height: 40px; padding: 0 16px; border-radius: 20px; background: none; color: var(--accent); border: 1px solid var(--accent); font-size: 14px; font-weight: 600; }
+.big.done { background: var(--accent-bg); color: var(--text); }
 
 /* Fish rows (hole screen) */
 .fishes { display: flex; flex-direction: column; gap: 8px; }

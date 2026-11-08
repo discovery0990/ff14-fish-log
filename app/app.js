@@ -284,6 +284,12 @@ function applyImport(mode) {
   render({ keepScroll: true });
 }
 
+// A tap that stops a scroll can land as a click: catch toggles ignore taps
+// that come right after one.
+let lastScroll = 0;
+window.addEventListener('scroll', () => { lastScroll = performance.now(); }, { passive: true });
+const SCROLL_GUARD_MS = 300;
+
 root.addEventListener('click', (ev) => {
   const el = ev.target.closest('[data-act]');
   if (!el) return;
@@ -291,7 +297,10 @@ root.addEventListener('click', (ev) => {
   const d = el.dataset;
   switch (d.act) {
     case 'back': history.back(); break;
-    case 'caught': store.toggleCaught(d.fid, d.hid); break;
+    case 'caught':
+      if (performance.now() - lastScroll < SCROLL_GUARD_MS) break;
+      store.toggleCaught(d.fid, d.hid);
+      break;
     case 'disc': store.toggleDiscovered(d.hid); break;
     case 'dismiss-reminder': store.setPrefs({ reminderDismissedAt: Date.now() }); break;
     case 'step': {

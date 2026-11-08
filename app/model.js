@@ -63,8 +63,13 @@ export function createModel(data, sprites = null) {
   // How far a fish is from catchable at a hole, ignoring time: windows don't
   // count, since you can wait for them.
   const GATE = { null: 0, window: 0, gath: 1, tome: 2, lock: 3 };
+  // Catchable at both: no window beats an open one, then the most time left.
+  // Waiting at both: the soonest window.
+  const diff = (x, y) => (x === y ? 0 : x - y);
   const better = (a, b) => (a.why == null ? 0 : WHY_RANK[a.why] + 1) - (b.why == null ? 0 : WHY_RANK[b.why] + 1)
-    || (a.st?.start ?? Infinity) - (b.st?.start ?? Infinity);
+    || (a.why == null && b.why == null
+      ? diff(b.st?.end ?? Infinity, a.st?.end ?? Infinity)
+      : diff(a.st?.start ?? Infinity, b.st?.start ?? Infinity));
 
   /**
    * Why a fish can't be caught at a hole right now, or null if it can: the
@@ -96,7 +101,7 @@ export function createModel(data, sprites = null) {
       for (const { fid } of holeFish(hid)) {
         if (isCaught(fid)) continue;
         const prev = best.get(fid);
-        if (prev && prev.why == null) continue;
+        if (prev && prev.why == null && !prev.st) continue; // no window: can't do better
         const x = { fid, hid, why: whyNot(fid, hid, profile, now), st: now != null ? status(fid, hid, now) : null };
         if (!prev || better(x, prev) < 0) best.set(fid, x);
       }

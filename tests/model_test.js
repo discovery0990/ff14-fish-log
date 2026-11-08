@@ -291,6 +291,10 @@ Deno.test('up soon: within horizon, open first, uncaught, eligible, one per fish
   assert(list.length > 10);
   const firstUpcoming = list.findIndex((x) => x.st.state === 'upcoming');
   assert(list.slice(firstUpcoming).every((x) => x.st.state === 'upcoming'), 'open entries come first');
+  const open = list.slice(0, firstUpcoming);
+  assert(open.every((x, i) => i === 0 || open[i - 1].st.end >= x.st.end), 'open: most time left first');
+  const up = list.slice(firstUpcoming);
+  assert(up.every((x, i) => i === 0 || up[i - 1].st.start <= x.st.start), 'upcoming: soonest first');
   for (const x of list) {
     if (x.st.state === 'upcoming') assert(x.st.start - T <= 2 * 36e5);
     assert(!DATA.holes[x.hid].ocean);

@@ -356,7 +356,9 @@ export function createModel(data, sprites = null) {
   /**
    * Uncaught fish whose window is open or opens within the horizon, at holes
    * the profile shows (discovered or not), skipping fish needing more
-   * Gathering. One entry per fish (its soonest hole); open windows first.
+   * Gathering. One entry per fish (its best hole). Open windows come first,
+   * most time left first: a window about to close is too late to be useful
+   * for a hard fish. Upcoming windows follow, soonest first.
    */
   function upSoon(tab, { now, horizonMs = Infinity, isCaught, profile }) {
     const best = new Map();
@@ -366,7 +368,7 @@ export function createModel(data, sprites = null) {
       const st = status(fid, hid, now);
       if (!st || st.state === 'rare') continue;
       if (st.state === 'upcoming' && st.start - now > horizonMs) continue;
-      const key = st.state === 'open' ? [0, st.end] : [1, st.start];
+      const key = st.state === 'open' ? [0, -st.end] : [1, st.start];
       const prev = best.get(fid);
       if (!prev || key[0] < prev.key[0] || (key[0] === prev.key[0] && key[1] < prev.key[1])) {
         best.set(fid, { fid, hid, st, key });

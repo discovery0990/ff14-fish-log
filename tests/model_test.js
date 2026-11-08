@@ -152,6 +152,11 @@ Deno.test('alternative baits: only other methods (bait vs mooch), flagged', () =
   assertEquals(fv.e.alts.map((b) => m.fishName(b)), ['Grey Worm']);
   // From the wiki override: the other Feverfish hole can be mooched too.
   assertEquals(at('Feverfish', 'The Frozen Fissure').e.alts, [Number(byName('Calicia'))]);
+  // Junkmonger: Wahoo is the main path; a Merlthor Goby works too (one step shorter).
+  const jm = at('Junkmonger', 'Skull Valley');
+  assertEquals(m.fishName(jm.e.bait), 'Wahoo');
+  assertEquals(jm.e.alts, [Number(byName('Merlthor Goby'))]);
+  assertStringIncludes(holeView(ctxFor(createStore(memStorage())), jm.hid), 'Or mooch it from Merlthor Goby');
   // A bait swapped for another of the same shape isn't listed: the main bait
   // works. Every non-ocean alternative changes how many fish are mooched.
   const mooches = (b, hid) => {
@@ -161,7 +166,7 @@ Deno.test('alternative baits: only other methods (bait vs mooch), flagged', () =
   };
   const alts = Object.values(DATA.fish).flatMap((f) => Object.entries(f.at)
     .filter(([h, e]) => !DATA.holes[h].ocean && e.alts).flatMap(([h, e]) => e.alts.map((a) => [h, e, a])));
-  assertEquals(alts.length, 10);
+  assertEquals(alts.length, 11);
   for (const [h, e, a] of alts) assert(mooches(a, h) !== mooches(e.bait, h), `${m.fishName(a)} at ${h}`);
   // Flagged on its own line on the hole and fish screens.
   const store = createStore(memStorage());

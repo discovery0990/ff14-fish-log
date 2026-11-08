@@ -9,6 +9,7 @@
     "24203": {"name": "Indigo Prismfish", "spawn": 0, "duration": 4, "source": "icykoneko/ff14-fish-tracker-app fishData.yaml (ET 00-04)"}
   },
   "baitAlts": {
+    "7684": {"name": "Junkmonger", "hole": "r60", "alts": ["Merlthor Goby"], "source": "ffxiv.consolegameswiki.com/wiki/Junkmonger_(Seafood) (mooched from Merlthor Goby, or Wahoo) and eorzeantavern.com/ffxiv-big-fish-a-realm-reborn/junkmonger/ (Merlthor Goby or Wahoo); also caught in game off a Goby, 2026-11-07"},
     "36468": {"name": "Feverfish", "hole": "r274", "alts": ["Calicia"], "source": "ffxiv.consolegameswiki.com/wiki/Feverfish (both holes: Grey Worm, Versatile Lure, or mooched from Calicia; checked 2026-11-07)"}
   },
   "minGathering": {

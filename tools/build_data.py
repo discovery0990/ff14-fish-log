@@ -438,10 +438,13 @@ def build(fetch, skip_icons):
     baits ={bid: {'name': items[bid]['Name'], 'icon': items[bid]['Icon']['id']} for bid in sorted(bait_ids)}
 
     # --- Alternative baits -----------------------------------------------------
-    # `alts` on an entry: other things that also hook the fish there, bait
-    # items or fish to mooch (Teamcraft gives one). From the fish tracker's
-    # best catch paths, where a step differs from Teamcraft's or lists
-    # options, and from overrides checked against the wiki.
+    # `alts` on an entry (outside ocean fishing): another way to hook the
+    # fish there that changes the method, a direct bait where the main path
+    # mooches or a mooch where it casts (or a chain of another length).
+    # Teamcraft gives one way. From the fish tracker's best catch paths,
+    # where a step differs from Teamcraft's or lists options, and from
+    # overrides checked against the wiki. A bait swapped for another of the
+    # same shape (Spinner for Spinnerbait) is left out: the main bait works.
     by_name = {}
     for bid, b in baits.items():
         by_name.setdefault(b['name'], set()).add(bid)
@@ -455,13 +458,22 @@ def build(fetch, skip_icons):
         check(ids, f'{where}: unknown bait or fish {name!r}')
         return next(iter(ids)) if ids else None
 
+    def mooches(b, hid):
+        """How many fish are mooched on the way from bait `b` (0: cast directly)."""
+        n = 0
+        while b in fish and hid in fish[b]['at'] and n <= MAX_MOOCH_DEPTH:
+            n, b = n + 1, fish[b]['at'][hid].get('bait')
+        return n
+
     def add_alt(fid, hid, alt):
-        """Whether `alt` was new for the fish at the hole."""
+        """Whether `alt` was added for the fish at the hole: new, and a different method."""
         e = fish[fid]['at'][hid]
         if alt is None or alt == fid or alt == e.get('bait') or alt in e.get('alts', []):
             return False
         # A fish to mooch has to be caught at the same hole.
         if alt in fish and hid not in fish[alt]['at']:
+            return False
+        if mooches(alt, hid) == mooches(e.get('bait'), hid):
             return False
         e.setdefault('alts', []).append(alt)
         return True
@@ -504,7 +516,7 @@ def build(fetch, skip_icons):
         for alt in o['alts']:
             check(add_alt(int(fid_s), o['hole'], resolve(alt, f'baitAlts override {o["name"]}')),
                   f'baitAlts override {fid_s} ({o["name"]}): {alt} is already its bait or an alternative '
-                  '(remove it), or is a fish not caught at that hole')
+                  '(remove it), is a fish not caught at that hole, or is the same method as its bait')
     extra_names = {pid: items[pid]['Name'] for pid in pred_ids - set(fish)}
 
     # Big fish: green rarity on overworld holes. Green ocean fish are ocean

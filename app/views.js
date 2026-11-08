@@ -18,9 +18,21 @@ const SHADOW = ['Small', 'Normal', 'Large'];
 // Plain text, shared by the hole rows, the fish facts and the mooch steps.
 const tugText = (tug, unknown) => (tug ? TUG[tug] : unknown);
 const hookText = (hook, unknown) => (hook ? HOOK[hook] : unknown);
-// Other things that also hook a fish: bait items, or fish to mooch.
-const altNames = (m, e) => (e.alts ?? []).map((b) => (m.data.fish[b] ? `mooch ${m.fishName(b)}` : m.fishName(b)));
-const orAlts = (m, e) => (e?.alts?.length ? ` <span class="dim">(or ${altNames(m, e).map(esc).join(', ')})</span>` : '');
+// Ocean fishing: other baits that also work, from Teamcraft.
+const altNames = (m, e) => (e.alts ?? []).map((b) => m.fishName(b));
+const orAlts = (m, hid, e) => (m.data.holes[hid].ocean && e.alts?.length
+  ? ` <span class="dim">(or ${altNames(m, e).map(esc).join(', ')})</span>` : '');
+/**
+ * Elsewhere, alts are another way that changes the method: a direct bait
+ * where the main path mooches, or a mooch where it casts. Plain text.
+ */
+export function otherWays(m, hid, e) {
+  if (m.data.holes[hid].ocean) return [];
+  return (e.alts ?? []).map((b) => (m.data.fish[b]
+    ? `Or mooch it from ${m.fishName(b)}`
+    : `Or cast ${m.fishName(b)} for it directly, no mooch`));
+}
+const otherWaysLines = (m, hid, e) => otherWays(m, hid, e).map((t) => `<span class="alt-way">${esc(t)}</span>`).join('');
 
 /** "14m", "1h 52m", "2d 3h". */
 export function fmtDuration(ms) {
@@ -149,16 +161,13 @@ function baitLine(m, fid, hid, e) {
   const tug = `<span class="hi">${tugText(e.tug, 'Tug ?')}</span>`;
   const hook = hookText(e.hook, 'Hookset ?');
   if (m.isMooch(e)) {
-    const { steps } = m.moochChain(fid, hid);
-    // Each step's alternatives stand in for the step before it.
-    const chain = steps.map((s, i) => (s.unknown ? '?' : esc(m.fishName(s.id)))
-      + (steps[i + 1]?.fish ? orAlts(m, m.data.fish[steps[i + 1].id].at[hid]) : ''));
+    const chain = m.moochChain(fid, hid).steps.map((s) => (s.unknown ? '?' : esc(m.fishName(s.id))));
     chain.pop(); // the fish itself
     // Purple arrows mark a mooch chain (purple is the app's mooch colour).
-    return `<span class="sub">${chain.join(' <span class="arrow" aria-label="then mooch">→</span> ')} · ${tug} · ${hook}</span>`;
+    return `<span class="sub">${chain.join(' <span class="arrow" aria-label="then mooch">→</span> ')} · ${tug} · ${hook}</span>${otherWaysLines(m, hid, e)}`;
   }
   const bait = e.bait ? esc(m.fishName(e.bait)) : 'Bait unknown';
-  return `<span class="sub">${bait}${orAlts(m, e)} · ${tug} · ${hook}</span>`;
+  return `<span class="sub">${bait}${orAlts(m, hid, e)} · ${tug} · ${hook}</span>${otherWaysLines(m, hid, e)}`;
 }
 
 /** "Coerthas" from "Tome of Ichthyological Folklore - Coerthas". */
@@ -825,7 +834,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
   if (f.log === 'spear') {
     facts.push(['Shadow', SHADOW[e.size] ?? 'Unknown'], ['Speed', SPEED[e.speed] ?? 'Unknown']);
   } else if (!m.isMooch(e)) {
-    facts.push(['Bait', e.bait ? m.fishName(e.bait) + (e.alts?.length ? ` (or ${altNames(m, e).join(', ')})` : '') : 'Unknown'],
+    facts.push(['Bait', e.bait ? m.fishName(e.bait) + (h.ocean && e.alts?.length ? ` (or ${altNames(m, e).join(', ')})` : '') : 'Unknown'],
       ['Tug', tugText(e.tug, 'Unknown')], ['Hookset', hookText(e.hook, 'Unknown')]);
   }
   if (e.minG || e.minGq) facts.push(['Min. Gathering', gathText(e)]);
@@ -836,6 +845,8 @@ export function fishView(ctx, fid, fromHole, from = null) {
   if (e.snag) facts.push(['Snagging', 'Required']);
   if (f.folk) facts.push(['Folklore', m.data.tomes[f.folk] + (m.tomeMissing(fid, store.state.profile) ? ' (not in your Profile)' : '')]);
 
+  // Another way that changes the method, under the chain or the bait.
+  const ways = otherWays(m, hid, e).map((t) => `<p class="note alt-way">${esc(t)}</p>`).join('');
   let chain = '';
   if (f.log === 'rod' && m.isMooch(e)) {
     const { steps } = m.moochChain(fid, hid);
@@ -848,12 +859,10 @@ export function fishView(ctx, fid, fromHole, from = null) {
           const how = s.fish ? `<span class="sub"><span class="hi">${tugText(s.tug, 'Tug ?')}</span> · ${hookText(s.hook, 'Hookset ?')}</span>` : '';
           // A bait fish's own window limits when the whole chain works.
           const when = s.fish && i < steps.length - 1 && baitWin[s.id] ? `<span class="sub">${esc(condText(m, baitWin[s.id]))}</span>` : '';
-          // What also hooks the next fish, in place of this step.
-          const next = steps[i + 1]?.fish ? m.data.fish[steps[i + 1].id].at[hid] : null;
-          const or = next?.alts?.length ? `<span class="sub">Or ${next.alts.map((b) => `${m.data.fish[b] ? 'mooch' : 'cast with'} ${esc(m.fishName(b))}`).join(', or ')}</span>` : '';
           return `<li><span class="dot${i === steps.length - 1 ? ' last' : ''}">${i + 1}</span>
-            <span class="grow"><span class="sub">${verb}</span><span class="title">${what}</span>${how}${when}${or}</span></li>`;
+            <span class="grow"><span class="sub">${verb}</span><span class="title">${what}</span>${how}${when}</span></li>`;
         }).join('')}</ol>
+        ${ways}
         ${baitBlockText(m, fid, hid, store.state.profile).map(({ t, k }) => `<p class="note warn">${whyMark(k)} ${esc(t)}</p>`).join('')}
         ${holes.length > 1 ? '<p class="note">Chains can differ per hole — this one is for the hole you came from.</p>' : ''}
       </section>`;
@@ -885,7 +894,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
     ${fromGuide && !banner ? '' : `<div class="row catch-row">${fromGuide ? '' : `<button class="big${caught ? ' done' : ''}" data-act="caught" data-fid="${fid}" data-hid="${discoverHid}" aria-pressed="${caught}">${caught ? 'Caught — tap to undo' : 'Mark caught'}</button>`}${banner}</div>`}
     ${caught ? logEntry(store, fid, f, !fromGuide) : ''}
     ${facts.length ? `<section><h2 class="sec">How to catch${holes.length > 1 ? ` · ${esc(h.name)}` : ''}</h2>
-      <dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>` : ''}
+      <dl class="facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>${m.isMooch(e) ? '' : ways}</section>` : ''}
     ${chain}${windows}
     <section><h2 class="sec">Found at</h2><div class="list">${found}</div></section>
     ${caught ? '' : '<section><h2 class="sec">Log entry</h2><p class="note">Catch it to read its log entry.</p></section>'}`;

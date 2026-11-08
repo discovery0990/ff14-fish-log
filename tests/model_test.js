@@ -135,7 +135,7 @@ Deno.test('mooch chains: Black Ghost and Junkmonger', () => {
   assertEquals(m.moochTargets('r5')[byName('Ala Mhigan Fighting Fish')], ['Black Ghost']);
 });
 
-Deno.test('alternative baits: other mooches and direct baits that also work', () => {
+Deno.test('alternative baits: only other methods (bait vs mooch), flagged', () => {
   const at = (name, hole) => {
     const fid = byName(name);
     const hid = Object.keys(DATA.fish[fid].at).find((h) => DATA.holes[h].name === hole);
@@ -144,25 +144,32 @@ Deno.test('alternative baits: other mooches and direct baits that also work', ()
   // A direct bait that can also be mooched (tracker's best path).
   const st = at('Stupendemys', 'The Habisphere');
   assertEquals(m.fishName(st.e.bait), 'Giant Crane Fly');
-  assert(st.e.alts.includes(Number(byName('Rudderfish'))));
+  assertEquals(st.e.alts, [Number(byName('Rudderfish'))]);
   assert(m.moochTargets(st.hid)[byName('Rudderfish')].includes('Stupendemys'), 'Rudderfish feeds Stupendemys');
-  // A mooch that a bait item also hooks.
+  // A mooch that a bait item also hooks directly.
   const fv = at('Feverfish', 'The Chlorophospond');
   assertEquals(m.fishName(fv.e.bait), 'Calicia');
-  assert(fv.e.alts.map((b) => m.fishName(b)).includes('Grey Worm'));
+  assertEquals(fv.e.alts.map((b) => m.fishName(b)), ['Grey Worm']);
   // From the wiki override: the other Feverfish hole can be mooched too.
-  assert(at('Feverfish', 'The Frozen Fissure').e.alts.includes(Number(byName('Calicia'))));
-  // Versatile Lure works on everything Dawntrail, so the tracker's isn't
-  // listed (ocean fishing's alternatives are Teamcraft's own).
-  const vl = Object.entries(DATA.baits).find(([, b]) => b.name === 'Versatile Lure')?.[0];
-  assert(!Object.values(DATA.fish).some((f) => Object.entries(f.at)
-    .some(([h, e]) => !DATA.holes[h].ocean && e.alts?.includes(Number(vl)))));
-  // Shown on the hole screen, and on the fish screen's steps.
+  assertEquals(at('Feverfish', 'The Frozen Fissure').e.alts, [Number(byName('Calicia'))]);
+  // A bait swapped for another of the same shape isn't listed: the main bait
+  // works. Every non-ocean alternative changes how many fish are mooched.
+  const mooches = (b, hid) => {
+    let n = 0;
+    while (DATA.fish[b]?.at[hid] && n < 8) { n++; b = DATA.fish[b].at[hid].bait; }
+    return n;
+  };
+  const alts = Object.values(DATA.fish).flatMap((f) => Object.entries(f.at)
+    .filter(([h, e]) => !DATA.holes[h].ocean && e.alts).flatMap(([h, e]) => e.alts.map((a) => [h, e, a])));
+  assertEquals(alts.length, 10);
+  for (const [h, e, a] of alts) assert(mooches(a, h) !== mooches(e.bait, h), `${m.fishName(a)} at ${h}`);
+  // Flagged on its own line on the hole and fish screens.
   const store = createStore(memStorage());
-  assertStringIncludes(holeView(ctxFor(store), st.hid), '(or mooch Rudderfish)');
-  assertStringIncludes(holeView(ctxFor(store), fv.hid), 'Calicia <span class="dim">(or Grey Worm)</span>');
-  assertStringIncludes(fishView(ctxFor(store), fv.fid, fv.hid), 'Or cast with Grey Worm');
-  assertStringIncludes(fishView(ctxFor(store), st.fid, st.hid), 'Giant Crane Fly (or mooch Rudderfish)');
+  assertStringIncludes(holeView(ctxFor(store), st.hid), '<span class="alt-way">Or mooch it from Rudderfish</span>');
+  assertStringIncludes(holeView(ctxFor(store), fv.hid), 'Or cast Grey Worm for it directly, no mooch');
+  assertStringIncludes(fishView(ctxFor(store), fv.fid, fv.hid), '<p class="note alt-way">Or cast Grey Worm for it directly, no mooch</p>');
+  assertStringIncludes(fishView(ctxFor(store), st.fid, st.hid), '<p class="note alt-way">Or mooch it from Rudderfish</p>');
+  assert(!fishView(ctxFor(store), st.fid, st.hid).includes('(or '), 'not inline in the Bait fact');
 });
 
 Deno.test('broken ocean chain is marked incomplete', () => {

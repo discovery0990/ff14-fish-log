@@ -226,6 +226,8 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .cond { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; margin-top: 2px; }
 .warn { font-size: 12px; color: var(--warn); }
 .feeds { font-size: 12px; color: var(--mooch); }
+/* Another way to hook it that changes the method (bait vs mooch). */
+.alt-way { font-size: 12px; color: var(--mooch); font-weight: 600; }
 .folk { font-size: 12px; color: var(--folk); }
 
 /* Icons */

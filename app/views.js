@@ -26,9 +26,8 @@ const orAlts = (m, hid, e) => (m.data.holes[hid].ocean && e.alts?.length
  * Elsewhere, alts are another way that changes the method: a direct bait
  * where the main path mooches, or a mooch where it casts. Plain text.
  */
-export function otherWays(m, hid, e) {
-  if (m.data.holes[hid].ocean) return [];
-  const alts = e.alts ?? [];
+export function otherWays(m, fid, hid) {
+  const alts = m.altSplit(fid, hid).ways;
   const fish = alts.filter((b) => m.data.fish[b]).map((b) => m.fishName(b));
   const baits = alts.filter((b) => !m.data.fish[b]).map((b) => m.fishName(b));
   return [
@@ -36,7 +35,10 @@ export function otherWays(m, hid, e) {
     ...(baits.length ? [`Or cast ${baits.join(' or ')} directly, no mooch`] : []),
   ];
 }
-const otherWaysLines = (m, hid, e) => otherWays(m, hid, e).map((t) => `<span class="alt-way">${esc(t)}</span>`).join('');
+const otherWaysLines = (m, fid, hid) => otherWays(m, fid, hid).map((t) => `<span class="alt-way">${esc(t)}</span>`).join('');
+/** " or Silverfish (from Lugworm)": the same-step alternatives to a chain step, as HTML. */
+const orStep = (m, fid, hid) => m.altSplit(fid, hid).step
+  .map(({ id, from }) => ` <span class="or">or</span> ${esc(m.fishName(id))}${from ? ` <span class="dim">(from ${esc(from)})</span>` : ''}`).join('');
 
 /** "14m", "1h 52m", "2d 3h". */
 export function fmtDuration(ms) {
@@ -165,13 +167,16 @@ function baitLine(m, fid, hid, e) {
   const tug = `<span class="hi">${tugText(e.tug, 'Tug ?')}</span>`;
   const hook = hookText(e.hook, 'Hookset ?');
   if (m.isMooch(e)) {
-    const chain = m.moochChain(fid, hid).steps.map((s) => (s.unknown ? '?' : esc(m.fishName(s.id))));
+    const { steps } = m.moochChain(fid, hid);
+    // Each step names what else works there: the next fish's same-step alternatives.
+    const chain = steps.map((s, i) => (s.unknown ? '?' : esc(m.fishName(s.id)))
+      + (steps[i + 1]?.fish ? orStep(m, steps[i + 1].id, hid) : ''));
     chain.pop(); // the fish itself
     // Purple arrows mark a mooch chain (purple is the app's mooch colour).
-    return `<span class="sub">${chain.join(' <span class="arrow" aria-label="then mooch">→</span> ')} · ${tug} · ${hook}</span>${otherWaysLines(m, hid, e)}`;
+    return `<span class="sub">${chain.join(' <span class="arrow" aria-label="then mooch">→</span> ')} · ${tug} · ${hook}</span>${otherWaysLines(m, fid, hid)}`;
   }
   const bait = e.bait ? esc(m.fishName(e.bait)) : 'Bait unknown';
-  return `<span class="sub">${bait}${orAlts(m, hid, e)} · ${tug} · ${hook}</span>${otherWaysLines(m, hid, e)}`;
+  return `<span class="sub">${bait}${orAlts(m, hid, e)}${orStep(m, fid, hid)} · ${tug} · ${hook}</span>${otherWaysLines(m, fid, hid)}`;
 }
 
 /** "Coerthas" from "Tome of Ichthyological Folklore - Coerthas". */
@@ -850,7 +855,7 @@ export function fishView(ctx, fid, fromHole, from = null) {
   if (f.folk) facts.push(['Folklore', m.data.tomes[f.folk] + (m.tomeMissing(fid, store.state.profile) ? ' (not in your Profile)' : '')]);
 
   // Another way that changes the method, under the chain or the bait.
-  const ways = otherWays(m, hid, e).map((t) => `<p class="note alt-way">${esc(t)}</p>`).join('');
+  const ways = otherWays(m, fid, hid).map((t) => `<p class="note alt-way">${esc(t)}</p>`).join('');
   let chain = '';
   if (f.log === 'rod' && m.isMooch(e)) {
     const { steps } = m.moochChain(fid, hid);
@@ -858,9 +863,20 @@ export function fishView(ctx, fid, fromHole, from = null) {
     chain = `
       <section><h2 class="sec">Mooch chain · ${esc(h.name)}</h2>
         <ol class="steps">${steps.map((s, i) => {
-          const verb = s.unknown ? 'Start with' : !s.fish ? 'Cast with' : i === steps.length - 1 ? 'Catch' : 'Hook, then mooch it';
-          const what = s.unknown ? 'Unknown — no data yet' : esc(m.fishName(s.id));
-          const how = s.fish ? `<span class="sub"><span class="hi">${tugText(s.tug, 'Tug ?')}</span> · ${hookText(s.hook, 'Hookset ?')}</span>` : '';
+          // What else works at this step: the next fish's same-step alternatives.
+          const alts = steps[i + 1]?.fish ? m.altSplit(steps[i + 1].id, hid).step : [];
+          const verb = s.unknown ? 'Start with' : !s.fish ? 'Cast with' : i === steps.length - 1 ? 'Catch'
+            : alts.length ? 'Hook either, then mooch it' : 'Hook, then mooch it';
+          const what = s.unknown ? 'Unknown — no data yet' : esc(m.fishName(s.id))
+            + alts.map(({ id }) => ` <span class="or">or</span> ${esc(m.fishName(id))}`).join('');
+          const tugOf = (id, x) => `<span class="hi">${tugText(x?.tug, 'Tug ?')}</span> · ${hookText(x?.hook, 'Hookset ?')}`;
+          // With alternatives, each fish's tug is named (they can differ),
+          // with its own bait when that isn't the main chain's.
+          const how = !s.fish ? '' : !alts.length ? `<span class="sub">${tugOf(s.id, s)}</span>`
+            : [{ id: s.id, from: null }, ...alts].map(({ id, from }) => {
+              const x = m.data.fish[id]?.at[hid];
+              return `<span class="sub">${esc(m.fishName(id))}: ${x && m.data.fish[id] ? tugOf(id, x) : ''}${from ? ` · from ${esc(from)}` : ''}</span>`;
+            }).join('');
           // A bait fish's own window limits when the whole chain works.
           const when = s.fish && i < steps.length - 1 && baitWin[s.id] ? `<span class="sub">${esc(condText(m, baitWin[s.id]))}</span>` : '';
           return `<li><span class="dot${i === steps.length - 1 ? ' last' : ''}">${i + 1}</span>

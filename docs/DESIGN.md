@@ -178,7 +178,7 @@ The file is 858 KB (258 KB gzipped); the log entries (`text`, newlines kept for 
 - Catch info is stored per hole (`at`), because bait and chains differ by hole.
 - **A mooch** is a `bait` that is itself a fish ID. The chain is followed through that fish's `at[sameHole]`.
 - **Optional `at` fields on rod fish:**
-  - `alts`: ocean fishing, other baits that also work (Teamcraft), shown dim as "(or X)". Elsewhere, another way that changes the method: a bait item to cast directly, or a fish to mooch (at the same hole). Flagged in a purple callout, one per kind ("Or mooch it from Merlthor Goby or Ogre Barracuda", "Or mooch it from Rudderfish" / "Or cast Grey Worm directly, no mooch", on the hole screen and the fish screen (under the bait or the mooch chain)
+  - `alts`: ocean fishing, other baits that also work (Teamcraft), shown dim as "(or X)". Elsewhere, other things that also hook the fish there: a bait item, or a fish to mooch (at the same hole). One that stands in for the bait at the same step (as many fish are mooched before it) is shown in that step: "Hook either, then mooch it · Assassin Betta **or** Silverfish" on the fish screen's chain, with each fish's tug and, when it takes another bait, "from Lugworm"; and "Honey Worm → Assassin Betta or Silverfish" on the hole screen. One that changes the method (a direct bait where the main path mooches, or a mooch where it casts, or a longer chain) has no step to go in, so it gets a purple callout, one per kind: "Or mooch it from Ogre Barracuda", "Or cast Grey Worm directly, no mooch".
   - `minG`: minimum Gathering
   - `spawn` / `dur`: Eorzea-hour time window
   - `w`: weathers

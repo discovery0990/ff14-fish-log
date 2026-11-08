@@ -266,6 +266,33 @@ export function createModel(data, sprites = null) {
     return { steps, complete: false };
   }
 
+  /** How many fish are mooched on the way from bait `b` at a hole (0: cast directly). */
+  function moochDepth(b, hid) {
+    let n = 0;
+    for (let e = data.fish[b]?.at[hid]; e && n < 8; e = data.fish[e.bait]?.at[hid]) n++;
+    return n;
+  }
+
+  /**
+   * A fish's alternatives at a hole (outside ocean fishing), split: `step`,
+   * the ones that stand in for its bait at the same step (Silverfish or
+   * Assassin Betta), each with `from`, its own chain before it when that
+   * differs from the main one (names, or null); and `ways`, the ones that
+   * change the method (a direct bait where it mooches, or the reverse).
+   */
+  function altSplit(fid, hid) {
+    const e = data.fish[fid]?.at[hid];
+    if (!e?.alts?.length || data.holes[hid].ocean) return { step: [], ways: [] };
+    const d = moochDepth(e.bait, hid);
+    const before = (id) => moochChain(id, hid).steps.slice(0, -1).map((s) => (s.unknown ? '?' : fishName(s.id))).join(' → ');
+    const main = data.fish[e.bait] ? before(e.bait) : '';
+    const step = e.alts.filter((a) => moochDepth(a, hid) === d).map((id) => {
+      const own = data.fish[id] ? before(id) : '';
+      return { id, from: own && own !== main ? own : null };
+    });
+    return { step, ways: e.alts.filter((a) => moochDepth(a, hid) !== d) };
+  }
+
   /** At a hole: bait fish id → names of fish mooched from it. */
   function moochTargets(hid) {
     const out = {};
@@ -410,6 +437,6 @@ export function createModel(data, sprites = null) {
     upSoon, search, isLocked, expOff, onlyHere, isOceanFish, sprite: (icon) => spriteAt.get(icon) ?? null, guideGroups, logFish: (log) => logFish[log] ?? [],
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, tabHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
-    isMooch, moochChain, moochTargets, chainBait, chainWindows, chainBlocks, whyNot, remaining, uncaught, status, windows, weatherNow, gatheringShort, tomeMissing, blocked,
+    isMooch, moochChain, moochTargets, moochDepth, altSplit, chainBait, chainWindows, chainBlocks, whyNot, remaining, uncaught, status, windows, weatherNow, gatheringShort, tomeMissing, blocked,
   };
 }

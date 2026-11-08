@@ -186,7 +186,16 @@ Deno.test('alternative baits: only other methods (bait vs mooch), flagged', asyn
   assertEquals(at('Assassin Betta', 'Moondrip').e.alts, [Number(byName('Silverfish'))]);
   assertEquals(at('Gigantshark', 'Summerford').e.alts.map((b) => m.fishName(b)), ['Merlthor Goby', 'Ogre Barracuda']);
   const gs = at('Gigantshark', 'Summerford');
-  assertStringIncludes(fishView(ctxFor(createStore(memStorage())), gs.fid, gs.hid), 'Or mooch it from Merlthor Goby or Ogre Barracuda');
+  // Same step: in the step itself (with the other fish's own bait); a
+  // longer route: the callout.
+  const gsHtml = fishView(ctxFor(createStore(memStorage())), gs.fid, gs.hid);
+  assertStringIncludes(gsHtml, 'Harbor Herring <span class="or">or</span> Merlthor Goby');
+  assertStringIncludes(gsHtml, 'Merlthor Goby: <span class="hi">');
+  assertStringIncludes(gsHtml, ' · from Lugworm');
+  assertStringIncludes(gsHtml, '<p class="note alt-way">Or mooch it from Ogre Barracuda</p>');
+  assert(!gsHtml.includes('Or mooch it from Merlthor Goby'), 'a same-step alternative is not a callout');
+  assertStringIncludes(holeView(ctxFor(createStore(memStorage())), nd.hid), 'Assassin Betta <span class="or">or</span> Silverfish');
+  assertEquals(m.altSplit(nd.fid, nd.hid), { step: [{ id: Number(byName('Silverfish')), from: null }], ways: [] });
   // Flagged on its own line on the hole and fish screens.
   const store = createStore(memStorage());
   assertStringIncludes(holeView(ctxFor(store), st.hid), '<span class="alt-way">Or mooch it from Rudderfish</span>');

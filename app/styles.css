@@ -200,6 +200,8 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .sec-toggle.open .chev { transform: rotate(90deg); }
 .why-sec svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .arrow { color: var(--mooch); font-weight: 700; }
+/* "Assassin Betta or Silverfish": a step with alternatives. */
+.or { color: var(--mooch); font-weight: 600; }
 .pill { font-family: var(--mono); font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--track); white-space: nowrap; }
 .pill.open { background: var(--open); color: var(--open-text); }
 

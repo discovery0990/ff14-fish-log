@@ -8,11 +8,14 @@
     "23056": {"name": "Firelight Goldfish", "spawn": 4, "duration": 4, "source": "icykoneko/ff14-fish-tracker-app fishData.yaml (ET 04-08)"},
     "24203": {"name": "Indigo Prismfish", "spawn": 0, "duration": 4, "source": "icykoneko/ff14-fish-tracker-app fishData.yaml (ET 00-04)"}
   },
+  "bait": {
+    "5002": {"name": "Assassin Betta", "hole": "r103", "bait": "Honey Worm", "source": "Player, checked in game 2026-11-08: at Moondrip, Honey Worm hooks Silverfish or Assassin Betta, and either is mooched for Ndendecki (Teamcraft has Betta mooched from Silverfish, kept as an alternative)"}
+  },
   "baitAlts": {
     "7686": {"name": "Gigantshark", "hole": "r38", "alts": ["Merlthor Goby", "Ogre Barracuda"], "source": "Player, 2026-11-08: mooched from Merlthor Goby, Harbor Herring or Ogre Barracuda (ffxiv.consolegameswiki.com/wiki/Gigantshark lists Merlthor Goby and Ogre Barracuda)"},
     "8763": {"name": "Kuno the Killer", "hole": "r94", "alts": ["Goldfish"], "source": "Player, 2026-11-08: step 3 can be Goldfish or Assassin Betta (ffxiv.consolegameswiki.com/wiki/Kuno_the_Killer lists Goldfish)"},
     "7707": {"name": "Octomammoth", "hole": "r35", "alts": ["Merlthor Goby"], "source": "Player, 2026-11-08: step 2 can be Merlthor Goby or Harbor Herring (ffxiv.consolegameswiki.com/wiki/Octomammoth lists Merlthor Goby)"},
-    "8765": {"name": "Ndendecki", "hole": "r103", "alts": ["Silverfish"], "source": "Player, 2026-11-08: mooched from Silverfish or Assassin Betta, not only Silverfish then Assassin Betta (ffxiv.consolegameswiki.com/wiki/Ndendecki lists Silverfish)"},
+    "8765": {"name": "Ndendecki", "hole": "r103", "alts": ["Silverfish"], "source": "Player, 2026-11-08: Honey Worm, then mooch Silverfish or Assassin Betta (see the Assassin Betta bait override; ffxiv.consolegameswiki.com/wiki/Ndendecki lists Silverfish)"},
     "7684": {"name": "Junkmonger", "hole": "r60", "alts": ["Merlthor Goby"], "source": "ffxiv.consolegameswiki.com/wiki/Junkmonger_(Seafood) (mooched from Merlthor Goby, or Wahoo) and eorzeantavern.com/ffxiv-big-fish-a-realm-reborn/junkmonger/ (Merlthor Goby or Wahoo); also caught in game off a Goby, 2026-11-07"},
     "36468": {"name": "Feverfish", "hole": "r274", "alts": ["Calicia"], "source": "ffxiv.consolegameswiki.com/wiki/Feverfish (both holes: Grey Worm, Versatile Lure, or mooched from Calicia; checked 2026-11-07)"}
   },

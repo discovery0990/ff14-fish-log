@@ -480,6 +480,24 @@ def build(fetch, skip_icons):
         e.setdefault('alts', []).append(alt)
         return True
 
+    # Main-bait overrides (checked in game): the bait Teamcraft gives becomes
+    # an alternative. Before the tracker, so its depths see the fixed chain.
+    for fid_s, o in overrides.get('bait', {}).items():
+        f = fish.get(int(fid_s))
+        check(f is not None and f['name'] == o['name'],
+              f'bait override {fid_s} says {o["name"]}, but that id is {f and f["name"]}')
+        if f is None or o['hole'] not in f['at']:
+            check(f is None, f'bait override {fid_s} ({o["name"]}): not at hole {o["hole"]}')
+            continue
+        e = f['at'][o['hole']]
+        new = resolve(o['bait'], f'bait override {o["name"]}')
+        check(new != e.get('bait'), f'bait override {fid_s} ({o["name"]}): Teamcraft now has {o["bait"]}; remove it')
+        if new is not None and new != e.get('bait'):
+            old = e.get('bait')
+            e['bait'] = new
+            if old is not None:
+                e['alts'] = [old, *[a for a in e.get('alts', []) if a not in (old, new)]]
+
     tracker_alts = tracker_unmatched = 0
     for t in fetch.tracker():
         fid = next(iter(by_name.get(t.get('name'), ())), None)

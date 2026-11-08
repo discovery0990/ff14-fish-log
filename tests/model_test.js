@@ -166,7 +166,7 @@ Deno.test('alternative baits: only other methods (bait vs mooch), flagged', asyn
   };
   const alts = Object.values(DATA.fish).flatMap((f) => Object.entries(f.at)
     .filter(([h, e]) => !DATA.holes[h].ocean && e.alts).flatMap(([h, e]) => e.alts.map((a) => [h, e, a])));
-  assertEquals(alts.length, 16);
+  assertEquals(alts.length, 17);
   // Hand-checked overrides may add another fish at the same step (you may
   // hook either); everything else changes the method.
   const OV = JSON.parse(await Deno.readTextFile(new URL('../data/overrides.json', import.meta.url))).baitAlts;
@@ -178,7 +178,12 @@ Deno.test('alternative baits: only other methods (bait vs mooch), flagged', asyn
   // Player-checked: Kuno's step 3 can be Goldfish; Ndendecki can be mooched
   // straight from Silverfish; Gigantshark from any of three.
   assertEquals(at('Kuno the Killer', 'The North Shards').e.alts, [Number(byName('Goldfish'))]);
-  assertEquals(at('Ndendecki', 'Moondrip').e.alts, [Number(byName('Silverfish'))]);
+  // Ndendecki: Honey Worm hooks Silverfish or Assassin Betta (a main-bait
+  // override for Betta), and either is mooched for it.
+  const nd = at('Ndendecki', 'Moondrip');
+  assertEquals(m.moochChain(nd.fid, nd.hid).steps.map((x) => m.fishName(x.id)), ['Honey Worm', 'Assassin Betta', 'Ndendecki']);
+  assertEquals(nd.e.alts, [Number(byName('Silverfish'))]);
+  assertEquals(at('Assassin Betta', 'Moondrip').e.alts, [Number(byName('Silverfish'))]);
   assertEquals(at('Gigantshark', 'Summerford').e.alts.map((b) => m.fishName(b)), ['Merlthor Goby', 'Ogre Barracuda']);
   const gs = at('Gigantshark', 'Summerford');
   assertStringIncludes(fishView(ctxFor(createStore(memStorage())), gs.fid, gs.hid), 'Or mooch it from Merlthor Goby or Ogre Barracuda');

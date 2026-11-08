@@ -105,6 +105,7 @@ Regions, zones, holes and fish all follow the in-game Fishing Log order: Fishing
 |---|---|
 | XIVAPI v2 (`https://v2.xivapi.com/api`) | Game version key `0874aee069e1e7c4` (= `7.57x1`, "latest" on 2026-10-28) |
 | Teamcraft `libs/data/src/lib/json` | Commit `c022ca5385ae41ec0d747599ef16ce74e4fbfdcf` (2026-10-26) |
+| ff14-fish-tracker-app `private/fishData.yaml` | Commit `f5a51e5d3eb0eccb9a5e25899397e0d9cb5a6f66` (2026-11-03) |
 | `data/overrides.json` (hand-kept) | Fixes and gaps |
 
 Nothing comes from the upstream icykoneko repo, except as a test oracle.
@@ -126,7 +127,7 @@ Nothing comes from the upstream icykoneko repo, except as a test oracle.
 | Rod catch info, per fish per hole | Teamcraft `fishing-sources.json`: `bait`, `tug`, `hookset`, `spawn`, `duration`, `weathers`, `weathersFrom`, `predators`, `minGathering`, `snagging`, `aLure`/`mLure`, `oceanFishingTime` |
 | Spearfishing catch info | Teamcraft `spearfishing-sources.json`: `speed`, `shadowSize`, `predators` (26), `spawn`/`duration` (1) |
 | "Also caught here" | Teamcraft `fishing-sources` pairs whose spot's `FishingSpot.Item[]` doesn't list the fish. Kept only for log fish at holes with a zone: 10 pairs (Copperfish ×4, Merlthor Goby ×5, Galadion Goby ×1). The other 92 raw pairs are fish not in either log, or holes with no zone |
-| Alternative baits | Several Teamcraft entries for one fish at one hole (122 cases). The first is `bait`; the rest go in `alts`. For ocean fish, `oft` collects every time of day listed |
+| Alternative baits | Several Teamcraft entries for one fish at one hole (122 cases, all ocean). The first is `bait`; the rest go in `alts`. For ocean fish, `oft` collects every time of day listed. Outside ocean fishing Teamcraft gives one bait, so the tracker's best catch paths fill in the rest: wherever a step's bait or mooch fish differs from Teamcraft's, or the step lists options, it's added to `alts` of the fish that step hooks (193 added; Versatile Lure skipped, as it works on all Dawntrail fish). Overrides `baitAlts` add ones only the wiki has. Teamcraft's bait stays the main path, used for gating; the build fails if a direct alternative would make that gating wrong (the main path's bait fish has a window or requirement) |
 | Overrides | Time windows only the upstream repo has: White Goldfish, Firelight Goldfish, Indigo Prismfish. Plus any future corrections |
 
 ### Decoded enums
@@ -155,7 +156,7 @@ The file is 858 KB (258 KB gzipped); the log entries (`text`, newlines kept for 
 
 ```json
 {
-  "meta": {"game": "7.57x1", "xivapi": "0874aee069e1e7c4", "teamcraft": "c022ca5", "built": "…", "stats": {…}},
+  "meta": {"game": "7.57x1", "xivapi": "0874aee069e1e7c4", "teamcraft": "c022ca5", "tracker": "f5a51e5", "built": "…", "stats": {…}},
   "expansions": {"0": "A Realm Reborn", …},
   "recordTypes": {"3": {"name": "Lakes", "spear": false}, …},
   "regions": {"23": {"name": "The Black Shroud", "zones": [55, 53, 426, 56, 57, 54, 52]}},
@@ -177,7 +178,7 @@ The file is 858 KB (258 KB gzipped); the log entries (`text`, newlines kept for 
 - Catch info is stored per hole (`at`), because bait and chains differ by hole.
 - **A mooch** is a `bait` that is itself a fish ID. The chain is followed through that fish's `at[sameHole]`.
 - **Optional `at` fields on rod fish:**
-  - `alts`: alternative baits
+  - `alts`: other things that also hook the fish there: bait items, or fish to mooch (at the same hole). Shown as "(or X, or mooch Y)" on the hole screen and in the fish's Bait fact, and as an "Or cast with X / Or mooch Y" line on the mooch step they replace
   - `minG`: minimum Gathering
   - `spawn` / `dur`: Eorzea-hour time window
   - `w`: weathers
@@ -294,7 +295,7 @@ return s2 % 100
 
 ## Toolchain
 
-- **Build:** `tools/build_data.py`, Python 3 stdlib only (`urllib`, `json`). Raw API responses are cached in `tools/cache/` (gitignored) so rebuilds are fast and repeatable. Run it each patch, review the assertions and diff, then commit `app/data/` and `app/icons/`.
+- **Build:** `tools/build_data.py`, Python 3 stdlib plus PyYAML (for the tracker's data). Raw API responses are cached in `tools/cache/` (gitignored) so rebuilds are fast and repeatable. Run it each patch, review the assertions and diff, then commit `app/data/` and `app/icons/`.
 - **App:** no bundler or framework. Edit and reload.
 - **Tests:** `deno test`. Deno runs the same ES modules the browser loads.
 - **Local preview:** `python3 -m http.server -d app`. Testing on the phone needs HTTPS, so do it on a Pages branch deploy.

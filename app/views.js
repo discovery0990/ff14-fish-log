@@ -18,7 +18,9 @@ const SHADOW = ['Small', 'Normal', 'Large'];
 // Plain text, shared by the hole rows, the fish facts and the mooch steps.
 const tugText = (tug, unknown) => (tug ? TUG[tug] : unknown);
 const hookText = (hook, unknown) => (hook ? HOOK[hook] : unknown);
-const altNames = (m, e) => (e.alts ?? []).map((b) => m.fishName(b));
+// Other things that also hook a fish: bait items, or fish to mooch.
+const altNames = (m, e) => (e.alts ?? []).map((b) => (m.data.fish[b] ? `mooch ${m.fishName(b)}` : m.fishName(b)));
+const orAlts = (m, e) => (e?.alts?.length ? ` <span class="dim">(or ${altNames(m, e).map(esc).join(', ')})</span>` : '');
 
 /** "14m", "1h 52m", "2d 3h". */
 export function fmtDuration(ms) {
@@ -147,14 +149,16 @@ function baitLine(m, fid, hid, e) {
   const tug = `<span class="hi">${tugText(e.tug, 'Tug ?')}</span>`;
   const hook = hookText(e.hook, 'Hookset ?');
   if (m.isMooch(e)) {
-    const chain = m.moochChain(fid, hid).steps.map((s) => (s.unknown ? '?' : esc(m.fishName(s.id))));
+    const { steps } = m.moochChain(fid, hid);
+    // Each step's alternatives stand in for the step before it.
+    const chain = steps.map((s, i) => (s.unknown ? '?' : esc(m.fishName(s.id)))
+      + (steps[i + 1]?.fish ? orAlts(m, m.data.fish[steps[i + 1].id].at[hid]) : ''));
     chain.pop(); // the fish itself
     // Purple arrows mark a mooch chain (purple is the app's mooch colour).
     return `<span class="sub">${chain.join(' <span class="arrow" aria-label="then mooch">→</span> ')} · ${tug} · ${hook}</span>`;
   }
   const bait = e.bait ? esc(m.fishName(e.bait)) : 'Bait unknown';
-  const alts = e.alts?.length ? ` <span class="dim">(or ${altNames(m, e).map(esc).join(', ')})</span>` : '';
-  return `<span class="sub">${bait}${alts} · ${tug} · ${hook}</span>`;
+  return `<span class="sub">${bait}${orAlts(m, e)} · ${tug} · ${hook}</span>`;
 }
 
 /** "Coerthas" from "Tome of Ichthyological Folklore - Coerthas". */
@@ -844,8 +848,11 @@ export function fishView(ctx, fid, fromHole, from = null) {
           const how = s.fish ? `<span class="sub"><span class="hi">${tugText(s.tug, 'Tug ?')}</span> · ${hookText(s.hook, 'Hookset ?')}</span>` : '';
           // A bait fish's own window limits when the whole chain works.
           const when = s.fish && i < steps.length - 1 && baitWin[s.id] ? `<span class="sub">${esc(condText(m, baitWin[s.id]))}</span>` : '';
+          // What also hooks the next fish, in place of this step.
+          const next = steps[i + 1]?.fish ? m.data.fish[steps[i + 1].id].at[hid] : null;
+          const or = next?.alts?.length ? `<span class="sub">Or ${next.alts.map((b) => `${m.data.fish[b] ? 'mooch' : 'cast with'} ${esc(m.fishName(b))}`).join(', or ')}</span>` : '';
           return `<li><span class="dot${i === steps.length - 1 ? ' last' : ''}">${i + 1}</span>
-            <span class="grow"><span class="sub">${verb}</span><span class="title">${what}</span>${how}${when}</span></li>`;
+            <span class="grow"><span class="sub">${verb}</span><span class="title">${what}</span>${how}${when}${or}</span></li>`;
         }).join('')}</ol>
         ${baitBlockText(m, fid, hid, store.state.profile).map(({ t, k }) => `<p class="note warn">${whyMark(k)} ${esc(t)}</p>`).join('')}
         ${holes.length > 1 ? '<p class="note">Chains can differ per hole — this one is for the hole you came from.</p>' : ''}

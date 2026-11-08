@@ -270,7 +270,10 @@ export function createModel(data, sprites = null) {
   function moochTargets(hid) {
     const out = {};
     for (const { fid, entry } of holeFish(hid)) {
-      if (isMooch(entry)) (out[String(entry.bait)] ??= []).push(data.fish[fid].name);
+      // Its bait fish, and any other fish it can be mooched from.
+      for (const b of [entry.bait, ...(entry.alts ?? [])]) {
+        if (b != null && data.fish[b]) (out[String(b)] ??= []).push(data.fish[fid].name);
+      }
     }
     return out;
   }

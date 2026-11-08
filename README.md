@@ -7,14 +7,14 @@ A mobile-first PWA for tracking FFXIV fish-log completion (rod and spearfishing)
 ## Data build
 
 ```sh
-python3 tools/build_data.py            # uses tools/cache/ when present
+python3 tools/build_data.py            # needs PyYAML; uses tools/cache/ when present
 python3 tools/build_data.py --refresh  # re-download everything
 ```
 
 The build writes `app/data/fish.json` and `app/icons/`, and fails if any of its checks fail.
 
 On patch day:
-1. Bump `GAME_VERSION`, `GAME_VERSION_NAME`, `TEAMCRAFT_SHA` and the expected log counts in `tools/build_data.py`.
+1. Bump `GAME_VERSION`, `GAME_VERSION_NAME`, `TEAMCRAFT_SHA`, `TRACKER_SHA` and the expected log counts in `tools/build_data.py`.
 2. Run the build with `--refresh`.
 3. Review the stats and diff it prints.
 4. Run `python3 tools/build_sprites.py` (needs Pillow) to rebuild the Fish guide's icon sheets. The unit tests fail if they're out of date.
@@ -48,7 +48,7 @@ Pushing to `main` runs the unit tests and deploys to GitHub Pages if they pass (
 
 ## Sources
 
-Data comes from [XIVAPI](https://v2.xivapi.com) (game data) and [FFXIV Teamcraft](https://github.com/ffxiv-teamcraft/ffxiv-teamcraft) (MIT; catch conditions). Hand fixes go in `data/overrides.json`.
+Data comes from [XIVAPI](https://v2.xivapi.com) (game data) and [FFXIV Teamcraft](https://github.com/ffxiv-teamcraft/ffxiv-teamcraft) (MIT; catch conditions), plus [ff14-fish-tracker-app](https://github.com/icykoneko/ff14-fish-tracker-app)'s best catch paths for alternative baits. Hand fixes go in `data/overrides.json`.
 
 ## Legal
 

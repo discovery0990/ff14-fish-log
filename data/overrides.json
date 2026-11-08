@@ -8,6 +8,9 @@
     "23056": {"name": "Firelight Goldfish", "spawn": 4, "duration": 4, "source": "icykoneko/ff14-fish-tracker-app fishData.yaml (ET 04-08)"},
     "24203": {"name": "Indigo Prismfish", "spawn": 0, "duration": 4, "source": "icykoneko/ff14-fish-tracker-app fishData.yaml (ET 00-04)"}
   },
+  "baitAlts": {
+    "36468": {"name": "Feverfish", "hole": "r274", "alts": ["Calicia"], "source": "ffxiv.consolegameswiki.com/wiki/Feverfish (both holes: Grey Worm, Versatile Lure, or mooched from Calicia; checked 2026-11-07)"}
+  },
   "minGathering": {
     "7913": {"name": "Floating Boulder", "minGathering": 349, "source": "ffxiv.consolegameswiki.com/wiki/Floating_Boulder (349+ Gathering required); lowest live catch 354"},
     "7923": {"name": "Sweetnewt", "minGathering": 380, "guess": true, "source": "Estimate: highest requirement among patch 2.3 (Defenders of Eorzea) big fish (335-380; patches from GatherBuddy). Own number unknown: no number on the wiki, Teamcraft or its live stats; also not on Garland Tools or ff14angler (checked 2026-11-04)"},

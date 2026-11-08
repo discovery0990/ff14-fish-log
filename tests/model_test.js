@@ -135,6 +135,36 @@ Deno.test('mooch chains: Black Ghost and Junkmonger', () => {
   assertEquals(m.moochTargets('r5')[byName('Ala Mhigan Fighting Fish')], ['Black Ghost']);
 });
 
+Deno.test('alternative baits: other mooches and direct baits that also work', () => {
+  const at = (name, hole) => {
+    const fid = byName(name);
+    const hid = Object.keys(DATA.fish[fid].at).find((h) => DATA.holes[h].name === hole);
+    return { fid, hid, e: DATA.fish[fid].at[hid] };
+  };
+  // A direct bait that can also be mooched (tracker's best path).
+  const st = at('Stupendemys', 'The Habisphere');
+  assertEquals(m.fishName(st.e.bait), 'Giant Crane Fly');
+  assert(st.e.alts.includes(Number(byName('Rudderfish'))));
+  assert(m.moochTargets(st.hid)[byName('Rudderfish')].includes('Stupendemys'), 'Rudderfish feeds Stupendemys');
+  // A mooch that a bait item also hooks.
+  const fv = at('Feverfish', 'The Chlorophospond');
+  assertEquals(m.fishName(fv.e.bait), 'Calicia');
+  assert(fv.e.alts.map((b) => m.fishName(b)).includes('Grey Worm'));
+  // From the wiki override: the other Feverfish hole can be mooched too.
+  assert(at('Feverfish', 'The Frozen Fissure').e.alts.includes(Number(byName('Calicia'))));
+  // Versatile Lure works on everything Dawntrail, so the tracker's isn't
+  // listed (ocean fishing's alternatives are Teamcraft's own).
+  const vl = Object.entries(DATA.baits).find(([, b]) => b.name === 'Versatile Lure')?.[0];
+  assert(!Object.values(DATA.fish).some((f) => Object.entries(f.at)
+    .some(([h, e]) => !DATA.holes[h].ocean && e.alts?.includes(Number(vl)))));
+  // Shown on the hole screen, and on the fish screen's steps.
+  const store = createStore(memStorage());
+  assertStringIncludes(holeView(ctxFor(store), st.hid), '(or mooch Rudderfish)');
+  assertStringIncludes(holeView(ctxFor(store), fv.hid), 'Calicia <span class="dim">(or Grey Worm)</span>');
+  assertStringIncludes(fishView(ctxFor(store), fv.fid, fv.hid), 'Or cast with Grey Worm');
+  assertStringIncludes(fishView(ctxFor(store), st.fid, st.hid), 'Giant Crane Fly (or mooch Rudderfish)');
+});
+
 Deno.test('broken ocean chain is marked incomplete', () => {
   const { steps, complete } = m.moochChain('51225', 'r335');
   assertEquals(complete, false);

@@ -64,7 +64,7 @@ Regions, zones, holes and fish all follow the in-game Fishing Log order: Fishing
    - **Also caught here** section: community-reported fish (see Data).
    - Spearfishing holes show speed and shadow size instead of bait, tug and hookset.
    - There's no "mark all caught" action.
-3. **Fish detail**: catch facts, numbered mooch-chain steps (for the hole you came from), the next N windows with local times and durations, and every hole the fish is found at. Once caught, the fish's in-game log entry and the date you marked it ("Caught before dates were kept" for older catches) show under the Mark caught button. Opened from the Fish guide it reads as a log page: the entry without the catch button or date; until then a line at the bottom says to catch it to read it.
+3. **Fish detail**: catch facts (ending with Source: Carbuncle Plushy or Teamcraft, for the hole you came from), numbered mooch-chain steps (other baits for the first cast shown "Stardust or Panic Jig") (for the hole you came from), the next N windows with local times and durations, and every hole the fish is found at. Once caught, the fish's in-game log entry and the date you marked it ("Caught before dates were kept" for older catches) show under the Mark caught button. Opened from the Fish guide it reads as a log page: the entry without the catch button or date; until then a line at the bottom says to catch it to read it.
 4. **Fish guide** (`#/guide/rod`, `#/guide/spear`; an open-book button beside Profile in the Home header, always shown, opening the Spearfishing log from the Spearfishing tab and the Rod log otherwise)
    - Every fish in the log as a grid that fills in as you catch them, grouped by expansion. Each expansion is a row with its count and bar that expands in place, one open at a time (like regions on Home), all closed at first; the open one stays open for the session, so Back from a fish returns to it at the same scroll position, and its header sticks while its grid scrolls.
    - Caught fish show their icon and open the fish. Uncaught fish are anonymous tiles with a soft glow, teal, or pink for folklore fish, as the game's guide colours them (checked in game: the first pink is #409, Spring Urchin, the first folklore fish). They aren't links and don't name the fish (open it from search or a hole instead). The tiles are plain CSS, no image.
@@ -105,10 +105,10 @@ Regions, zones, holes and fish all follow the in-game Fishing Log order: Fishing
 |---|---|
 | XIVAPI v2 (`https://v2.xivapi.com/api`) | Game version key `0874aee069e1e7c4` (= `7.57x1`, "latest" on 2026-10-28) |
 | Teamcraft `libs/data/src/lib/json` | Commit `c022ca5385ae41ec0d747599ef16ce74e4fbfdcf` (2026-10-26) |
-| ff14-fish-tracker-app `private/fishData.yaml` | Commit `f5a51e5d3eb0eccb9a5e25899397e0d9cb5a6f66` (2026-11-03) |
+| ff14-fish-tracker-app `private/fishData.yaml` (Carbuncle Plushy's fish tracker) | Commit `f5a51e5d3eb0eccb9a5e25899397e0d9cb5a6f66` (2026-11-03) |
 | `data/overrides.json` (hand-kept) | Fixes and gaps |
 
-Nothing comes from the upstream icykoneko repo, except as a test oracle.
+The tracker is the source most fishers use. Where it has a fish at a hole, that entry's catch info comes from it; everywhere else from Teamcraft (see [Which source](#which-source)). The app is based on popular data and consistent: it shows each source as written and doesn't try to settle disagreements between them, since players cross-check other sites as a normal part of fishing.
 
 ### Field sources
 
@@ -127,8 +127,20 @@ Nothing comes from the upstream icykoneko repo, except as a test oracle.
 | Rod catch info, per fish per hole | Teamcraft `fishing-sources.json`: `bait`, `tug`, `hookset`, `spawn`, `duration`, `weathers`, `weathersFrom`, `predators`, `minGathering`, `snagging`, `aLure`/`mLure`, `oceanFishingTime` |
 | Spearfishing catch info | Teamcraft `spearfishing-sources.json`: `speed`, `shadowSize`, `predators` (26), `spawn`/`duration` (1) |
 | "Also caught here" | Teamcraft `fishing-sources` pairs whose spot's `FishingSpot.Item[]` doesn't list the fish. Kept only for log fish at holes with a zone: 10 pairs (Copperfish ×4, Merlthor Goby ×5, Galadion Goby ×1). The other 92 raw pairs are fish not in either log, or holes with no zone |
-| Alternative baits | Several Teamcraft entries for one fish at one hole (122 cases, all ocean). The first is `bait`; the rest go in `alts`. For ocean fish, `oft` collects every time of day listed. Outside ocean fishing Teamcraft gives one bait. The best bait is what the app shows: often others work too, but it's the one to use. Teamcraft's is a bait players reported; the fish tracker (Carbuncle Plushy's site, the source most fishers use) picks the best by hand, so where a step of a tracker best catch path, at its hole, doesn't list Teamcraft's bait, the tracker's first option becomes the main bait (119 fish-holes at 7.57, no big fish's own bait, 8 of them a change of method) and Teamcraft's is kept only if it's another method. Where the tracker disagrees with itself (a fish's own path vs. its step in another fish's chain, 11 cases, logged by the build) and any of its paths agrees with Teamcraft, Teamcraft's stays. What's worth knowing is another *method*: a direct bait where the main path mooches, or a mooch where it casts (or a chain of another length). The tracker's best catch paths fill those in: wherever a step's bait or mooch fish differs from Teamcraft's, or the step lists options, it goes in `alts` of the fish that step hooks, but only if it changes how many fish are mooched (9 added; bait-for-bait swaps such as Spinner for Spinnerbait, 184 of them, are left out, as is Versatile Lure). Overrides `baitAlts` add hand-checked ones (the wiki, or caught in game) and may also add another fish to mooch at the same step (Gigantshark from Merlthor Goby, Harbor Herring or Ogre Barracuda), since you may hook any of them. Overrides `bait` replace a fish's main bait at a hole where the game differs (Assassin Betta at Moondrip takes Honey Worm directly, so Ndendecki is Honey Worm → Silverfish or Assassin Betta); Teamcraft's bait becomes an alternative. Teamcraft's bait stays the main path, used for gating; the build fails if an alternative would make that gating wrong (a bait fish on the main path has a window or requirement the alternative avoids) |
-| Overrides | Time windows only the upstream repo has: White Goldfish, Firelight Goldfish, Indigo Prismfish. Plus any future corrections |
+| Other baits | Carbuncle Plushy's path may list several baits for the first cast: the first is `bait`, the rest `or`, shown "Stardust or Panic Jig". Its mooch steps never list options (the build checks). Teamcraft's several entries for one fish at one hole (122, all ocean; the build checks) go in `alts`, shown "(or …)" beside an ocean bait; for ocean fish, `oft` collects every time of day listed. No other alternatives: each fish at each hole has one path, from one source |
+| Overrides | Only fixes for gaps no source fills: Gathering requirements (`minGathering`) and Shirogane's expansion (`zoneExp`). No catch paths, windows or weather: those follow a source as written |
+
+### Which source
+
+Each rod entry (fish at a hole) takes its catch info from one source, recorded as `src` (`"cp"`, or absent for Teamcraft):
+
+- **Carbuncle Plushy** wherever its tracker lists the fish with a best catch path at a hole we have (869 entries at 7.57). From it: the path, tug, hookset, time window and weather. Times over 24 are minutes past midnight. A weather the hole never has (Snow at Jadeite Flood) is dropped. The tracker names one hole per fish, so a fish at several holes follows it at that hole and Teamcraft at the others.
+- **Teamcraft** everywhere else (common fish, other holes, ocean fishing, spearfishing). Its path is built by following each fish's bait at the hole.
+- Everything else (predators, lures, snagging, Gathering, folklore) is Teamcraft's or the game's; the two sources agree on predators.
+
+A path is stored on the entry, not rebuilt from each fish's own bait: `bait` (the first cast), `or` (other baits for it), `via` (fish mooched on the way, in order). So The Horned King reads Jerked Ovim → Hornhelm, as the tracker gives his chain, while Hornhelm on its own takes Desert Dessert Frog, as its own entry gives it. A mooched fish's tug, hookset and window are its own entry's at the hole.
+
+Where the sources differed at 7.57: about 120 baits or paths, 3 time windows (Kissing Fish, Oliphant's Trunk, Dravanian Squeaker) and Namitaro's weather. Tug, hookset, weather and predators otherwise agreed on all 869.
 
 ### Decoded enums
 
@@ -166,8 +178,8 @@ The file is 858 KB (258 KB gzipped); the log entries (`text`, newlines kept for 
   "weatherRates": {"3": [[3, 5], [7, 15], …]},
   "weathers": {"7": {"name": "Rain", "icon": 60207}},
   "fish": {"4964": {"name": "Black Ghost", "icon": 29213, "log": "rod", "lvl": 28, "stars": 0, "rec": 3, "no": 66, "exp": 0, "text": "Native to the rivers…",
-                    "at": {"r5": {"bait": 4942, "tug": "medium", "hook": "powerful"},
-                           "r15": {"bait": 4942, "tug": "medium", "hook": "powerful"}}}},
+                    "at": {"r5": {"bait": 2592, "via": [4942], "tug": "medium", "hook": "powerful"},
+                           "r15": {"bait": 2592, "via": [4942], "tug": "medium", "hook": "powerful"}}}},
   "baits": {"2592": {"name": "Midge Basket", "icon": 27002}},
   "names": {"<predator id>": "<name>"}
 }
@@ -176,9 +188,12 @@ The file is 858 KB (258 KB gzipped); the log entries (`text`, newlines kept for 
 - Hole IDs are namespaced (`r` = rod, `s` = spearfishing) because the two ID spaces overlap.
 - Weather is per hole (`wr`), because it comes from the hole's territory.
 - Catch info is stored per hole (`at`), because bait and chains differ by hole.
-- **A mooch** is a `bait` that is itself a fish ID. The chain is followed through that fish's `at[sameHole]`.
+- **`bait`** is always the first cast (a bait item). **A mooch** has `via`, the fish mooched on the way in order; the chain is read from the entry, not followed through each fish's own bait.
 - **Optional `at` fields on rod fish:**
-  - `alts`: ocean fishing, other baits that also work (Teamcraft), shown dim as "(or X)". Elsewhere, other things that also hook the fish there: a bait item, or a fish to mooch (at the same hole). One that stands in for the bait at the same step (as many fish are mooched before it) is shown in that step: "Hook either, then mooch it · Assassin Betta **or** Silverfish" on the fish screen's chain, with each fish's tug and, when it takes another bait, "from Lugworm"; and "Honey Worm → Assassin Betta or Silverfish" on the hole screen. One that changes the method (a direct bait where the main path mooches, or a mooch where it casts, or a longer chain) has no step to go in, so it gets a purple callout, one per kind: "Or mooch it from Ogre Barracuda", "Or cast Grey Worm directly, no mooch".
+  - `or`: other baits for the first cast (Carbuncle Plushy), shown "Stardust **or** Panic Jig"
+  - `via`: fish mooched on the way, in order (the last one hooks this fish)
+  - `src`: `"cp"` when the entry comes from Carbuncle Plushy; absent for Teamcraft. Shown as "Source" on the fish screen
+  - `alts`: ocean fishing only, other baits that also work (Teamcraft), shown dim as "(or X)"
   - `minG`: minimum Gathering
   - `spawn` / `dur`: Eorzea-hour time window
   - `w`: weathers

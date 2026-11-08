@@ -135,75 +135,46 @@ Deno.test('mooch chains: Black Ghost and Junkmonger', () => {
   assertEquals(m.moochTargets('r5')[byName('Ala Mhigan Fighting Fish')], ['Black Ghost']);
 });
 
-Deno.test('alternative baits: only other methods (bait vs mooch), flagged', async () => {
+Deno.test('catch paths: one source per fish at a hole, as that source gives it', () => {
   const at = (name, hole) => {
     const fid = byName(name);
     const hid = Object.keys(DATA.fish[fid].at).find((h) => DATA.holes[h].name === hole);
     return { fid, hid, e: DATA.fish[fid].at[hid] };
   };
-  // A mooch (the tracker's best path) that a bait item also hooks directly
-  // (Teamcraft's bait, kept as an alternative).
-  const st = at('Stupendemys', 'The Habisphere');
-  assertEquals(m.fishName(st.e.bait), 'Rudderfish');
-  assertEquals(st.e.alts.map((b) => m.fishName(b)), ['Giant Crane Fly']);
-  assert(m.moochTargets(st.hid)[byName('Rudderfish')].includes('Stupendemys'), 'Rudderfish feeds Stupendemys');
-  // A direct bait (the tracker's) that can also be mooched (Teamcraft's).
-  const fv = at('Feverfish', 'The Chlorophospond');
-  assertEquals(m.fishName(fv.e.bait), 'Grey Worm');
-  assertEquals(fv.e.alts, [Number(byName('Calicia'))]);
-  // From the wiki override: the other Feverfish hole can be mooched too.
-  assertEquals(at('Feverfish', 'The Frozen Fissure').e.alts, [Number(byName('Calicia'))]);
-  // Junkmonger: Wahoo is the main path; a Merlthor Goby works too (one step shorter).
-  const jm = at('Junkmonger', 'Skull Valley');
-  assertEquals(m.fishName(jm.e.bait), 'Wahoo');
-  assertEquals(jm.e.alts, [Number(byName('Merlthor Goby'))]);
-  assertStringIncludes(holeView(ctxFor(createStore(memStorage())), jm.hid), 'Or mooch it from Merlthor Goby');
-  // A bait swapped for another of the same shape isn't listed: the main bait
-  // works. Every non-ocean alternative changes how many fish are mooched.
-  const mooches = (b, hid) => {
-    let n = 0;
-    while (DATA.fish[b]?.at[hid] && n < 8) { n++; b = DATA.fish[b].at[hid].bait; }
-    return n;
-  };
-  const alts = Object.values(DATA.fish).flatMap((f) => Object.entries(f.at)
-    .filter(([h, e]) => !DATA.holes[h].ocean && e.alts).flatMap(([h, e]) => e.alts.map((a) => [h, e, a])));
-  assertEquals(alts.length, 17);
-  // Hand-checked overrides may add another fish at the same step (you may
-  // hook either); everything else changes the method.
-  const OV = JSON.parse(await Deno.readTextFile(new URL('../data/overrides.json', import.meta.url))).baitAlts;
-  const checked = new Set(Object.values(OV).flatMap((o) => o.alts.map((a) => `${o.hole}:${a}`)));
-  for (const [h, e, a] of alts) {
-    if (checked.has(`${h}:${m.fishName(a)}`)) continue;
-    assert(mooches(a, h) !== mooches(e.bait, h), `${m.fishName(a)} at ${h}`);
-  }
-  // Player-checked: Kuno's step 3 can be Goldfish; Ndendecki can be mooched
-  // straight from Silverfish; Gigantshark from any of three.
-  assertEquals(at('Kuno the Killer', 'The North Shards').e.alts, [Number(byName('Goldfish'))]);
-  // Ndendecki: Honey Worm hooks Silverfish or Assassin Betta (a main-bait
-  // override for Betta), and either is mooched for it.
-  const nd = at('Ndendecki', 'Moondrip');
-  assertEquals(m.moochChain(nd.fid, nd.hid).steps.map((x) => m.fishName(x.id)), ['Honey Worm', 'Assassin Betta', 'Ndendecki']);
-  assertEquals(nd.e.alts, [Number(byName('Silverfish'))]);
-  assertEquals(at('Assassin Betta', 'Moondrip').e.alts, [Number(byName('Silverfish'))]);
-  assertEquals(at('Gigantshark', 'Summerford').e.alts.map((b) => m.fishName(b)), ['Merlthor Goby', 'Ogre Barracuda']);
-  const gs = at('Gigantshark', 'Summerford');
-  // Same step: in the step itself (with the other fish's own bait); a
-  // longer route: the callout.
-  const gsHtml = fishView(ctxFor(createStore(memStorage())), gs.fid, gs.hid);
-  assertStringIncludes(gsHtml, 'Harbor Herring <span class="or">or</span> Merlthor Goby');
-  assertStringIncludes(gsHtml, 'Merlthor Goby: <span class="hi">');
-  assertStringIncludes(gsHtml, ' · from Lugworm');
-  assertStringIncludes(gsHtml, '<p class="note alt-way">Or mooch it from Ogre Barracuda</p>');
-  assert(!gsHtml.includes('Or mooch it from Merlthor Goby'), 'a same-step alternative is not a callout');
-  assertStringIncludes(holeView(ctxFor(createStore(memStorage())), nd.hid), 'Assassin Betta <span class="or">or</span> Silverfish');
-  assertEquals(m.altSplit(nd.fid, nd.hid), { step: [{ id: Number(byName('Silverfish')), from: null }], ways: [] });
-  // Flagged on its own line on the hole and fish screens.
+  const names = ({ fid, hid }) => m.moochChain(fid, hid).steps.map((x) => m.fishName(x.id));
+  // Carbuncle Plushy: The Horned King's chain reads as it does there, and
+  // Hornhelm on its own keeps its own entry's bait (no tie-break).
+  const hk = at('The Horned King', 'The River of Sand');
+  assertEquals(hk.e.src, 'cp');
+  assertEquals(names(hk), ['Jerked Ovim', 'Hornhelm', 'The Horned King']);
+  assertEquals(m.fishName(at('Hornhelm', 'The River of Sand').e.bait), 'Desert Dessert Frog');
+  assert(m.moochTargets(hk.hid)[byName('Hornhelm')].includes('The Horned King'), 'Hornhelm feeds The Horned King');
+  // At a hole the tracker doesn't name, Teamcraft's.
+  const hn = at('Hornhelm', 'The Nabaath Severance');
+  assertEquals(hn.e.src, undefined);
+  assertEquals(m.fishName(hn.e.bait), 'Jerked Ovim');
+  // Its time window and weather come with it (Teamcraft has ET 9-2 here).
+  const kf = at('Kissing Fish', 'Eil Tohm');
+  assertEquals([kf.e.spawn, kf.e.dur], [9, 15]);
+  // Options for the first cast are listed in the step.
+  const sw = at('Sidereal Whale', 'Limne 3-β');
+  assertEquals(names(sw), ['Stardust', 'Horizon Event', 'Sidereal Whale']);
+  assertEquals(m.moochChain(sw.fid, sw.hid).steps[0].or.map((b) => m.fishName(b)), ['Panic Jig']);
   const store = createStore(memStorage());
-  assertStringIncludes(holeView(ctxFor(store), st.hid), '<span class="alt-way">Or cast Giant Crane Fly directly, no mooch</span>');
-  assertStringIncludes(holeView(ctxFor(store), fv.hid), 'Or mooch it from Calicia');
-  assertStringIncludes(fishView(ctxFor(store), fv.fid, fv.hid), '<p class="note alt-way">Or mooch it from Calicia</p>');
-  assertStringIncludes(fishView(ctxFor(store), st.fid, st.hid), '<p class="note alt-way">Or cast Giant Crane Fly directly, no mooch</p>');
-  assert(!fishView(ctxFor(store), st.fid, st.hid).includes('(or '), 'not inline in the Bait fact');
+  assertStringIncludes(holeView(ctxFor(store), sw.hid), 'Stardust <span class="or">or</span> Panic Jig');
+  assertStringIncludes(fishView(ctxFor(store), sw.fid, sw.hid), '<span class="title">Stardust <span class="or">or</span> Panic Jig</span>');
+  const cc = at('Cerule Core', 'The Eblan Thaw');
+  assertStringIncludes(fishView(ctxFor(store), cc.fid, cc.hid), '<dt>Bait</dt><dd>Mayfly or Leech</dd>');
+  // The source is named on the fish screen.
+  assertStringIncludes(fishView(ctxFor(store), hk.fid, hk.hid), '<dt>Source</dt><dd>Carbuncle Plushy</dd>');
+  assertStringIncludes(fishView(ctxFor(store), hn.fid, hn.hid), '<dt>Source</dt><dd>Teamcraft</dd>');
+  // Outside ocean fishing there are no other ways: each entry has one path.
+  for (const f of Object.values(DATA.fish)) {
+    for (const [h, e] of Object.entries(f.at)) {
+      if (!DATA.holes[h].ocean) assert(!e.alts, `${f.name} at ${h}`);
+      for (const v of e.via ?? []) assert(DATA.fish[v].at[h], `${f.name} at ${h}: mooches ${v}, not caught there`);
+    }
+  }
 });
 
 Deno.test('broken ocean chain is marked incomplete', () => {

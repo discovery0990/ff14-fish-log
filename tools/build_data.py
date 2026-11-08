@@ -32,14 +32,11 @@ GAME_VERSION_NAME = '7.57x1'
 TEAMCRAFT_SHA = 'c022ca5385ae41ec0d747599ef16ce74e4fbfdcf'
 TEAMCRAFT = ('https://raw.githubusercontent.com/ffxiv-teamcraft/ffxiv-teamcraft/'
              f'{TEAMCRAFT_SHA}/libs/data/src/lib/json')
-# Second source for baits (Carbuncle Plushy's fish tracker): its best catch
-# paths, picked by hand, replace Teamcraft's bait where they differ, and fill
-# in other methods that also work (Teamcraft gives one per fish per hole).
+# Carbuncle Plushy's fish tracker: where it has a fish at a hole, its catch
+# path, time window and weather are used there (Teamcraft elsewhere).
 TRACKER_SHA = 'f5a51e5d3eb0eccb9a5e25899397e0d9cb5a6f66'
 TRACKER = ('https://raw.githubusercontent.com/icykoneko/ff14-fish-tracker-app/'
            f'{TRACKER_SHA}/private/fishData.yaml')
-# Works on every Dawntrail fish, so listing it as an alternative is noise.
-NOT_ALTS = {'Versatile Lure'}
 
 EXPECTED_ROD = 1517
 EXPECTED_SPEAR = 289
@@ -288,7 +285,7 @@ def build(fetch, skip_icons):
             entry = rod_entry(es[0])
             if len(es) > 1:
                 # Several entries for one fish at one hole = alternative baits
-                # (and, for ocean fish, other times of day).
+                # and other times of day (only ever ocean fish; checked below).
                 multi_entries += 1
                 alts = []
                 for e in es[1:]:
@@ -329,14 +326,6 @@ def build(fetch, skip_icons):
         check(f is not None, f'{section} override {fid_s} ({o["name"]}): unknown fish')
         return f['at'].values() if f is not None else []
 
-    for fid_s, w in overrides.get('windows', {}).items():
-        entries = override_target('windows', fid_s, w)
-        upstream = sorted({(e['spawn'], e['dur']) for e in entries if e.get('spawn') is not None})
-        check(not upstream, f'windows override {fid_s} ({w["name"]}): Teamcraft now has spawn/duration '
-              f'{upstream} (override {w["spawn"]}/{w["duration"]}); remove or reconcile it')
-        for entry in entries:
-            if entry.get('spawn') is None:
-                entry['spawn'], entry['dur'] = w['spawn'], w['duration']
     for fid_s, g in overrides.get('minGathering', {}).items():
         entries = override_target('minGathering', fid_s, g)
         upstream = sorted({e['minG'] for e in entries if e.get('minG')})
@@ -431,21 +420,21 @@ def build(fetch, skip_icons):
         f['name'] = items[fid]['Name']
         f['icon'] = items[fid]['Icon']['id']
     # A mistyped id that happens to be another fish would pass the checks above.
-    for section in ('windows', 'minGathering'):
+    for section in ('minGathering',):
         for fid_s, o in overrides.get(section, {}).items():
             f = fish.get(int(fid_s))
             check(f is None or f['name'] == o['name'],
                   f'{section} override {fid_s} says {o["name"]}, but that id is {f and f["name"]}')
     baits ={bid: {'name': items[bid]['Name'], 'icon': items[bid]['Icon']['id']} for bid in sorted(bait_ids)}
 
-    # --- Alternative baits -----------------------------------------------------
-    # `alts` on an entry (outside ocean fishing): another way to hook the
-    # fish there that changes the method, a direct bait where the main path
-    # mooches or a mooch where it casts (or a chain of another length).
-    # Teamcraft gives one way. From the fish tracker's best catch paths,
-    # where a step differs from Teamcraft's or lists options, and from
-    # overrides checked against the wiki. A bait swapped for another of the
-    # same shape (Spinner for Spinnerbait) is left out: the main bait works.
+    # --- Catch paths and the source of each entry ---------------------------
+    # Each rod entry gets one catch path from one source: `bait`, the first
+    # cast (with `or`, other baits that work there), and `via`, the fish
+    # mooched on the way, in order (absent: cast directly for this fish).
+    # Where Carbuncle Plushy's fish tracker (the source most fishers use) has
+    # the fish at a hole, its path, time window and weather are used as
+    # written there (`src: 'cp'`); everywhere else, Teamcraft's. No merging,
+    # no tie-breaks: a fish's chain reads as its source shows it.
     by_name = {}
     for bid, b in baits.items():
         by_name.setdefault(b['name'], set()).add(bid)
@@ -459,92 +448,41 @@ def build(fetch, skip_icons):
         check(ids, f'{where}: unknown bait or fish {name!r}')
         return next(iter(ids)) if ids else None
 
-    def mooches(b, hid):
-        """How many fish are mooched on the way from bait `b` (0: cast directly)."""
-        n = 0
-        while b in fish and hid in fish[b]['at'] and n <= MAX_MOOCH_DEPTH:
-            n, b = n + 1, fish[b]['at'][hid].get('bait')
-        return n
-
-    def add_alt(fid, hid, alt, checked=False):
-        """Whether `alt` was added for the fish at the hole: new, and a different
-        method, unless `checked` by hand (an override: another fish to mooch
-        at the same step is worth knowing, since you may hook either)."""
-        e = fish[fid]['at'][hid]
-        if alt is None or alt == fid or alt == e.get('bait') or alt in e.get('alts', []):
-            return False
-        # A fish to mooch has to be caught at the same hole.
-        if alt in fish and hid not in fish[alt]['at']:
-            return False
-        if not checked and mooches(alt, hid) == mooches(e.get('bait'), hid):
-            return False
-        e.setdefault('alts', []).append(alt)
-        return True
-
-    # Main-bait overrides (checked in game): the bait Teamcraft gives becomes
-    # an alternative. Before the tracker, so its depths see the fixed chain.
-    for fid_s, o in overrides.get('bait', {}).items():
-        f = fish.get(int(fid_s))
-        check(f is not None and f['name'] == o['name'],
-              f'bait override {fid_s} says {o["name"]}, but that id is {f and f["name"]}')
-        if f is None or o['hole'] not in f['at']:
-            check(f is None, f'bait override {fid_s} ({o["name"]}): not at hole {o["hole"]}')
+    # Teamcraft's path: follow its bait links at the hole. A chain that runs
+    # into a fish with no bait there is broken: `bait` None, `via` known.
+    broken = []
+    tc_paths = {}
+    for fid, f in fish.items():
+        if f['log'] != 'rod':
             continue
-        e = f['at'][o['hole']]
-        new = resolve(o['bait'], f'bait override {o["name"]}')
-        check(new != e.get('bait'), f'bait override {fid_s} ({o["name"]}): Teamcraft now has {o["bait"]}; remove it')
-        if new is not None and new != e.get('bait'):
-            old = e.get('bait')
-            e['bait'] = new
-            if old is not None:
-                e['alts'] = [old, *[a for a in e.get('alts', []) if a not in (old, new)]]
+        for hid, e in f['at'].items():
+            via, b = [], e.get('bait')
+            while b in fish:
+                nxt = fish[b]['at'].get(hid)
+                via.insert(0, b)
+                if not nxt or not nxt.get('bait') or len(via) > MAX_MOOCH_DEPTH:
+                    broken.append((fid, hid))
+                    b = None
+                    break
+                b = nxt['bait']
+            tc_paths[(fid, hid)] = (b, via)
+    for (fid, hid), (b, via) in tc_paths.items():
+        e = fish[fid]['at'][hid]
+        e['bait'] = b
+        if via:
+            e['via'] = via
 
-    # The fish tracker (Carbuncle Plushy's site) picks the best bait by hand;
-    # Teamcraft's is one players reported. Where a step of the tracker's path
-    # at its hole doesn't list Teamcraft's bait, the tracker's first option
-    # becomes the main bait and Teamcraft's is kept only as a different
-    # method. Hand-checked bait overrides win over both.
-    overridden = {(int(k), o['hole']) for k, o in overrides.get('bait', {}).items()}
-    tracker_set = {}  # (fish, hole) -> the tracker fish whose path set its bait
-    tracker_main = tracker_conflicts = 0
+    def hours(v, where):
+        """Tracker times are hours, or minutes past midnight when over 24."""
+        h = v / 60 if v > 24 else v
+        check(0 <= h <= 24, f'tracker: {where}: odd time {v}')
+        return h
 
-    def tracker_bait(target, hid, ids, source):
-        nonlocal tracker_main, tracker_conflicts
-        e = fish[target]['at'][hid]
-        if not ids or (target, hid) in overridden:
-            return
-        if e.get('bait') in ids:
-            tracker_set.setdefault((target, hid), source)
-            return
-        if (target, hid) in tracker_set:
-            tracker_conflicts += 1
-            kept = e['bait']
-            kept = (baits.get(kept) or fish[kept])['name']
-            print(f'tracker: {fish[target]["name"]} at {holes[hid]["name"]}: kept {kept} (from '
-                  f'{tracker_set[(target, hid)]}), not {" or ".join((baits.get(i) or fish[i])["name"] for i in ids)} '
-                  f'(from {source})', file=sys.stderr)
-            return
-        new = ids[0]
-        if new in fish and hid not in fish[new]['at']:
-            print(f'tracker: {source}: {fish[new]["name"]} is not caught at {holes[hid]["name"]}; '
-                  f'kept Teamcraft\'s bait for {fish[target]["name"]}', file=sys.stderr)
-            return
-        old = e.get('bait')
-        e['bait'] = new
-        e['alts'] = [a for a in e.get('alts', []) if a != new]
-        if not e['alts']:
-            del e['alts']
-        tracker_set[(target, hid)] = source
-        tracker_main += 1
-        if old is not None:
-            add_alt(target, hid, old)
-
-    tracker_alts = tracker_unmatched = 0
-    steps = []  # (fish, hole, bait ids, tracker fish): one per step of each path
+    tracker_used = tracker_unmatched = 0
     for t in fetch.tracker():
         fid = next(iter(by_name.get(t.get('name'), ())), None)
         path = t.get('bestCatchPath') or []
-        if fid not in fish or fish[fid]['log'] != 'rod' or not path:
+        if fid not in fish or fish[fid]['log'] != 'rod' or not path or t.get('dataMissing'):
             continue
         hid = next((h for h in fish[fid]['at'] if holes[h]['name'] == t.get('location')), None)
         if hid is None or holes[hid].get('ocean'):
@@ -553,44 +491,51 @@ def build(fetch, skip_icons):
                 tracker_unmatched += 1
                 print(f'tracker: {t["name"]} at {t.get("location")}: no such hole for it', file=sys.stderr)
             continue
-        # Step i's options hook the fish at step i + 1 (the last hooks this fish).
-        hooked = [None] * len(path)
-        for i, step in enumerate(path[1:]):
-            hooked[i] = step if isinstance(step, str) else None
-        hooked[-1] = t['name']
-        for i, step in enumerate(path):
-            target = resolve(hooked[i], t['name']) if hooked[i] else None
-            if target not in fish or hid not in fish[target]['at']:
-                continue
-            ids = [resolve(o, t['name']) for o in ([step] if isinstance(step, str) else step)
-                   if o not in NOT_ALTS]
-            steps.append((target, hid, ids, t['name']))
-    # The tracker can give a fish one bait in its own entry and another as a
-    # step in some other fish's path. If any of them agrees with Teamcraft,
-    # Teamcraft's stays. Main baits are all set before alternatives, which
-    # depend on the main path.
-    for target, hid, ids, _ in steps:
-        if fish[target]['at'][hid].get('bait') in ids:
-            tracker_set.setdefault((target, hid), 'Teamcraft')
-    for target, hid, ids, source in steps:
-        tracker_bait(target, hid, ids, source)
-    for target, hid, ids, _ in steps:
-        for opt in ids:
-            tracker_alts += add_alt(target, hid, opt)
-
-    for fid_s, o in overrides.get('baitAlts', {}).items():
-        f = fish.get(int(fid_s))
-        check(f is not None and f['name'] == o['name'],
-              f'baitAlts override {fid_s} says {o["name"]}, but that id is {f and f["name"]}')
-        if f is None:
-            continue
-        check(o['hole'] in f['at'], f'baitAlts override {fid_s} ({o["name"]}): not at hole {o["hole"]}')
-        if o['hole'] not in f['at']:
-            continue
-        for alt in o['alts']:
-            check(add_alt(int(fid_s), o['hole'], resolve(alt, f'baitAlts override {o["name"]}'), checked=True),
-                  f'baitAlts override {fid_s} ({o["name"]}): {alt} is already its bait or an alternative '
-                  '(remove it), or is a fish not caught at that hole')
+        steps = [[x] if isinstance(x, str) else x for x in path]
+        first = [resolve(x, t['name']) for x in steps[0]]
+        via = [resolve(x[0], t['name']) for x in steps[1:]]
+        check(all(len(x) == 1 for x in steps[1:]), f'tracker: {t["name"]}: options at a mooch step {path}')
+        check(not any(b in fish for b in first), f'tracker: {t["name"]}: path starts with a fish {path}')
+        check(all(v in fish and hid in fish[v]['at'] for v in via),
+              f'tracker: {t["name"]}: mooches a fish not caught at {holes[hid]["name"]} {path}')
+        e = fish[fid]['at'][hid]
+        e['bait'] = first[0]
+        e.pop('or', None)
+        if first[1:]:
+            e['or'] = first[1:]
+        e.pop('via', None)
+        if via:
+            e['via'] = via
+        if t.get('tug'):
+            tug = t['tug'].lower()
+            check(tug in ('light', 'medium', 'heavy', 'legendary'), f'tracker: {t["name"]}: unknown tug {t["tug"]}')
+            e['tug'] = 'heavy' if tug == 'legendary' else tug
+        if t.get('hookset'):
+            e['hook'] = t['hookset'].lower()
+            check(e['hook'] in ('powerful', 'precision'), f'tracker: {t["name"]}: unknown hookset {t["hookset"]}')
+        e.pop('spawn', None)
+        e.pop('dur', None)
+        sh, eh = t.get('startHour'), t.get('endHour')
+        if sh is not None and (sh, eh) != (0, 24):
+            sh, eh = hours(sh, t['name']), hours(eh, t['name'])
+            e['spawn'], e['dur'] = sh, round((eh - sh) % 24, 4) or 24
+        here = {weathers[w]['name']: w for w, _ in weather_rates[holes[hid]['wr']]}
+        for key, names in (('w', t.get('weatherSet')), ('pw', t.get('previousWeatherSet'))):
+            e.pop(key, None)
+            if names:
+                # A weather the hole never has (Snow at Jadeite Flood) can't matter.
+                check(any(n in here for n in names), f'tracker: {t["name"]}: weather {names} never at {holes[hid]["name"]}')
+                e[key] = sorted(here[n] for n in names if n in here)
+        e['src'] = 'cp'
+        tracker_used += 1
+    for f in fish.values():
+        for e in f['at'].values():
+            if f['log'] == 'rod' and 'bait' in e and e['bait'] is None:
+                del e['bait']
+    # Baits no entry uses any more.
+    used = {b for f in fish.values() for e in f['at'].values()
+            for b in [e.get('bait'), *e.get('or', []), *e.get('alts', [])] if b}
+    baits = {bid: b for bid, b in baits.items() if bid in used}
     extra_names = {pid: items[pid]['Name'] for pid in pred_ids - set(fish)}
 
     # Big fish: green rarity on overworld holes. Green ocean fish are ocean
@@ -618,44 +563,8 @@ def build(fetch, skip_icons):
         for hid in f['at']:
             check(hid in holes, f'fish {fid} references dropped hole {hid}')
 
-    # A chain is broken if a bait fish has no entry, or no bait, at the same hole.
-    broken = []
-    for fid, f in fish.items():
-        for hid, e in f['at'].items():
-            b, depth = e.get('bait'), 0
-            while b in fish:
-                nxt = fish[b]['at'].get(hid)
-                depth += 1
-                if not nxt or not nxt.get('bait') or depth > MAX_MOOCH_DEPTH:
-                    broken.append((fid, hid))
-                    break
-                b = nxt['bait']
-    # A fish alternative needs its own chain at the hole.
-    for fid, f in fish.items():
-        for hid, e in f['at'].items():
-            for a in e.get('alts', []):
-                if a in fish and not fish[a]['at'][hid].get('bait'):
-                    broken.append((fid, hid))
-    # Alternatives are shown, not used for gating: no bait fish on the main
-    # path may have a window or requirement that an alternative's path avoids.
-    def gated(fid, hid):
-        e = fish[fid]['at'][hid]
-        return bool(any(e.get(k) for k in ('spawn', 'w', 'pw', 'minG')) or fish[fid].get('folk'))
-
-    def path_gated(b, hid):
-        for _ in range(MAX_MOOCH_DEPTH + 1):
-            if b not in fish or hid not in fish[b]['at']:
-                return False
-            if gated(b, hid):
-                return True
-            b = fish[b]['at'][hid].get('bait')
-        return False
-    for fid, f in fish.items():
-        for hid, e in f['at'].items():
-            if e.get('alts') and path_gated(e.get('bait'), hid) and \
-                    any(not path_gated(a, hid) for a in e['alts']):
-                check(False, f'{f["name"]} at {holes[hid]["name"]}: a bait fish on its main path has a window '
-                             'or requirement that an alternative avoids; gating would be wrong')
+    check(all(holes[h].get('ocean') for f in fish.values() for h, e in f['at'].items() if e.get('alts')),
+          'Teamcraft has several entries for a fish at a hole outside ocean fishing')
     unexpected = set(broken) - KNOWN_BROKEN_CHAINS
     check(not (KNOWN_BROKEN_CHAINS - set(broken)),
           f'known broken chains now resolve, remove them: {sorted(KNOWN_BROKEN_CHAINS - set(broken))}')
@@ -692,8 +601,7 @@ def build(fetch, skip_icons):
         'no_catch_info': sum(1 for f in fish.values() if f['log'] == 'rod'
                              and not any(e.get('tug') or e.get('bait') for e in f['at'].values())),
         'tc_multi_entries': multi_entries,
-        'tracker_alts': tracker_alts, 'tracker_unmatched': tracker_unmatched,
-        'tracker_main': tracker_main, 'tracker_conflicts': tracker_conflicts,
+        'tracker_entries': tracker_used, 'tracker_unmatched': tracker_unmatched,
         'broken_chains': len(broken), 'icons': len(icon_ids),
         'big_fish': sum(1 for f in fish.values() if f.get('big')),
         'folklore_fish': sum(1 for f in fish.values() if f.get('folk')), 'tomes': len(tomes),

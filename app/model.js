@@ -239,68 +239,33 @@ export function createModel(data, sprites = null) {
   const tabHolesAll = (tab) => Object.values(zoneHoles[tab] ?? {}).flat();
   const regionHolesAll = (tab, region) => (regionZones[tab][region] ?? []).flatMap((z) => zoneHolesAll(tab, z));
 
-  const isMooch = (entry) => entry.bait != null && data.fish[entry.bait] != null;
+  const isMooch = (entry) => !!entry?.via?.length;
 
   /**
-   * Mooch chain for a fish at a hole, from the starting bait to the fish:
-   * {steps: [{id, fish, tug, hook}], complete}. Incomplete chains start with
-   * {unknown: true}.
+   * Catch path for a fish at a hole, as its source gives it (one source per
+   * entry; see `src`): {steps: [{id, fish, tug, hook, or}], complete}. The
+   * first step is the bait cast, with `or` other baits that work there; an
+   * unknown bait is {unknown: true}. Fish mooched on the way follow, then
+   * the fish itself. Each fish's tug and hookset are its own at the hole.
    */
   function moochChain(fid, hid) {
-    const steps = [];
-    let cur = String(fid);
-    for (let depth = 0; depth < 8; depth++) {
-      const e = data.fish[cur]?.at[hid];
-      if (!e?.bait) {
-        if (depth > 0) steps.unshift({ unknown: true });
-        return { steps, complete: false };
-      }
-      steps.unshift({ id: cur, fish: true, tug: e.tug, hook: e.hook });
-      const b = String(e.bait);
-      if (!data.fish[b]) {
-        steps.unshift({ id: b, fish: false });
-        return { steps, complete: true };
-      }
-      cur = b;
-    }
-    return { steps, complete: false };
-  }
-
-  /** How many fish are mooched on the way from bait `b` at a hole (0: cast directly). */
-  function moochDepth(b, hid) {
-    let n = 0;
-    for (let e = data.fish[b]?.at[hid]; e && n < 8; e = data.fish[e.bait]?.at[hid]) n++;
-    return n;
-  }
-
-  /**
-   * A fish's alternatives at a hole (outside ocean fishing), split: `step`,
-   * the ones that stand in for its bait at the same step (Silverfish or
-   * Assassin Betta), each with `from`, its own chain before it when that
-   * differs from the main one (names, or null); and `ways`, the ones that
-   * change the method (a direct bait where it mooches, or the reverse).
-   */
-  function altSplit(fid, hid) {
     const e = data.fish[fid]?.at[hid];
-    if (!e?.alts?.length || data.holes[hid].ocean) return { step: [], ways: [] };
-    const d = moochDepth(e.bait, hid);
-    const before = (id) => moochChain(id, hid).steps.slice(0, -1).map((s) => (s.unknown ? '?' : fishName(s.id))).join(' → ');
-    const main = data.fish[e.bait] ? before(e.bait) : '';
-    const step = e.alts.filter((a) => moochDepth(a, hid) === d).map((id) => {
-      const own = data.fish[id] ? before(id) : '';
-      return { id, from: own && own !== main ? own : null };
-    });
-    return { step, ways: e.alts.filter((a) => moochDepth(a, hid) !== d) };
+    if (!e) return { steps: [], complete: false };
+    const steps = [e.bait != null ? { id: String(e.bait), fish: false, or: (e.or ?? []).map(String) } : { unknown: true }];
+    for (const v of e.via ?? []) {
+      const x = data.fish[v]?.at[hid];
+      steps.push({ id: String(v), fish: true, tug: x?.tug, hook: x?.hook });
+    }
+    steps.push({ id: String(fid), fish: true, tug: e.tug, hook: e.hook });
+    return { steps, complete: e.bait != null };
   }
 
-  /** At a hole: bait fish id → names of fish mooched from it. */
+  /** At a hole: bait fish id → names of fish mooched straight from it. */
   function moochTargets(hid) {
     const out = {};
     for (const { fid, entry } of holeFish(hid)) {
-      // Its bait fish, and any other fish it can be mooched from.
-      for (const b of [entry.bait, ...(entry.alts ?? [])]) {
-        if (b != null && data.fish[b]) (out[String(b)] ??= []).push(data.fish[fid].name);
-      }
+      const b = entry.via?.at(-1);
+      if (b != null) (out[String(b)] ??= []).push(data.fish[fid].name);
     }
     return out;
   }
@@ -311,16 +276,8 @@ export function createModel(data, sprites = null) {
    * its window and requirements apply to everything after it.
    */
   function chainBait(fid, hid) {
-    const out = [];
-    const seen = new Set([String(fid)]);
-    let e = data.fish[fid]?.at[hid];
-    while (e && isMooch(e) && !seen.has(String(e.bait))) {
-      const id = String(e.bait);
-      seen.add(id);
-      e = data.fish[id].at[hid];
-      if (e) out.push({ id, entry: e });
-    }
-    return out;
+    const via = data.fish[fid]?.at[hid]?.via ?? [];
+    return [...via].reverse().map((v) => ({ id: String(v), entry: data.fish[v]?.at[hid] })).filter((x) => x.entry);
   }
 
   /** Bait fish in the mooch chain that have a time or weather window. */
@@ -437,6 +394,6 @@ export function createModel(data, sprites = null) {
     upSoon, search, isLocked, expOff, onlyHere, isOceanFish, sprite: (icon) => spriteAt.get(icon) ?? null, guideGroups, logFish: (log) => logFish[log] ?? [],
     data, weatherOf, fishName, holeFish, count, holeVisibility, visibleHoles, visibleZones,
     visibleRegions, zoneHolesAll, regionHolesAll, tabHolesAll, fishHoles: (fid) => fishHoles[String(fid)] ?? [],
-    isMooch, moochChain, moochTargets, moochDepth, altSplit, chainBait, chainWindows, chainBlocks, whyNot, remaining, uncaught, status, windows, weatherNow, gatheringShort, tomeMissing, blocked,
+    isMooch, moochChain, moochTargets, chainBait, chainWindows, chainBlocks, whyNot, remaining, uncaught, status, windows, weatherNow, gatheringShort, tomeMissing, blocked,
   };
 }

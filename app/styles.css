@@ -228,11 +228,6 @@ button.caught-group { border: 0; border-radius: 14px; background: var(--surface)
 .cond { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; margin-top: 2px; }
 .warn { font-size: 12px; color: var(--warn); }
 .feeds { font-size: 12px; color: var(--mooch); }
-/* Another way to hook it that changes the method (bait vs mooch). */
-.alt-way { align-self: flex-start; margin-top: 2px; padding: 5px 10px; border-radius: 8px; background: var(--mooch-bg);
-  outline: 1px solid var(--mooch); color: var(--text); font-size: 13px; font-weight: 600; }
-.alt-way::before { content: "⇄ "; color: var(--mooch); }
-p.alt-way { display: block; width: fit-content; margin-top: 10px; padding: 8px 12px; font-size: 14px; }
 .folk { font-size: 12px; color: var(--folk); }
 
 /* Icons */

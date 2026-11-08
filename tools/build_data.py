@@ -474,7 +474,10 @@ def build(fetch, skip_icons):
             continue
         hid = next((h for h in fish[fid]['at'] if holes[h]['name'] == t.get('location')), None)
         if hid is None or holes[hid].get('ocean'):
-            tracker_unmatched += hid is None
+            # No location: a common bait fish listed without a hole; skip it.
+            if hid is None and t.get('location'):
+                tracker_unmatched += 1
+                print(f'tracker: {t["name"]} at {t.get("location")}: no such hole for it', file=sys.stderr)
             continue
         # Step i's options hook the fish at step i + 1 (the last hooks this fish).
         hooked = [None] * len(path)
@@ -500,8 +503,8 @@ def build(fetch, skip_icons):
             continue
         for alt in o['alts']:
             check(add_alt(int(fid_s), o['hole'], resolve(alt, f'baitAlts override {o["name"]}')),
-                  f'baitAlts override {fid_s} ({o["name"]}): {alt} is already its bait or an alternative; '
-                  'remove it')
+                  f'baitAlts override {fid_s} ({o["name"]}): {alt} is already its bait or an alternative '
+                  '(remove it), or is a fish not caught at that hole')
     extra_names = {pid: items[pid]['Name'] for pid in pred_ids - set(fish)}
 
     # Big fish: green rarity on overworld holes. Green ocean fish are ocean
@@ -547,18 +550,26 @@ def build(fetch, skip_icons):
             for a in e.get('alts', []):
                 if a in fish and not fish[a]['at'][hid].get('bait'):
                     broken.append((fid, hid))
-    # Alternatives are shown, not used for gating: the main path's bait fish
-    # mustn't have a window or need more than a direct alternative would.
+    # Alternatives are shown, not used for gating: no bait fish on the main
+    # path may have a window or requirement that an alternative's path avoids.
     def gated(fid, hid):
         e = fish[fid]['at'][hid]
-        return any(e.get(k) for k in ('spawn', 'w', 'pw', 'minG')) or fish[fid].get('folk')
+        return bool(any(e.get(k) for k in ('spawn', 'w', 'pw', 'minG')) or fish[fid].get('folk'))
+
+    def path_gated(b, hid):
+        for _ in range(MAX_MOOCH_DEPTH + 1):
+            if b not in fish or hid not in fish[b]['at']:
+                return False
+            if gated(b, hid):
+                return True
+            b = fish[b]['at'][hid].get('bait')
+        return False
     for fid, f in fish.items():
         for hid, e in f['at'].items():
-            b = e.get('bait')
-            direct = [a for a in e.get('alts', []) if a not in fish]
-            if b in fish and direct and gated(b, hid):
-                check(False, f'{f["name"]} at {holes[hid]["name"]}: mooched from {fish[b]["name"]}, which has '
-                             'a window or requirement, but a direct bait also works; gating would be wrong')
+            if e.get('alts') and path_gated(e.get('bait'), hid) and \
+                    any(not path_gated(a, hid) for a in e['alts']):
+                check(False, f'{f["name"]} at {holes[hid]["name"]}: a bait fish on its main path has a window '
+                             'or requirement that an alternative avoids; gating would be wrong')
     unexpected = set(broken) - KNOWN_BROKEN_CHAINS
     check(not (KNOWN_BROKEN_CHAINS - set(broken)),
           f'known broken chains now resolve, remove them: {sorted(KNOWN_BROKEN_CHAINS - set(broken))}')

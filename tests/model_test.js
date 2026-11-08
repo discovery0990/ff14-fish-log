@@ -141,15 +141,16 @@ Deno.test('alternative baits: only other methods (bait vs mooch), flagged', asyn
     const hid = Object.keys(DATA.fish[fid].at).find((h) => DATA.holes[h].name === hole);
     return { fid, hid, e: DATA.fish[fid].at[hid] };
   };
-  // A direct bait that can also be mooched (tracker's best path).
+  // A mooch (the tracker's best path) that a bait item also hooks directly
+  // (Teamcraft's bait, kept as an alternative).
   const st = at('Stupendemys', 'The Habisphere');
-  assertEquals(m.fishName(st.e.bait), 'Giant Crane Fly');
-  assertEquals(st.e.alts, [Number(byName('Rudderfish'))]);
+  assertEquals(m.fishName(st.e.bait), 'Rudderfish');
+  assertEquals(st.e.alts.map((b) => m.fishName(b)), ['Giant Crane Fly']);
   assert(m.moochTargets(st.hid)[byName('Rudderfish')].includes('Stupendemys'), 'Rudderfish feeds Stupendemys');
-  // A mooch that a bait item also hooks directly.
+  // A direct bait (the tracker's) that can also be mooched (Teamcraft's).
   const fv = at('Feverfish', 'The Chlorophospond');
-  assertEquals(m.fishName(fv.e.bait), 'Calicia');
-  assertEquals(fv.e.alts.map((b) => m.fishName(b)), ['Grey Worm']);
+  assertEquals(m.fishName(fv.e.bait), 'Grey Worm');
+  assertEquals(fv.e.alts, [Number(byName('Calicia'))]);
   // From the wiki override: the other Feverfish hole can be mooched too.
   assertEquals(at('Feverfish', 'The Frozen Fissure').e.alts, [Number(byName('Calicia'))]);
   // Junkmonger: Wahoo is the main path; a Merlthor Goby works too (one step shorter).
@@ -198,10 +199,10 @@ Deno.test('alternative baits: only other methods (bait vs mooch), flagged', asyn
   assertEquals(m.altSplit(nd.fid, nd.hid), { step: [{ id: Number(byName('Silverfish')), from: null }], ways: [] });
   // Flagged on its own line on the hole and fish screens.
   const store = createStore(memStorage());
-  assertStringIncludes(holeView(ctxFor(store), st.hid), '<span class="alt-way">Or mooch it from Rudderfish</span>');
-  assertStringIncludes(holeView(ctxFor(store), fv.hid), 'Or cast Grey Worm directly, no mooch');
-  assertStringIncludes(fishView(ctxFor(store), fv.fid, fv.hid), '<p class="note alt-way">Or cast Grey Worm directly, no mooch</p>');
-  assertStringIncludes(fishView(ctxFor(store), st.fid, st.hid), '<p class="note alt-way">Or mooch it from Rudderfish</p>');
+  assertStringIncludes(holeView(ctxFor(store), st.hid), '<span class="alt-way">Or cast Giant Crane Fly directly, no mooch</span>');
+  assertStringIncludes(holeView(ctxFor(store), fv.hid), 'Or mooch it from Calicia');
+  assertStringIncludes(fishView(ctxFor(store), fv.fid, fv.hid), '<p class="note alt-way">Or mooch it from Calicia</p>');
+  assertStringIncludes(fishView(ctxFor(store), st.fid, st.hid), '<p class="note alt-way">Or cast Giant Crane Fly directly, no mooch</p>');
   assert(!fishView(ctxFor(store), st.fid, st.hid).includes('(or '), 'not inline in the Bait fact');
 });
 

@@ -32,8 +32,9 @@ GAME_VERSION_NAME = '7.57x1'
 TEAMCRAFT_SHA = 'c022ca5385ae41ec0d747599ef16ce74e4fbfdcf'
 TEAMCRAFT = ('https://raw.githubusercontent.com/ffxiv-teamcraft/ffxiv-teamcraft/'
              f'{TEAMCRAFT_SHA}/libs/data/src/lib/json')
-# Second source for baits: its best catch paths fill in the other baits and
-# mooches that also work (Teamcraft gives one per fish per hole).
+# Second source for baits (Carbuncle Plushy's fish tracker): its best catch
+# paths, picked by hand, replace Teamcraft's bait where they differ, and fill
+# in other methods that also work (Teamcraft gives one per fish per hole).
 TRACKER_SHA = 'f5a51e5d3eb0eccb9a5e25899397e0d9cb5a6f66'
 TRACKER = ('https://raw.githubusercontent.com/icykoneko/ff14-fish-tracker-app/'
            f'{TRACKER_SHA}/private/fishData.yaml')
@@ -498,7 +499,48 @@ def build(fetch, skip_icons):
             if old is not None:
                 e['alts'] = [old, *[a for a in e.get('alts', []) if a not in (old, new)]]
 
+    # The fish tracker (Carbuncle Plushy's site) picks the best bait by hand;
+    # Teamcraft's is one players reported. Where a step of the tracker's path
+    # at its hole doesn't list Teamcraft's bait, the tracker's first option
+    # becomes the main bait and Teamcraft's is kept only as a different
+    # method. Hand-checked bait overrides win over both.
+    overridden = {(int(k), o['hole']) for k, o in overrides.get('bait', {}).items()}
+    tracker_set = {}  # (fish, hole) -> the tracker fish whose path set its bait
+    tracker_main = tracker_conflicts = 0
+
+    def tracker_bait(target, hid, ids, source):
+        nonlocal tracker_main, tracker_conflicts
+        e = fish[target]['at'][hid]
+        if not ids or (target, hid) in overridden:
+            return
+        if e.get('bait') in ids:
+            tracker_set.setdefault((target, hid), source)
+            return
+        if (target, hid) in tracker_set:
+            tracker_conflicts += 1
+            kept = e['bait']
+            kept = (baits.get(kept) or fish[kept])['name']
+            print(f'tracker: {fish[target]["name"]} at {holes[hid]["name"]}: kept {kept} (from '
+                  f'{tracker_set[(target, hid)]}), not {" or ".join((baits.get(i) or fish[i])["name"] for i in ids)} '
+                  f'(from {source})', file=sys.stderr)
+            return
+        new = ids[0]
+        if new in fish and hid not in fish[new]['at']:
+            print(f'tracker: {source}: {fish[new]["name"]} is not caught at {holes[hid]["name"]}; '
+                  f'kept Teamcraft\'s bait for {fish[target]["name"]}', file=sys.stderr)
+            return
+        old = e.get('bait')
+        e['bait'] = new
+        e['alts'] = [a for a in e.get('alts', []) if a != new]
+        if not e['alts']:
+            del e['alts']
+        tracker_set[(target, hid)] = source
+        tracker_main += 1
+        if old is not None:
+            add_alt(target, hid, old)
+
     tracker_alts = tracker_unmatched = 0
+    steps = []  # (fish, hole, bait ids, tracker fish): one per step of each path
     for t in fetch.tracker():
         fid = next(iter(by_name.get(t.get('name'), ())), None)
         path = t.get('bestCatchPath') or []
@@ -520,9 +562,21 @@ def build(fetch, skip_icons):
             target = resolve(hooked[i], t['name']) if hooked[i] else None
             if target not in fish or hid not in fish[target]['at']:
                 continue
-            for opt in [step] if isinstance(step, str) else step:
-                if opt not in NOT_ALTS:
-                    tracker_alts += add_alt(target, hid, resolve(opt, t['name']))
+            ids = [resolve(o, t['name']) for o in ([step] if isinstance(step, str) else step)
+                   if o not in NOT_ALTS]
+            steps.append((target, hid, ids, t['name']))
+    # The tracker can give a fish one bait in its own entry and another as a
+    # step in some other fish's path. If any of them agrees with Teamcraft,
+    # Teamcraft's stays. Main baits are all set before alternatives, which
+    # depend on the main path.
+    for target, hid, ids, _ in steps:
+        if fish[target]['at'][hid].get('bait') in ids:
+            tracker_set.setdefault((target, hid), 'Teamcraft')
+    for target, hid, ids, source in steps:
+        tracker_bait(target, hid, ids, source)
+    for target, hid, ids, _ in steps:
+        for opt in ids:
+            tracker_alts += add_alt(target, hid, opt)
 
     for fid_s, o in overrides.get('baitAlts', {}).items():
         f = fish.get(int(fid_s))
@@ -639,6 +693,7 @@ def build(fetch, skip_icons):
                              and not any(e.get('tug') or e.get('bait') for e in f['at'].values())),
         'tc_multi_entries': multi_entries,
         'tracker_alts': tracker_alts, 'tracker_unmatched': tracker_unmatched,
+        'tracker_main': tracker_main, 'tracker_conflicts': tracker_conflicts,
         'broken_chains': len(broken), 'icons': len(icon_ids),
         'big_fish': sum(1 for f in fish.values() if f.get('big')),
         'folklore_fish': sum(1 for f in fish.values() if f.get('folk')), 'tomes': len(tomes),
